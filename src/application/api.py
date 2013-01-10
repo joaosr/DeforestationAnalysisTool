@@ -18,7 +18,7 @@ from report_types import ReportType, CSVReportType, KMLReportType
 from kml import path_to_kml
 
 from models import Area, Note, Report, StatsStore, FustionTablesNames
-from ee_bridge import NDFI, EELandsat, Stats
+from ee_bridge import NDFI, EELandsat, Stats, getProdesStats
 
 from resources.report import ReportAPI, CellAPI, NDFIMapApi, PolygonAPI, NoteAPI, UserAPI
 
@@ -142,9 +142,5 @@ def testing():
     #return str(ndfi.mapid2())
     #return str(ndfi.freeze_map(1089491, r.key().id()))
     """
-    s = Stats()
-    return jsonify(s._execute_cmd("/value", {
-        "image": json.dumps({"creator":"SAD/com.google.earthengine.examples.sad.GetStatsList","args":[
-    [{"creator":"SAD/com.google.earthengine.examples.sad.ProdesImage","args":["PRODES_2009"]},
-     {"creator":"SAD/com.google.earthengine.examples.sad.ProdesImage","args":["PRODES_IMAZON_2011a"]}],{"type":"FeatureCollection","table_id":1505198},"name"]}), "fields": "classHistogram"}))
+    return jsonify(getProdesStats(["PRODES_2009", "PRODES_IMAZON_2011a"], 1505198))
 

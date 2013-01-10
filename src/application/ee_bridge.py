@@ -22,6 +22,31 @@ KRIGING = "kriging/com.google.earthengine.examples.kriging.KrigedModisImage"
 ee.Initialize(settings.EE_CREDENTIALS)
 
 
+def getProdesStats(assetids, table_id):
+    cmd = {
+        "image": json.dumps({
+            "creator": "SAD/com.google.earthengine.examples.sad.GetStatsList",
+            "args": [
+                [
+                    {
+                        "creator": "SAD/com.google.earthengine.examples.sad.ProdesImage",
+                        "args": [assetid]
+                    }
+                    for assetid in assetids
+                ],
+                {
+                    "type": "FeatureCollection",
+                    "table_id": table_id
+                },
+                "name"
+            ]
+        }),
+        "fields": "classHistogram"
+    }
+    params = "&".join(("%s=%s"% v for v in cmd.iteritems()))
+    return EarthEngine(settings.EE_TOKEN).post("/value", params)
+
+
 class Stats(object):
 
     TOTAL_AREA_KEY = u'1'
@@ -210,10 +235,8 @@ class NDFI(object):
     };
 
     MODIS_BANDS = [
-          'sur_refl_b01_250m', 'sur_refl_b02_250m', 'sur_refl_b03_500m',
-          'sur_refl_b04_500m', 'sur_refl_b06_500m', 'sur_refl_b07_500m'];
-
-    THIS_POLY = None
+        'sur_refl_b01_250m', 'sur_refl_b02_250m', 'sur_refl_b03_500m',
+        'sur_refl_b04_500m', 'sur_refl_b06_500m', 'sur_refl_b07_500m'];
 
     def __init__(self, ee_res, last_period, work_period):
         self.last_period = dict(start=last_period[0],
