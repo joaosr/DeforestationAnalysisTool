@@ -55,11 +55,6 @@ class RegionStatsAPI(Resource):
     def get(self, report_id, id):
         r = Report.get(Key(report_id))
         s = self.stats_for(str(r.key().id()), r.assetid, int(id))
-        if request.args.get('_debug', False):
-            s['debug'] = {
-                'request': self.ee.ee.last_request,
-                'response': self.ee.ee.last_response
-            }
         data = json.dumps(s)
         return Response(data, mimetype='application/json')
 
