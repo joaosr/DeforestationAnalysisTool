@@ -102,7 +102,7 @@ def getValue(params):
   return send_('/value', params)
 
 
-def getThumbnail(params):
+def getThumbId(params):
   """Get a Thumbnail for a given asset.
 
   Args:
@@ -119,7 +119,8 @@ def getThumbnail(params):
   Returns:
     An image.
   """
-  request = params.update()
+  request = params.copy()
+  request['getid'] = '1'
   return send_('/thumb', request)
 
 
