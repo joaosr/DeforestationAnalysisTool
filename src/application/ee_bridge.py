@@ -8,6 +8,7 @@ import urllib
 import time
 
 from earthengine.connector import EarthEngine
+import ee
 
 from time_utils import timestamp
 from datetime import timedelta, date
@@ -17,6 +18,9 @@ METER2_TO_KM2 = 1.0/(1000*1000)
 CALL_SCOPE = "SAD"
 #CALL_SCOPE = "sad_test"
 KRIGING = "kriging/com.google.earthengine.examples.kriging.KrigedModisImage"
+
+ee.Initialize(settings.EE_CREDENTIALS)
+
 
 class Stats(object):
 
@@ -682,18 +686,8 @@ class NDFI(object):
             "bands": bands
         }
 
-class Thumbnail(object):
-    def __init__(self):
-        self.ee = EarthEngine(settings.EE_TOKEN)
-    def thumbid(self, id):
-        MAP_IMAGE = {'id':id};
-        MAP_IMAGE_BANDS = ['30','20','10'];
-        cmd = {
-            'getid':1,
-            'image':urllib.quote_plus(json.dumps(MAP_IMAGE)),
-            'bands':','.join(MAP_IMAGE_BANDS), #'30,20,10'
-        }
-        return self._execute_cmd("/thumb", cmd)
-    def _execute_cmd(self, url, cmd):
-        params = "&".join(("%s=%s"% v for v in cmd.iteritems()))
-        return self.ee.get(url, params)
+def GetThumbnail(landsat_image_id):
+  return ee.data.getThumbnail({
+      'image': ee.Image(landsat_image_id).serialize(),
+      'bands': '30,20,10'
+  })
