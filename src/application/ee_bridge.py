@@ -686,8 +686,8 @@ class NDFI(object):
             "bands": bands
         }
 
-def GetThumbnail(landsat_image_id):
-  return ee.data.getThumbnail({
+def getThumbnail(landsat_image_id):
+  return ee.data.getThumbId({
       'image': ee.Image(landsat_image_id).serialize(),
       'bands': '30,20,10'
   })
