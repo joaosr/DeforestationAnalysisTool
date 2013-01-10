@@ -22,31 +22,6 @@ KRIGING = "kriging/com.google.earthengine.examples.kriging.KrigedModisImage"
 ee.Initialize(settings.EE_CREDENTIALS)
 
 
-def getProdesStats(assetids, table_id):
-    cmd = {
-        "image": json.dumps({
-            "creator": "SAD/com.google.earthengine.examples.sad.GetStatsList",
-            "args": [
-                [
-                    {
-                        "creator": "SAD/com.google.earthengine.examples.sad.ProdesImage",
-                        "args": [assetid]
-                    }
-                    for assetid in assetids
-                ],
-                {
-                    "type": "FeatureCollection",
-                    "table_id": table_id
-                },
-                "name"
-            ]
-        }),
-        "fields": "classHistogram"
-    }
-    params = "&".join(("%s=%s"% v for v in cmd.iteritems()))
-    return EarthEngine(settings.EE_TOKEN).post("/value", params)
-
-
 class Stats(object):
 
     TOTAL_AREA_KEY = u'1'
@@ -680,8 +655,32 @@ class NDFI(object):
             "bands": bands
         }
 
-def getThumbnail(landsat_image_id):
+def get_thumbnail(landsat_image_id):
   return ee.data.getThumbId({
       'image': ee.Image(landsat_image_id).serialize(),
       'bands': '30,20,10'
   })
+
+
+def get_prodes_stats(assetids, table_id):
+    cmd = {
+        "image": json.dumps({
+            "creator": "SAD/com.google.earthengine.examples.sad.GetStatsList",
+            "args": [
+                [
+                    {
+                        "creator": "SAD/com.google.earthengine.examples.sad.ProdesImage",
+                        "args": [assetid]
+                    }
+                    for assetid in assetids
+                ],
+                {
+                    "type": "FeatureCollection",
+                    "table_id": table_id
+                },
+                "name"
+            ]
+        }),
+        "fields": "classHistogram"
+    }
+    return {'data': ee.data.getValue(cmd)}

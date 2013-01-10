@@ -13,7 +13,7 @@ from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
 from forms import ExampleForm
-from application.ee_bridge import NDFI, EELandsat, getThumbnail
+from application.ee_bridge import NDFI, EELandsat, get_thumbnail
 
 from app import app
 
@@ -182,7 +182,7 @@ def warmup():
 def picker():
     scene = request.args.get('scene','')
     if scene:
-       result = getThumbnail(scene)
+       result = get_thumbnail(scene)
     else:
        result = {'thumbid': '', 'token': ''}
     return render_template('picker.html', **result)
