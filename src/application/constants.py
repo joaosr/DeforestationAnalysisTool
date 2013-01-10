@@ -5,4 +5,3 @@ amazon_bounds = (
 )
 
 NDFI_IMAGERY_RESOURCE = 'MOD09GA'
-LANDSAT7 = 'LANDSAT/L7_L1T'

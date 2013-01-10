@@ -125,9 +125,9 @@ def polygon_stats(format=None):
         abort(404)
 
 def landstat():
-    e = EELandsat('LANDSAT/L7_L1T')
+    e = EELandsat()
     #return jsonify(images=e.list())
-    return jsonify(map=e.mapid())
+    return jsonify(map={'data': e.mapid()})
 
 @app.route('/api/v0/test')
 def testing():

@@ -11,7 +11,7 @@ from application.time_utils import date_from_julian
 import simplejson as json
 from application.time_utils import timestamp
 
-from application.constants import amazon_bounds, LANDSAT7
+from application.constants import amazon_bounds
 from application import settings
 
 from google.appengine.ext.db import Key
@@ -190,7 +190,7 @@ class CellAPI(Resource):
         cell = Cell.get_or_default(r, x, y, z)
         bounds = cell.bounds(amazon_bounds)
         bounds = "%f,%f,%f,%f" % (bounds[1][1], bounds[1][0], bounds[0][1], bounds[0][0])
-        ee = EELandsat(LANDSAT7)
+        ee = EELandsat()
         d = ee.list(bounds=bounds)
         data = {}
         if len(d) >= 1:

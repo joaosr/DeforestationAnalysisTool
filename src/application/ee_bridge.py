@@ -184,44 +184,23 @@ class Stats(object):
 
 class EELandsat(object):
 
-    def __init__(self, resource):
-        self.resource = resource
-        self.ee = EarthEngine(settings.EE_TOKEN)
-
     def list(self, bounds, params={}):
-        images = self.ee.get("/list?id=%s&bbox=%s&fields=ACQUISITION_DATE" % (self.resource, bounds))
+        bbox = ee.Feature.Rectangle(
+            *[float(i.strip()) for i in bounds.split(',')])
+        images = ee.ImageCollection('L7_L1T').filterBounds(bbox).getInfo()
         logging.info(images)
-        if 'data' in images:
-            return [x['id'] for x in images['data']]
+        if 'features' in images:
+            return [x['id'] for x in images['features']]
         return []
 
     def mapid(self, start, end):
-        landsat_bands = ['10','20','30','40','50','70','80','61','62']
-        creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
-        MAP_IMAGE1 = {
-            'creator':'LANDSAT/LandsatTOA',
-            'input':'LANDSAT/L7_L1T',
-            'bands':creator_bands,
-            'start_time': start,
-            'end_time': end
-        };
-        MAP_IMAGE = {
-             "creator": "SimpleMosaic",
-             "args": [MAP_IMAGE1]
-        }
-        PREVIEW_GAIN = 500;
-        MAP_IMAGE_BANDS = ['30','20','10'];
-        cmd = {
-            'image': json.dumps(MAP_IMAGE), #json.dumps(lanstat),
-            'bands': ','.join(MAP_IMAGE_BANDS), #'30,20,10',
+        MAP_IMAGE_BANDS = ['30','20','10']
+        PREVIEW_GAIN = 500
+        collection = ee.ImageCollection('L7_L1T_TOA').filterDate(start, end)
+        return collection.mosaic().getMapId({
+            'bands': ','.join(MAP_IMAGE_BANDS),
             'gain': PREVIEW_GAIN
-        }
-
-        return self._execute_cmd("/mapid", cmd)
-
-    def _execute_cmd(self, url, cmd):
-        params = "&".join(("%s=%s"% v for v in cmd.iteritems()))
-        return self.ee.post(url, params)
+        })
 
 class NDFI(object):
     """ ndfi info for a period of time
