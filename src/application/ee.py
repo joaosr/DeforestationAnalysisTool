@@ -192,8 +192,8 @@ class EELandsat(object):
         return []
 
     def mapid(self, start, end):
-	landsat_bands = ['10','20','30','40','50','70','80','61','62']
-	creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
+        landsat_bands = ['10','20','30','40','50','70','80','61','62']
+        creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
         MAP_IMAGE1 = {
             'creator':'LANDSAT/LandsatTOA',
             'input':'LANDSAT/L7_L1T',
@@ -246,7 +246,7 @@ class NDFI(object):
         self._image_cache = {}
 
     def paint_deforestation(self, asset_id, month, year):
-	year_str = "%04d" % (year)
+        year_str = "%04d" % (year)
         #end = "%04d%02d" % (year, month)
         return {
           "type": "Image", "creator": "Paint", "args": [asset_id,
@@ -259,18 +259,18 @@ class NDFI(object):
     def mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
         year_msec = 1000 * 60 * 60 * 24 * 365 
         month_msec = 1000 * 60 * 60 * 24 * 30 
-	six_months_ago = self.work_period['end'] - month_msec * 6
-	one_month_ago = self.work_period['end'] - month_msec
-	last_month = time.gmtime(int(six_months_ago / 1000))[1]
-	last_year = time.gmtime(int(six_months_ago / 1000))[0]
-	previous_month = time.gmtime(int(one_month_ago / 1000))[1]
-	previous_year = time.gmtime(int(one_month_ago / 1000))[0]
+        six_months_ago = self.work_period['end'] - month_msec * 6
+        one_month_ago = self.work_period['end'] - month_msec
+        last_month = time.gmtime(int(six_months_ago / 1000))[1]
+        last_year = time.gmtime(int(six_months_ago / 1000))[0]
+        previous_month = time.gmtime(int(one_month_ago / 1000))[1]
+        previous_year = time.gmtime(int(one_month_ago / 1000))[0]
         work_month = self.getMidMonth(self.work_period['start'], self.work_period['end'])
         work_year = self.getMidYear(self.work_period['start'], self.work_period['end'])
         end = "%04d%02d" % (work_year, work_month)
         start = "%04d%02d" % (last_year, last_month)
         previous = "%04d%02d" % (previous_year, previous_month)
-	start_filter = [{'property':'compounddate','greater_than':start},{'property':'compounddate','less_than':end}]
+        start_filter = [{'property':'compounddate','greater_than':start},{'property':'compounddate','less_than':end}]
         deforested_asset = self.paint_deforestation(asset_id, work_month, work_year)
         # 1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc  was 1868251
         json_cmd = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.GetNDFIDelta","args": [
@@ -282,19 +282,19 @@ class NDFI(object):
             "MODIS/MOD09GQ",
             {'type':'FeatureCollection','id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 'mark': str(timestamp()), 'filter':start_filter},
             {'type':'FeatureCollection','id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 'mark': str(timestamp()), 
-		'filter':[{"property":"month","equals":work_month},{"property":"year","equals":work_year}]},
+                'filter':[{"property":"month","equals":work_month},{"property":"year","equals":work_year}]},
             {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()), 
-		'filter':[{"property":"Compounddate","equals":int(previous)}]},
+                'filter':[{"property":"Compounddate","equals":int(previous)}]},
             {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()), 
-		'filter':[{"property":"Compounddate","equals":int(end)}]},
+                'filter':[{"property":"Compounddate","equals":int(end)}]},
             deforested_asset,
             polygon,
             rows,
             cols]
         }
-	logging.info("GetNDFIDelta")
-	logging.info(json_cmd)
-	return json_cmd
+        logging.info("GetNDFIDelta")
+        logging.info(json_cmd)
+        return json_cmd
 
 
     def getMidMonth(self, start, end):
@@ -335,7 +335,7 @@ class NDFI(object):
                         "bandSelectors":["remapped"], "newNames":["classification"]}
 
         clipped_image = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.AddBB",
-		"args":[renamed_image, asset_id, "classification"]}
+                "args":[renamed_image, asset_id, "classification"]}
 
         map_image = {"algorithm": "Image.addBands", "dstImg": asset_id, "srcImg": clipped_image,
                     "names": ["classification"], "overwrite": True}
@@ -500,13 +500,13 @@ class NDFI(object):
         work_year = self.getMidYear(period['start'], period['end'])
         end = "%04d%02d" % (work_year, work_month)
         filter = [{'property':'Compounddate','equals':int(end)}]
-	return filter
+        return filter
 
 
 
     def _NDFI_image(self, period, long_span=0):
         """ given image list from EE, returns the operator chain to return NDFI image """
-	filter = self._krig_filter(period)
+        filter = self._krig_filter(period)
         return {
             "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.NDFIImage',
             "args": [{
@@ -514,8 +514,8 @@ class NDFI(object):
               "args": [{
                 "creator": KRIGING,
                 "args": [ self._MakeMosaic(period, long_span), 
-			{'type':'FeatureCollection','table_id':4468280,
-				'filter':filter,'mark':str(timestamp())} ]
+                        {'type':'FeatureCollection','table_id':4468280,
+                                'filter':filter,'mark':str(timestamp())} ]
               }]
             }]
          }
@@ -573,12 +573,12 @@ class NDFI(object):
 
     def _RGB_image_command(self, period):
         """ commands for RGB image """
-	filter = self._krig_filter(period)
+        filter = self._krig_filter(period)
         return {
             "image": json.dumps({
                "creator": KRIGING,
                "args": [ self._MakeMosaic(period),{'type':'FeatureCollection','table_id':4468280,
-			'filter':filter,'mark':str(timestamp())} ]
+                        'filter':filter,'mark':str(timestamp())} ]
             }),
             "bands": 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
             "gain": 0.1,
@@ -603,7 +603,7 @@ class NDFI(object):
           end = "%04d%02d" % (year, month)
           start_time = period['start'] - 1000 * 60 * 60 * 24 * 365
           filter = [{'property':'compounddate','greater_than':start},
-		{'or': [{'property':'compounddate','less_than':end}, {'property':'compounddate','equals':end}]}]
+                {'or': [{'property':'compounddate','less_than':end}, {'property':'compounddate','equals':end}]}]
         return {
           "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.MakeMosaic',
           "args": [{"id":"MODIS/MOD09GA","version":micro_yesterday,"start_time":start_time,"end_time":period['end']},
@@ -613,7 +613,7 @@ class NDFI(object):
         }
 
     def _SMA_image_command(self, period):
-	filter = self._krig_filter(period)
+        filter = self._krig_filter(period)
         return {
             "image": json.dumps({
               "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
@@ -642,7 +642,7 @@ class NDFI(object):
                     {
                         "creator":KRIGING,
                         "args":[ self._MakeMosaic(period), {'type':'FeatureCollection','table_id':4468280,
-				'filter':filter}]
+                                'filter':filter}]
                     },
                     polygon]},
                  ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
@@ -657,8 +657,8 @@ class NDFI(object):
         work_period_start = self.work_period['start'] - 7776000000 #three_months
         yesterday = date.today() - timedelta(1)
         micro_yesterday = time.mktime(yesterday.timetuple()) * 1000000
-	landsat_bands = ['10','20','30','40','50','70','80','61','62']
-	creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
+        landsat_bands = ['10','20','30','40','50','70','80','61','62']
+        creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
         bands = "%d,%d,%d" % bands
         return {
             "image": json.dumps({
