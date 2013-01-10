@@ -2,7 +2,7 @@
 
 import logging
 from application.models import Report, Cell, Area, Note, CELL_BLACK_LIST, User
-from application.ee import NDFI, EELandsat
+from application.ee_bridge import NDFI, EELandsat
 from resource import Resource
 from flask import Response, request, jsonify, abort
 from datetime import date

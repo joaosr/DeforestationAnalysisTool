@@ -9,7 +9,7 @@ from google.appengine.ext.db import Key
 from google.appengine.ext import deferred
 
 from application.models import Report, StatsStore
-from application.ee import Stats
+from application.ee_bridge import Stats
 from application.commands import update_report_stats
 
 from google.appengine.api import memcache

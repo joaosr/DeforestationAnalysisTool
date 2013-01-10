@@ -13,7 +13,7 @@ from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
 from forms import ExampleForm
-from application.ee import NDFI, EELandsat, Thumbnail
+from application.ee_bridge import NDFI, EELandsat, Thumbnail
 
 from app import app
 

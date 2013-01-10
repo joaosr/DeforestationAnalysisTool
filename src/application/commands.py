@@ -18,7 +18,7 @@ from ft import FT
 from time_utils import month_range
 from application.models import Report, Cell, StatsStore, FustionTablesNames
 from application.constants import amazon_bounds
-from ee import NDFI
+from ee_bridge import NDFI
 
 
 @app.route('/_ah/cmd/create_table')
@@ -182,7 +182,7 @@ tables_map = dict(x[:2] for x in tables)
 # ==================================================
 #
 
-from application.ee import Stats
+from application.ee_bridge import Stats
 @app.route('/_ah/cmd/update_report_stats/<report_id>', methods=('GET',))
 def update_report_stats_view(report_id):
     deferred.defer(update_report_stats, report_id)

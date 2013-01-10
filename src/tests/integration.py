@@ -3,7 +3,7 @@
 import unittest
 from datetime import date
 import simplejson as json
-from application.ee import NDFI, Stats
+from application.ee_bridge import NDFI, Stats
 from application.app import app
 from application.models import Report, Area, Cell
 from application import settings

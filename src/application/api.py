@@ -18,7 +18,7 @@ from report_types import ReportType, CSVReportType, KMLReportType
 from kml import path_to_kml
 
 from models import Area, Note, Report, StatsStore, FustionTablesNames
-from ee import NDFI, EELandsat, Stats
+from ee_bridge import NDFI, EELandsat, Stats
 
 from resources.report import ReportAPI, CellAPI, NDFIMapApi, PolygonAPI, NoteAPI, UserAPI
 
