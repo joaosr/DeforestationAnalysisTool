@@ -70,22 +70,3 @@ class EarthEngine( object ):
 
     def post(self, api, params=None ):
         return self._http( 'POST', api, params )
-
-
-class EarthImage( object ):
-
-    def __init__( self ):
-        pass
-
-    def obj( self, type, id ):
-        return {
-            'type': type,
-            'id': id,
-        }
-
-    def step( self, creator, *args ):
-        return {
-            'type': 'Image',
-            'creator': creator,
-            'args': args,
-        }
