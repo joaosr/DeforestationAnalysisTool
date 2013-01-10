@@ -186,5 +186,5 @@ def picker():
     if scene:
        result = getThumbnail(scene)
     else:
-       result = "{}"
-    return render_template('picker.html', thumbid=result['thumbid'], token=result['token'])
+       result = {'thumbid': '', 'token': ''}
+    return render_template('picker.html', **result)
