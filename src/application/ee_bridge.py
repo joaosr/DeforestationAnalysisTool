@@ -36,14 +36,10 @@ class Stats(object):
         return self.ee.post(url, params)
 
     def paint_call(self, current_asset, report_id, table, value):
-        return {
-          "creator": "Paint", "args": [current_asset,
-          {
-            "table_id": int(table), "type": "FeatureCollection", 
-            "filter":[{"property":"report_id","equals":int(report_id)},
-                      {"property":"type","equals":value}]},
-          value]
-        }
+        fc = ee.FeatureCollection(int(table))
+        fc = fc.filterMetadata('report_id', 'equals', int(report_id))
+        fc = fc.filterMetadata('type', 'equals', value)
+        return json.loads(ee.Image(current_asset).paint(fc, value).serialize())
 
     def get_historical_freeze(self, report_id, frozen_image):
 
@@ -328,15 +324,11 @@ class NDFI(object):
         return self._execute_cmd('/create', cmd)
 
     def paint_call(self, current_asset, report_id, table, value):
-        return {
-          "algorithm": "Image.paint", "image": current_asset,
-          "featureCollection": {
-            "table_id": int(table), "type": "FeatureCollection", 
-            "filter":[{"property":"report_id","equals":int(report_id)},
-                      {"property":"type", "equals": value}]},
-          "color": value
-        }
-       
+        fc = ee.FeatureCollection(int(table))
+        fc = fc.filterMetadata('report_id', 'equals', int(report_id))
+        fc = fc.filterMetadata('type', 'equals', value)
+        return json.loads(ee.Image(current_asset).paint(fc, value).serialize())
+
     def rgbid(self):
         """ return params to access NDFI rgb image """
         # get map id from EE
