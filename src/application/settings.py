@@ -12,6 +12,8 @@ from google.appengine.api import app_identity
 import os
 
 from secret_keys import *
+from ee import ServiceAccountCredentials, OAUTH2_SCOPE as EE_OAUTH2_SCOPE
+from oauth2client import appengine
 
 
 DEBUG_MODE = False
@@ -28,6 +30,8 @@ if DEBUG:
     EE_API = 'https://earthengine.googleapis.com'
     #EE_API = 'https://earthengine.sandbox.google.com'
     EE_TILE_SERVER = EE_API + '/map/'
+    #EE_CREDENTIALS = ServiceAccountCredentials(EE_ACCOUNT, EE_PRIVATE_KEY_FILE)
+    EE_CREDENTIALS = None
 else:
     EE_API = 'https://earthengine.googleapis.com'
     EE_TILE_SERVER = EE_API + '/map/'
@@ -44,6 +48,7 @@ else:
     elif app_id == 'sad-ee':
         FT_TABLE = 'SAD EE Polygons'
         FT_TABLE_ID = '2949980'
+    EE_CREDENTIALS = appengine.AppAssertionCredentials(EE_OAUTH2_SCOPE)
 
 
 # Set secret keys for CSRF protection
