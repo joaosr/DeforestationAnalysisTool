@@ -23,92 +23,38 @@ ee.Initialize(settings.EE_CREDENTIALS)
 
 
 class Stats(object):
-
     TOTAL_AREA_KEY = u'1'
     DEF_KEY = u'7'
     DEG_KEY = u'8'
 
-    def __init__(self):
-        self.ee = EarthEngine(settings.EE_TOKEN)
-
-    def _execute_cmd(self, url, cmd):
-        params = "&".join(("%s=%s"% v for v in cmd.iteritems()))
-        return self.ee.post(url, params)
-
-    def paint_call(self, current_asset, report_id, table, value):
+    def _paint(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
         fc = fc.filterMetadata('report_id', 'equals', int(report_id))
         fc = fc.filterMetadata('type', 'equals', value)
-        return json.loads(ee.Image(current_asset).paint(fc, value).serialize())
+        return current_asset.paint(fc, value)
 
-    def get_historical_freeze(self, report_id, frozen_image):
+    def _get_historical_freeze(self, report_id, frozen_image):
+        remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
+                                      [0,1,2,3,4,5,6,1,1,9])
+        def_image = self._paint(remapped, report_id, settings.FT_TABLE_ID, 7)
+        deg_image = self._paint(def_image, report_id, settings.FT_TABLE_ID, 8)
+        renamed_image = deg_image.select(['remapped'], ['class'])
+        # Overwrite the band while keeping the metadata.
+        return frozen_image.addBands(renamed_image, ['class'], True)
 
-        remapped = {"algorithm": "Image.remap", "image":frozen_image, 
-          "from":[0,1,2,3,4,5,6,7,8,9], "to":[0,1,2,3,4,5,6,1,1,9]}
-
-        def_image = self.paint_call(remapped, report_id, settings.FT_TABLE_ID, 7)
-
-        selected_def = {"algorithm": "Image.select", "input": def_image, 
-                        "bandSelectors":["remapped"]}
-
-        deg_image = self.paint_call(selected_def, report_id, settings.FT_TABLE_ID, 8)
-
-        renamed_image = {"algorithm": "Image.select", "input": deg_image, 
-                        "bandSelectors":["remapped"], "newNames":["class"]}
-
-        clipped_image = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.AddBB","args":[renamed_image, frozen_image, "classification"]}
-
-        map_image = {"algorithm": "Image.addBands", "dstImg": frozen_image, "srcImg": clipped_image,
-                    "names": ["class"], "overwrite": True}
-
-        return map_image
-
-    def get_stats_for_table(self, report_id, frozen_image, table_id, key_name='name'):
-
-        historical_call = self.get_historical_freeze(report_id, frozen_image)
-
-        stats = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStats",
-                 "args":[historical_call, {"table_id": int(table_id), "type":"FeatureCollection"}, "name"]}
-
-        return self._execute_cmd("/value", {
-            "image": json.dumps(stats),
-            "fields": "classHistogram"
+    def _get_stats_for_table(self, report_id, frozen_image_id, table_id):
+        frozen_image = ee.Image(frozen_image_id)
+        report = self._get_historical_freeze(report_id, frozen_image)
+        polygons = ee.FeatureCollection(int(table_id))
+        stats = ee.Image({
+            "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStats",
+            "args": [report, polygons, "name"]
         })
 
-        """
-        return self._execute_cmd("/value", {
-            "image": json.dumps({
-                "creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStats",
-                "args":[
-                    {
-                        "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.HistoricalFreeze",
-                        "args":[
-                            frozen_image,
-                            {
-                                "table_id": int(settings.FT_TABLE_ID),
-                                "type":"FeatureCollection",
-                                'mark': str(timestamp()),
-                                "filter":[
-                                {
-                                    "property":"report_id",
-                                    "equals": int(report_id)
-                                }
-                                ]
-                            },
-                            "type"
-                         ],
-                         "type":"Image",
-                    },
-                    {
-                        "table_id": int(table_id),
-                        "type":"FeatureCollection"
-                    },
-                    "name"
-                 ]
-            }),
+        return ee.data.getValue({
+            "image": stats.serialize(),
             "fields": "classHistogram"
         })
-        """
 
     def get_stats_for_polygon(self, assetids, polygon):
         """ example poygon, must be CCW
@@ -120,33 +66,27 @@ class Stats(object):
 
         reports = []
         for report_id, asset_id in assetids:
-            reports.append(self.get_historical_freeze(report_id, asset_id))
+            reports.append(self._get_historical_freeze(
+                report_id, ee.Image(asset_id)))
 
-        data = self._execute_cmd("/value", {
-            "image": json.dumps({
-                    "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStatsList",
-                    "args":[reports, {
-                        'features': [{
-                           'type': 'feature',
-                           'geometry': { 
-                                'type': 'polygon',
-                                'coordinates': polygon,
-                                'properties':{'name': 'myPoly'}
-                            }
-                        }]
-                    }, "name" ]
-             }),
+        feature = ee.Feature(ee.Feature.Polygon(polygon), {'name': 'myPoly'})
+        polygons = ee.FeatureCollection([ee.Feature(feature)])
+        stats_image = ee.Image({
+            "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStatsList",
+            "args": [reports, polygons, "name"]
+         })
+        data = ee.data.getValue({
+            "image": stats_image.serialize(),
             "fields": "classHistogram"
         })
 
         try:
-            raw_stats = data['data']['properties']['classHistogram']
+            raw_stats = data['properties']['classHistogram']
         except KeyError:
             return None
         stats = []
         for x in raw_stats:
-            logging.info(x)
-            s = x['values']['null']['values']
+            s = x['values']['myPoly']['values']
             stats.append({
                 "total_area": sum(map(float, s.values()))*METER2_TO_KM2,
                 'def': float(s[Stats.DEF_KEY])*METER2_TO_KM2,
@@ -155,9 +95,9 @@ class Stats(object):
         return stats
 
     def get_stats(self, report_id, frozen_image, table_id):
-        r = self.get_stats_for_table(report_id, frozen_image,  table_id)
+        r = self._get_stats_for_table(report_id, frozen_image,  table_id)
         try:
-            stats_region = r["data"]["properties"]["classHistogram"]["values"]
+            stats_region = r["properties"]["classHistogram"]["values"]
         except KeyError:
             return None
         stats = {}
@@ -178,8 +118,8 @@ class Stats(object):
 
         return stats
 
-class EELandsat(object):
 
+class EELandsat(object):
     def list(self, bounds, params={}):
         bbox = ee.Feature.Rectangle(
             *[float(i.strip()) for i in bounds.split(',')])
