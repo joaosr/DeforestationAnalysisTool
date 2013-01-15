@@ -94,6 +94,43 @@ class Stats(object):
             })
         return stats
 
+    def get_stats_for_polygon2(self, assetids, polygon):
+        """ example poygon, must be CCW
+            #polygon = [[[-61.9,-11.799],[-61.9,-11.9],[-61.799,-11.9],[-61.799,-11.799],[-61.9,-11.799]]]
+        """
+        feature = ee.Feature(ee.Feature.Polygon(polygon), {'name': 'myPoly'})
+        polygons = ee.FeatureCollection([ee.Feature(feature)])
+
+        # javascript way, lovely
+        if not hasattr(assetids, '__iter__'):
+            assetids = [assetids]
+
+        reports = []
+        for report_id, asset_id in assetids:
+            freeze = self._get_historical_freeze(report_id, ee.Image(asset_id))
+            stats_image = ee.Image({
+                "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStats",
+                "args": [freeze, polygons, "name"]
+            })
+            result = ee.data.getValue({
+                "image": stats_image.serialize(),
+                "fields": "classHistogram"
+            })
+            try:
+                reports.append(result['properties']['classHistogram'])
+            except KeyError:
+                return None
+
+        stats = []
+        for x in reports:
+            s = x['values']['myPoly']['values']
+            stats.append({
+                "total_area": sum(map(float, s.values()))*METER2_TO_KM2,
+                'def': float(s[Stats.DEF_KEY])*METER2_TO_KM2,
+                'deg': float(s[Stats.DEG_KEY])*METER2_TO_KM2,
+            })
+        return stats
+
     def get_stats(self, report_id, frozen_image, table_id):
         r = self._get_stats_for_table(report_id, frozen_image,  table_id)
         try:
@@ -603,24 +640,20 @@ def get_thumbnail(landsat_image_id):
 
 
 def get_prodes_stats(assetids, table_id):
-    cmd = {
-        "image": json.dumps({
-            "creator": "SAD/com.google.earthengine.examples.sad.GetStatsList",
-            "args": [
-                [
-                    {
-                        "creator": "SAD/com.google.earthengine.examples.sad.ProdesImage",
-                        "args": [assetid]
-                    }
-                    for assetid in assetids
-                ],
-                {
-                    "type": "FeatureCollection",
-                    "table_id": table_id
-                },
-                "name"
-            ]
-        }),
-        "fields": "classHistogram"
-    }
-    return {'data': ee.data.getValue(cmd)}
+    results = []
+    for assetid in assetids:
+        prodes_image = ee.Image({
+            "creator": "SAD/com.google.earthengine.examples.sad.ProdesImage",
+            "args": [assetid]
+        })
+        collection = ee.FeatureCollection(table_id)
+        stats_image = ee.Image({
+            "creator": "SAD/com.google.earthengine.examples.sad.GetStats",
+            "args": [prodes_image, collection, "name"]
+        })
+        stats = ee.data.getValue({
+            "image": stats_image.serialize(),
+            "fields": "classHistogram"
+        })
+        results.append(stats['properties']['classHistogram'])
+    return {'data': {'properties': {'classHistogram': results}}}
