@@ -19,6 +19,7 @@ CALL_SCOPE = "SAD"
 #CALL_SCOPE = "sad_test"
 KRIGING = "kriging/com.google.earthengine.examples.kriging.KrigedModisImage"
 
+ee.data.DEFAULT_DEADLINE = 600
 ee.Initialize(settings.EE_CREDENTIALS)
 
 
