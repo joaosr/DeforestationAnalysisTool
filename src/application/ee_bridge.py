@@ -632,12 +632,6 @@ class NDFI(object):
             "bands": bands
         }
 
-def get_thumbnail(landsat_image_id):
-  return ee.data.getThumbId({
-      'image': ee.Image(landsat_image_id).serialize(),
-      'bands': '30,20,10'
-  })
-
 
 def get_prodes_stats(assetids, table_id):
     results = []
@@ -657,3 +651,10 @@ def get_prodes_stats(assetids, table_id):
         })
         results.append(stats['properties']['classHistogram'])
     return {'data': {'properties': {'classHistogram': results}}}
+
+
+def get_thumbnail(landsat_image_id):
+    return ee.data.getThumbId({
+        'image': ee.Image(landsat_image_id).serialize(),
+        'bands': '30,20,10'
+    })
