@@ -253,7 +253,8 @@ def send_(path, params, opt_method='POST', opt_raw=False):
         'Unexpected HTTP error: %s' % e.message)
 
   if response.status != 200:
-    raise ee_exception.EEException('Server error: %d' % e.code)
+    raise ee_exception.EEException('Server returned HTTP code: %d' %
+                                   response.status)
 
   if opt_raw:
     return content
