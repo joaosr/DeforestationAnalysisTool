@@ -60,44 +60,6 @@ class Stats(object):
         """ example poygon, must be CCW
             #polygon = [[[-61.9,-11.799],[-61.9,-11.9],[-61.799,-11.9],[-61.799,-11.799],[-61.9,-11.799]]]
         """
-        # javascript way, lovely
-        if not hasattr(assetids, '__iter__'):
-            assetids = [assetids]
-
-        reports = []
-        for report_id, asset_id in assetids:
-            reports.append(self._get_historical_freeze(
-                report_id, ee.Image(asset_id)))
-
-        feature = ee.Feature(ee.Feature.Polygon(polygon), {'name': 'myPoly'})
-        polygons = ee.FeatureCollection([ee.Feature(feature)])
-        stats_image = ee.Image({
-            "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStatsList",
-            "args": [reports, polygons, "name"]
-         })
-        data = ee.data.getValue({
-            "image": stats_image.serialize(),
-            "fields": "classHistogram"
-        })
-
-        try:
-            raw_stats = data['properties']['classHistogram']
-        except KeyError:
-            return None
-        stats = []
-        for x in raw_stats:
-            s = x['values']['myPoly']['values']
-            stats.append({
-                "total_area": sum(map(float, s.values()))*METER2_TO_KM2,
-                'def': float(s[Stats.DEF_KEY])*METER2_TO_KM2,
-                'deg': float(s[Stats.DEG_KEY])*METER2_TO_KM2,
-            })
-        return stats
-
-    def get_stats_for_polygon2(self, assetids, polygon):
-        """ example poygon, must be CCW
-            #polygon = [[[-61.9,-11.799],[-61.9,-11.9],[-61.799,-11.9],[-61.799,-11.799],[-61.9,-11.799]]]
-        """
         feature = ee.Feature(ee.Feature.Polygon(polygon), {'name': 'myPoly'})
         polygons = ee.FeatureCollection([ee.Feature(feature)])
 
