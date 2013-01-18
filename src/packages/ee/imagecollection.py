@@ -88,7 +88,11 @@ class ImageCollection(collection.Collection):
         'secondary': other
         })
 
-  def map(self, algorithm, opt_dynamicArgs, opt_constantArgs, opt_destination):
+  def map(self,
+          algorithm,
+          opt_dynamicArgs=None,
+          opt_constantArgs=None,
+          opt_destination=None):
     """Maps an algorithm over a collection. See ee.Collection.mapInternal()."""
     return self.mapInternal(image.Image, algorithm,
                             opt_dynamicArgs, opt_constantArgs, opt_destination)
