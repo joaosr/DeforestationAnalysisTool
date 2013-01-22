@@ -24,9 +24,9 @@ ee.Initialize(settings.EE_CREDENTIALS)
 
 
 class Stats(object):
-    TOTAL_AREA_KEY = u'1'
-    DEF_KEY = u'7'
-    DEG_KEY = u'8'
+    DEFORESTATION = 7
+    DEGRADATION = 8
+    SCALE_METERS = 120
 
     def _paint(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
@@ -39,26 +39,36 @@ class Stats(object):
                                       [0,1,2,3,4,5,6,1,1,9])
         def_image = self._paint(remapped, report_id, settings.FT_TABLE_ID, 7)
         deg_image = self._paint(def_image, report_id, settings.FT_TABLE_ID, 8)
-        renamed_image = deg_image.select(['remapped'], ['class'])
-        # Overwrite the band while keeping the metadata.
-        return frozen_image.addBands(renamed_image, ['class'], True)
+        return deg_image.select(['remapped'], ['class'])
 
-    def _get_stats_for_table(self, report_id, frozen_image_id, table_id):
-        frozen_image = ee.Image(frozen_image_id)
-        report = self._get_historical_freeze(report_id, frozen_image)
-        polygons = ee.FeatureCollection(int(table_id))
-        stats = ee.Image({
-            "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStats",
-            "args": [report, polygons, "name"]
-        })
+    def _get_area(self, report_id, image_id, polygons):
+        freeze = self._get_historical_freeze(report_id, ee.Image(image_id))
+        area = ee.Image({'algorithm': 'Image.area'})
 
-        return ee.data.getValue({
-            "image": stats.serialize(),
-            "fields": "classHistogram"
-        })
+        def calculateArea(feature):
+            geometry = feature.geometry();
+            total = area.mask(freeze.mask())
+            deforestation = area.mask(freeze.eq(Stats.DEFORESTATION))
+            degradation = area.mask(freeze.eq(Stats.DEGRADATION))
+
+            sum_reducer = ee.call('Reducer.sum')
+            total_area = total.reduceRegion(
+                geometry, sum_reducer, Stats.SCALE_METERS, bestEffort=True)
+            def_area = deforestation.reduceRegion(
+                geometry, sum_reducer, Stats.SCALE_METERS, bestEffort=True)
+            deg_area = degradation.reduceRegion(
+                geometry, sum_reducer, Stats.SCALE_METERS, bestEffort=True)
+            return ee.call('SetProperties', feature, {
+                'total': total_area,
+                'deforestation': def_area,
+                'degradation': deg_area,
+            })
+
+        result = polygons.map(calculateArea).getInfo()
+        return [i['properties'] for i in result['features']]
 
     def get_stats_for_polygon(self, assetids, polygon):
-        """ example poygon, must be CCW
+        """ example polygon, must be CCW
             #polygon = [[[-61.9,-11.799],[-61.9,-11.9],[-61.799,-11.9],[-61.799,-11.799],[-61.9,-11.799]]]
         """
         feature = ee.Feature(ee.Feature.Polygon(polygon), {'name': 'myPoly'})
@@ -70,50 +80,33 @@ class Stats(object):
 
         reports = []
         for report_id, asset_id in assetids:
-            freeze = self._get_historical_freeze(report_id, ee.Image(asset_id))
-            stats_image = ee.Image({
-                "creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.GetStats",
-                "args": [freeze, polygons, "name"]
-            })
-            result = ee.data.getValue({
-                "image": stats_image.serialize(),
-                "fields": "classHistogram"
-            })
-            try:
-                reports.append(result['properties']['classHistogram'])
-            except KeyError:
-                return None
+            result = self._get_area(report_id, asset_id, polygons)
+            if result is None: return None
+            reports.append(result[0])
 
         stats = []
         for x in reports:
-            s = x['values']['myPoly']['values']
             stats.append({
-                "total_area": sum(map(float, s.values()))*METER2_TO_KM2,
-                'def': float(s[Stats.DEF_KEY])*METER2_TO_KM2,
-                'deg': float(s[Stats.DEG_KEY])*METER2_TO_KM2,
+                'total_area': x['total']['area'] * METER2_TO_KM2,
+                'def': x['deforestation']['area'] * METER2_TO_KM2,
+                'deg': x['degradation']['area'] * METER2_TO_KM2,
             })
         return stats
 
     def get_stats(self, report_id, frozen_image, table_id):
-        r = self._get_stats_for_table(report_id, frozen_image,  table_id)
-        try:
-            stats_region = r["properties"]["classHistogram"]["values"]
-        except KeyError:
-            return None
+        result = self._get_area(
+            report_id, frozen_image, ee.FeatureCollection(int(table_id)))
+        if result is None: return None
         stats = {}
-        for k,values in stats_region.iteritems():
-            # google earth engine return pixels, each pixel has 250m on a side...
-            # values classificacion:
-            # 1 -> total_area
-            # 7 -> deforestation
-            # 8 -> degradation
-            v = values['values']
-            stats[str(table_id) + '_' + k] = {
-                "id": k,
-                "table": table_id,
-                "total_area": sum(map(float, v.values()))*METER2_TO_KM2,
-                "def": int(v[Stats.DEF_KEY])*METER2_TO_KM2,
-                "deg": int(v[Stats.DEG_KEY])*METER2_TO_KM2
+        for x in result:
+            name = x['name']
+            if isinstance(name, float): name = int(name)
+            stats['%s_%s' % (table_id, name)] = {
+                'id': str(name),
+                'table': table_id,
+                'total_area': x['total']['area'] * METER2_TO_KM2,
+                'def': x['deforestation']['area'] * METER2_TO_KM2,
+                'deg': x['degradation']['area'] * METER2_TO_KM2,
             }
 
         return stats
