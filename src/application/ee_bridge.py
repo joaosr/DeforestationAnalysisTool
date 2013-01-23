@@ -5,6 +5,7 @@ import settings
 import simplejson as json
 import collections
 import urllib
+import re
 import time
 
 from earthengine.connector import EarthEngine
@@ -26,7 +27,6 @@ ee.Initialize(settings.EE_CREDENTIALS)
 class Stats(object):
     DEFORESTATION = 7
     DEGRADATION = 8
-    SCALE_METERS = 120
 
     def _paint(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
@@ -43,29 +43,8 @@ class Stats(object):
 
     def _get_area(self, report_id, image_id, polygons):
         freeze = self._get_historical_freeze(report_id, ee.Image(image_id))
-        area = ee.Image({'algorithm': 'Image.area'})
-
-        def calculateArea(feature):
-            geometry = feature.geometry();
-            total = area.mask(freeze.mask())
-            deforestation = area.mask(freeze.eq(Stats.DEFORESTATION))
-            degradation = area.mask(freeze.eq(Stats.DEGRADATION))
-
-            sum_reducer = ee.call('Reducer.sum')
-            total_area = total.reduceRegion(
-                geometry, sum_reducer, Stats.SCALE_METERS, bestEffort=True)
-            def_area = deforestation.reduceRegion(
-                geometry, sum_reducer, Stats.SCALE_METERS, bestEffort=True)
-            deg_area = degradation.reduceRegion(
-                geometry, sum_reducer, Stats.SCALE_METERS, bestEffort=True)
-            return ee.call('SetProperties', feature, {
-                'total': total_area,
-                'deforestation': def_area,
-                'degradation': deg_area,
-            })
-
-        result = polygons.map(calculateArea).getInfo()
-        return [i['properties'] for i in result['features']]
+        return _get_area_histogram(
+            freeze, polygons, [Stats.DEFORESTATION, Stats.DEGRADATION])
 
     def get_stats_for_polygon(self, assetids, polygon):
         """ example polygon, must be CCW
@@ -88,8 +67,8 @@ class Stats(object):
         for x in reports:
             stats.append({
                 'total_area': x['total']['area'] * METER2_TO_KM2,
-                'def': x['deforestation']['area'] * METER2_TO_KM2,
-                'deg': x['degradation']['area'] * METER2_TO_KM2,
+                'def': x[str(Stats.DEFORESTATION)]['area'] * METER2_TO_KM2,
+                'deg': x[str(Stats.DEGRADATION)]['area'] * METER2_TO_KM2,
             })
         return stats
 
@@ -105,8 +84,8 @@ class Stats(object):
                 'id': str(name),
                 'table': table_id,
                 'total_area': x['total']['area'] * METER2_TO_KM2,
-                'def': x['deforestation']['area'] * METER2_TO_KM2,
-                'deg': x['degradation']['area'] * METER2_TO_KM2,
+                'def': x[str(Stats.DEFORESTATION)]['area'] * METER2_TO_KM2,
+                'deg': x[str(Stats.DEGRADATION)]['area'] * METER2_TO_KM2,
             }
 
         return stats
@@ -130,6 +109,7 @@ class EELandsat(object):
             'bands': ','.join(MAP_IMAGE_BANDS),
             'gain': PREVIEW_GAIN
         })
+
 
 class NDFI(object):
     """ ndfi info for a period of time
@@ -592,20 +572,23 @@ class NDFI(object):
 def get_prodes_stats(assetids, table_id):
     results = []
     for assetid in assetids:
-        prodes_image = ee.Image({
-            "creator": "SAD/com.google.earthengine.examples.sad.ProdesImage",
-            "args": [assetid]
-        })
+        prodes_image, classes = _remap_prodes_classes(ee.Image(assetid))
         collection = ee.FeatureCollection(table_id)
-        stats_image = ee.Image({
-            "creator": "SAD/com.google.earthengine.examples.sad.GetStats",
-            "args": [prodes_image, collection, "name"]
-        })
-        stats = ee.data.getValue({
-            "image": stats_image.serialize(),
-            "fields": "classHistogram"
-        })
-        results.append(stats['properties']['classHistogram'])
+        raw_stats = _get_area_histogram(prodes_image, collection, classes)
+        stats = {}
+        for raw_stat in raw_stats:
+            values = {}
+            for class_value in range(max(classes) + 1):
+                class_value = str(class_value)
+                if class_value in raw_stat:
+                    values[class_value] = raw_stat[class_value]['area']
+                else:
+                    values[class_value] = 0.0
+            stats[str(int(raw_stat['name']))] = {
+                'values': values,
+                'type': 'DataDictionary'
+            }
+        results.append({'values': stats, 'type': 'DataDictionary'})
     return {'data': {'properties': {'classHistogram': results}}}
 
 
@@ -614,3 +597,85 @@ def get_thumbnail(landsat_image_id):
         'image': ee.Image(landsat_image_id).serialize(),
         'bands': '30,20,10'
     })
+
+
+def _get_area_histogram(image, polygons, classes, scale=120):
+    area = ee.Image({'algorithm': 'Image.area'})
+    sum_reducer = ee.call('Reducer.sum')
+
+    def calculateArea(feature):
+        geometry = feature.geometry()
+        total = area.mask(image.mask())
+        total_area = total.reduceRegion(
+            geometry, sum_reducer, scale, bestEffort=True)
+        properties = {'total': total_area}
+        
+        for class_value in classes:
+            masked = area.mask(image.eq(class_value))
+            class_area = masked.reduceRegion(
+                geometry, sum_reducer, scale, bestEffort=True)
+            properties[str(class_value)] = class_area
+
+        return ee.call('SetProperties', feature, properties)
+
+    result = polygons.map(calculateArea).getInfo()
+    return [i['properties'] for i in result['features']]
+
+
+def _remap_prodes_classes(img):
+    RE_FOREST = re.compile(r'^floresta$')
+    RE_BASELINE = re.compile(r'^(baseline|d[12]\d{3}.*)$')
+    RE_DEFORESTATION = re.compile(r'^desmatamento$')
+    RE_DEGRADATION = re.compile(r'^degradacao$')
+    RE_CLOUD = re.compile(r'^nuvem$')
+    RE_NEW_DEFORESTATION = re.compile(r'^new_deforestation$');
+    RE_OLD_DEFORESTATION = re.compile(r'^desmat antigo$');
+    RE_EDITED_DEFORESTATION = re.compile(r'^desmat editado$');
+    RE_EDITED_DEGRADATION = re.compile(r'^degrad editado$');
+    RE_EDITED_OLD_DEGRADATION = re.compile(r'^desmat antigo editado$');
+
+    UNCLASSIFIED = 0
+    FOREST = 1
+    DEFORESTED = 2
+    DEGRADED = 3
+    BASELINE = 4
+    CLOUD = 5
+    OLD_DEFORESTATION = 6
+    EDITED_DEFORESTATION = 7
+    EDITED_DEGRADATION = 8
+    EDITED_OLD_DEGRADATION = 9
+
+    metadata = img.getInfo()['bands'][0]['properties']
+    class_names = metadata['class_names']
+    classes_from = metadata['class_indexes']
+    classes_to = []
+
+    for src_class, name in zip(classes_from, class_names):
+      dst_class = UNCLASSIFIED
+
+      if RE_FOREST.match(name):
+        dst_class = FOREST
+      elif RE_BASELINE.match(name):
+        dst_class = BASELINE
+      elif RE_CLOUD.match(name):
+        dst_class = CLOUD
+      elif RE_NEW_DEFORESTATION.match(name):
+        dst_class = DEFORESTED
+      elif RE_DEFORESTATION.match(name):
+        dst_class = DEFORESTED
+      elif RE_DEGRADATION.match(name):
+        dst_class = DEGRADED
+      elif RE_OLD_DEFORESTATION.match(name):
+        dst_class = OLD_DEFORESTATION
+      elif RE_EDITED_DEFORESTATION.match(name):
+        dst_class = EDITED_DEFORESTATION
+      elif RE_EDITED_DEGRADATION.match(name):
+        dst_class = EDITED_DEGRADATION
+      elif RE_EDITED_OLD_DEGRADATION.match(name):
+        dst_class = EDITED_OLD_DEGRADATION
+
+      classes_to.append(dst_class)
+
+    remapped = img.remap(classes_from, classes_to, UNCLASSIFIED)
+    final = remapped.mask(img.mask()).select(['remapped'], ['class'])
+    return (final, set(classes_to))
