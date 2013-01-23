@@ -128,14 +128,14 @@ class NDFI(object):
 
     def __init__(self, ee_res, last_period, work_period):
         self.last_period = dict(start=last_period[0],
-                                 end=last_period[1])
+                                end=last_period[1])
         self.work_period = dict(start=work_period[0],
-                               end=work_period[1])
+                                end=work_period[1])
         self.earth_engine_resource = ee_res
         self.ee = EarthEngine(settings.EE_TOKEN)
         self._image_cache = {}
 
-    def paint_deforestation(self, asset_id, month, year):
+    def _paint_deforestation(self, asset_id, month, year):
         year_str = "%04d" % (year)
         #end = "%04d%02d" % (year, month)
         return {
@@ -146,7 +146,7 @@ class NDFI(object):
           4]
         }
 
-    def mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
+    def _mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
         year_msec = 1000 * 60 * 60 * 24 * 365
         month_msec = 1000 * 60 * 60 * 24 * 30
         six_months_ago = self.work_period['end'] - month_msec * 6
@@ -155,13 +155,13 @@ class NDFI(object):
         last_year = time.gmtime(int(six_months_ago / 1000))[0]
         previous_month = time.gmtime(int(one_month_ago / 1000))[1]
         previous_year = time.gmtime(int(one_month_ago / 1000))[0]
-        work_month = self.getMidMonth(self.work_period['start'], self.work_period['end'])
-        work_year = self.getMidYear(self.work_period['start'], self.work_period['end'])
+        work_month = self._getMidMonth(self.work_period['start'], self.work_period['end'])
+        work_year = self._getMidYear(self.work_period['start'], self.work_period['end'])
         end = "%04d%02d" % (work_year, work_month)
         start = "%04d%02d" % (last_year, last_month)
         previous = "%04d%02d" % (previous_year, previous_month)
         start_filter = [{'property':'compounddate','greater_than':start},{'property':'compounddate','less_than':end}]
-        deforested_asset = self.paint_deforestation(asset_id, work_month, work_year)
+        deforested_asset = self._paint_deforestation(asset_id, work_month, work_year)
         # 1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc  was 1868251
         json_cmd = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.GetNDFIDelta","args": [
             self.last_period['start'] - year_msec,
@@ -187,19 +187,19 @@ class NDFI(object):
         return json_cmd
 
 
-    def getMidMonth(self, start, end):
+    def _getMidMonth(self, start, end):
         middle_seconds = int((end + start) / 2000)
         this_time = time.gmtime(middle_seconds)
         return this_time[1]
 
-    def getMidYear(self, start, end):
+    def _getMidYear(self, start, end):
         middle_seconds = int((end + start) / 2000)
         this_time = time.gmtime(middle_seconds)
         return this_time[0]
 
     def mapid2(self, asset_id):
         cmd = {
-            "image": json.dumps(self.mapid2_cmd(asset_id)),
+            "image": json.dumps(self._mapid2_cmd(asset_id)),
             "format": 'png'
 
         }
@@ -214,12 +214,12 @@ class NDFI(object):
         remapped = {"algorithm": "Image.remap", "image":base_image,
           "from":[0,1,2,3,4,5,6,7,8,9], "to":[0,1,2,3,4,5,6,2,3,9]}
 
-        def_image = self.paint_call(remapped, int(report_id), table, 7)
+        def_image = self._paint_call(remapped, int(report_id), table, 7)
 
         selected_def = {"algorithm": "Image.select", "input": def_image,
                         "bandSelectors":["remapped"]}
 
-        deg_image = self.paint_call(selected_def, int(report_id), table, 8)
+        deg_image = self._paint_call(selected_def, int(report_id), table, 8)
 
         renamed_image = {"algorithm": "Image.select", "input": deg_image,
                         "bandSelectors":["remapped"], "newNames":["classification"]}
@@ -234,7 +234,7 @@ class NDFI(object):
 
         return self._execute_cmd('/create', cmd)
 
-    def paint_call(self, current_asset, report_id, table, value):
+    def _paint_call(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
         fc = fc.filterMetadata('report_id', 'equals', int(report_id))
         fc = fc.filterMetadata('type', 'equals', value)
@@ -303,38 +303,11 @@ class NDFI(object):
         return self.ee.post(url, params)
 
     def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
-        img = self.mapid2_cmd(asset_id, polygon, rows, cols)
+        img = self._mapid2_cmd(asset_id, polygon, rows, cols)
         cmd = {
             "image": json.dumps(img),
             "fields": 'ndfiSum'#','.join(fields)
         }
-        return self._execute_cmd('/value', cmd)
-
-    def ndfi_change_value_old(self, polygons, rows=5, cols=5):
-        """ return how much NDFI has changed in the time period
-            ``polygons`` are a list of closed polygons defined by lat, lon::
-
-            [
-                [ [lat, lon], [lat, lon]...],
-                [ [lat, lon], [lat, lon]...]
-            ]
-
-            for performance reassons bbox greater than 3 degrees are now allowed
-        """
-        # some assertions
-        for p in polygons:
-            bbox = self._get_polygon_bbox(p)
-            if bbox[0][1] - bbox[0][0] > 3.5 or bbox[1][1] - bbox[1][0] > 3.5:
-                #raise Exception("polygon bbox size must be less than 3 degrees")
-                pass
-
-        cmd = self._NDFI_change_value(
-            self.last_period,
-            self.work_period,
-            polygons,
-            rows,
-            cols
-        )
         return self._execute_cmd('/value', cmd)
 
 
@@ -382,8 +355,8 @@ class NDFI(object):
 
 
     def _krig_filter(self, period):
-        work_month = self.getMidMonth(period['start'], period['end'])
-        work_year = self.getMidYear(period['start'], period['end'])
+        work_month = self._getMidMonth(period['start'], period['end'])
+        work_year = self._getMidYear(period['start'], period['end'])
         end = "%04d%02d" % (work_year, work_month)
         filter = [{'property':'Compounddate','equals':int(end)}]
         return filter
