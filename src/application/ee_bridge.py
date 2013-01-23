@@ -141,14 +141,14 @@ class NDFI(object):
         return {
           "type": "Image", "creator": "Paint", "args": [asset_id,
           {
-            "table_id": int(settings.FT_TABLE_ID), "type": "FeatureCollection", 
+            "table_id": int(settings.FT_TABLE_ID), "type": "FeatureCollection",
             "filter":[{"property":"type","equals":7}, {"property":"asset_id","contains":year_str}]},
           4]
         }
 
     def mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
-        year_msec = 1000 * 60 * 60 * 24 * 365 
-        month_msec = 1000 * 60 * 60 * 24 * 30 
+        year_msec = 1000 * 60 * 60 * 24 * 365
+        month_msec = 1000 * 60 * 60 * 24 * 30
         six_months_ago = self.work_period['end'] - month_msec * 6
         one_month_ago = self.work_period['end'] - month_msec
         last_month = time.gmtime(int(six_months_ago / 1000))[1]
@@ -171,11 +171,11 @@ class NDFI(object):
             "MODIS/MOD09GA",
             "MODIS/MOD09GQ",
             {'type':'FeatureCollection','id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 'mark': str(timestamp()), 'filter':start_filter},
-            {'type':'FeatureCollection','id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 'mark': str(timestamp()), 
+            {'type':'FeatureCollection','id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 'mark': str(timestamp()),
                 'filter':[{"property":"month","equals":work_month},{"property":"year","equals":work_year}]},
-            {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()), 
+            {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()),
                 'filter':[{"property":"Compounddate","equals":int(previous)}]},
-            {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()), 
+            {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()),
                 'filter':[{"property":"Compounddate","equals":int(end)}]},
             deforested_asset,
             polygon,
@@ -191,7 +191,7 @@ class NDFI(object):
         middle_seconds = int((end + start) / 2000)
         this_time = time.gmtime(middle_seconds)
         return this_time[1]
-      
+
     def getMidYear(self, start, end):
         middle_seconds = int((end + start) / 2000)
         this_time = time.gmtime(middle_seconds)
@@ -211,17 +211,17 @@ class NDFI(object):
         """
         base_image = {"creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.ProdesImage", "args":[asset_id]};
 
-        remapped = {"algorithm": "Image.remap", "image":base_image, 
+        remapped = {"algorithm": "Image.remap", "image":base_image,
           "from":[0,1,2,3,4,5,6,7,8,9], "to":[0,1,2,3,4,5,6,2,3,9]}
 
         def_image = self.paint_call(remapped, int(report_id), table, 7)
 
-        selected_def = {"algorithm": "Image.select", "input": def_image, 
+        selected_def = {"algorithm": "Image.select", "input": def_image,
                         "bandSelectors":["remapped"]}
 
         deg_image = self.paint_call(selected_def, int(report_id), table, 8)
 
-        renamed_image = {"algorithm": "Image.select", "input": deg_image, 
+        renamed_image = {"algorithm": "Image.select", "input": deg_image,
                         "bandSelectors":["remapped"], "newNames":["classification"]}
 
         clipped_image = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.AddBB",
@@ -263,7 +263,7 @@ class NDFI(object):
 
     def rgb0id(self):
 
-        quarter_msec = 1000 * 60 * 60 * 24 * 90 
+        quarter_msec = 1000 * 60 * 60 * 24 * 90
         last_start = self.last_period['start']
         last_period = dict(start=last_start - quarter_msec,
                                  end=self.last_period['end'])
@@ -373,13 +373,13 @@ class NDFI(object):
                  "input":{"type":"Image", "id":asset_id},
                  "bandSelectors":["classification"]}
 
-        mask = {"algorithm":"Image.eq", 
+        mask = {"algorithm":"Image.eq",
                 "image1":classification,
                 "image2":{"algorithm":"Constant","value":4}}
 
         image = {"algorithm":"Image.mask", "image":classification, "mask":mask}
         return image
-            
+
 
     def _krig_filter(self, period):
         work_month = self.getMidMonth(period['start'], period['end'])
@@ -399,7 +399,7 @@ class NDFI(object):
               "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
               "args": [{
                 "creator": KRIGING,
-                "args": [ self._MakeMosaic(period, long_span), 
+                "args": [ self._MakeMosaic(period, long_span),
                         {'type':'FeatureCollection','table_id':4468280,
                                 'filter':filter,'mark':str(timestamp())} ]
               }]
@@ -493,8 +493,8 @@ class NDFI(object):
         return {
           "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.MakeMosaic',
           "args": [{"id":"MODIS/MOD09GA","version":micro_yesterday,"start_time":start_time,"end_time":period['end']},
-                   {"id":"MODIS/MOD09GQ","version":micro_yesterday,"start_time":start_time,"end_time":period['end']}, 
-                   {'type':'FeatureCollection','id':'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 
+                   {"id":"MODIS/MOD09GQ","version":micro_yesterday,"start_time":start_time,"end_time":period['end']},
+                   {'type':'FeatureCollection','id':'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc',
                       'filter':filter}, start_time, period['end']]
         }
 
@@ -532,7 +532,7 @@ class NDFI(object):
                     },
                     polygon]},
                  ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
-                 2 
+                 2
                  ]
             }),
             "bands": bands
@@ -562,7 +562,7 @@ class NDFI(object):
                     },polygon, 30]
                  },
                  landsat_bands,
-                 2 
+                 2
                  ]
             }),
             "bands": bands
@@ -609,7 +609,7 @@ def _get_area_histogram(image, polygons, classes, scale=120):
         total_area = total.reduceRegion(
             geometry, sum_reducer, scale, bestEffort=True)
         properties = {'total': total_area}
-        
+
         for class_value in classes:
             masked = area.mask(image.eq(class_value))
             class_area = masked.reduceRegion(
