@@ -595,6 +595,29 @@ def _get_area_histogram(image, polygons, classes, scale=120):
     return [i['properties'] for i in result['features']]
 
 
+def _make_prodes_image(prodes):
+    """Create a baseline classification image from an ingested PRODES map."""
+    remapped = _remap_prodes_classes(prodes)
+    return ee.Image.cat(remapped, _visualize_classes(remapped), prodes)
+
+
+def _visualize_classes(img):
+    PALETTE = [
+        'ffffff',  # unclassified
+        '00ff00',  # forest  (was 0x00c800)
+        'ee0000',  # deforested (was 0xff0000)
+        'ff7150',  # degraded
+        '000000',  # baseline
+        'd8bfd8',  # cloud (was 0x7f7f7f)
+        '0000ff',  # old_deforestation (was ffff00)
+        '00ffff',  # edited deforestation
+        'a020f0',  # edited degradation
+        'ff00ff'   # edited old deforestation
+    ]
+    return img.visualize(
+        null, null, null, [0], [PALETTE.length - 1], null, null, PALETTE)
+
+
 def _remap_prodes_classes(img):
     RE_FOREST = re.compile(r'^floresta$')
     RE_BASELINE = re.compile(r'^(baseline|d[12]\d{3}.*)$')
