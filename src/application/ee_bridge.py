@@ -135,16 +135,99 @@ class NDFI(object):
         self.ee = EarthEngine(settings.EE_TOKEN)
         self._image_cache = {}
 
-    def _paint_deforestation(self, asset_id, month, year):
-        year_str = "%04d" % (year)
-        #end = "%04d%02d" % (year, month)
-        return {
-          "type": "Image", "creator": "Paint", "args": [asset_id,
-          {
-            "table_id": int(settings.FT_TABLE_ID), "type": "FeatureCollection",
-            "filter":[{"property":"type","equals":7}, {"property":"asset_id","contains":year_str}]},
-          4]
+    def mapid2(self, asset_id):
+        cmd = {
+            "image": json.dumps(self._mapid2_cmd(asset_id)),
+            "format": 'png'
+
         }
+        return self._execute_cmd('/mapid', cmd)
+
+
+    def freeze_map(self, asset_id, table, report_id):
+        """
+        """
+        base_image = {"creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.ProdesImage", "args":[asset_id]};
+
+        remapped = {"algorithm": "Image.remap", "image":base_image,
+          "from":[0,1,2,3,4,5,6,7,8,9], "to":[0,1,2,3,4,5,6,2,3,9]}
+
+        def_image = self._paint_call(remapped, int(report_id), table, 7)
+
+        selected_def = {"algorithm": "Image.select", "input": def_image,
+                        "bandSelectors":["remapped"]}
+
+        deg_image = self._paint_call(selected_def, int(report_id), table, 8)
+
+        renamed_image = {"algorithm": "Image.select", "input": deg_image,
+                        "bandSelectors":["remapped"], "newNames":["classification"]}
+
+        clipped_image = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.AddBB",
+                "args":[renamed_image, asset_id, "classification"]}
+
+        map_image = {"algorithm": "Image.addBands", "dstImg": asset_id, "srcImg": clipped_image,
+                    "names": ["classification"], "overwrite": True}
+
+        cmd = {"value": json.dumps(map_image)}
+
+        return self._execute_cmd('/create', cmd)
+
+    def rgbid(self):
+        """ return params to access NDFI rgb image """
+        # get map id from EE
+        params = self._RGB_image_command(self.work_period)
+        return self._execute_cmd('/mapid', params)
+
+    def smaid(self):
+        """ return params to access NDFI rgb image """
+        # get map id from EE
+        params = self._SMA_image_command(self.work_period)
+        return self._execute_cmd('/mapid', params)
+
+    def ndfi0id(self):
+        # get map id from EE set long_span=1
+        params = self._NDFI_period_image_command(self.last_period, 1)
+        return self._execute_cmd('/mapid', params)
+
+    def baseline(self, asset_id):
+        params = self._baseline_image_command(asset_id)
+        return self._execute_cmd('/mapid', params)
+
+    def rgb0id(self):
+
+        quarter_msec = 1000 * 60 * 60 * 24 * 90
+        last_start = self.last_period['start']
+        last_period = dict(start=last_start - quarter_msec,
+                                 end=self.last_period['end'])
+        params = self._RGB_image_command(last_period)
+        return self._execute_cmd('/mapid', params)
+
+    def ndfi1id(self):
+        # get map id from EE
+        params = self._NDFI_period_image_command(self.work_period)
+        return self._execute_cmd('/mapid', params)
+
+    def rgb_strech(self, polygon, sensor, bands):
+        # this is an special call, the application needs to call /value
+        # before call /mapid in order to google earthn engine makes his work
+        cmd = self._RGB_streched_command(self.work_period, polygon, sensor, bands)
+        del cmd['bands']
+        if (sensor=="modis"):
+            cmd['fields'] = 'stats_sur_refl_b01,stats_sur_refl_b02,stats_sur_refl_b03,stats_sur_refl_b04,stats_sur_refl_b05'
+        else:
+            cmd['fields'] = 'stats_30,stats_20,stats_10'
+
+        self._execute_cmd('/value', cmd)
+        cmd = self._RGB_streched_command(self.work_period, polygon, sensor, bands)
+        return self._execute_cmd('/mapid', cmd)
+
+    def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
+        img = self._mapid2_cmd(asset_id, polygon, rows, cols)
+        cmd = {
+            "image": json.dumps(img),
+            "fields": 'ndfiSum'#','.join(fields)
+        }
+        return self._execute_cmd('/value', cmd)
 
     def _mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
         year_msec = 1000 * 60 * 60 * 24 * 365
@@ -197,97 +280,22 @@ class NDFI(object):
         this_time = time.gmtime(middle_seconds)
         return this_time[0]
 
-    def mapid2(self, asset_id):
-        cmd = {
-            "image": json.dumps(self._mapid2_cmd(asset_id)),
-            "format": 'png'
-
+    def _paint_deforestation(self, asset_id, month, year):
+        year_str = "%04d" % (year)
+        #end = "%04d%02d" % (year, month)
+        return {
+          "type": "Image", "creator": "Paint", "args": [asset_id,
+          {
+            "table_id": int(settings.FT_TABLE_ID), "type": "FeatureCollection",
+            "filter":[{"property":"type","equals":7}, {"property":"asset_id","contains":year_str}]},
+          4]
         }
-        return self._execute_cmd('/mapid', cmd)
-
-
-    def freeze_map(self, asset_id, table, report_id):
-        """
-        """
-        base_image = {"creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.ProdesImage", "args":[asset_id]};
-
-        remapped = {"algorithm": "Image.remap", "image":base_image,
-          "from":[0,1,2,3,4,5,6,7,8,9], "to":[0,1,2,3,4,5,6,2,3,9]}
-
-        def_image = self._paint_call(remapped, int(report_id), table, 7)
-
-        selected_def = {"algorithm": "Image.select", "input": def_image,
-                        "bandSelectors":["remapped"]}
-
-        deg_image = self._paint_call(selected_def, int(report_id), table, 8)
-
-        renamed_image = {"algorithm": "Image.select", "input": deg_image,
-                        "bandSelectors":["remapped"], "newNames":["classification"]}
-
-        clipped_image = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.AddBB",
-                "args":[renamed_image, asset_id, "classification"]}
-
-        map_image = {"algorithm": "Image.addBands", "dstImg": asset_id, "srcImg": clipped_image,
-                    "names": ["classification"], "overwrite": True}
-
-        cmd = {"value": json.dumps(map_image)}
-
-        return self._execute_cmd('/create', cmd)
 
     def _paint_call(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
         fc = fc.filterMetadata('report_id', 'equals', int(report_id))
         fc = fc.filterMetadata('type', 'equals', value)
         return json.loads(ee.Image(current_asset).paint(fc, value).serialize())
-
-    def rgbid(self):
-        """ return params to access NDFI rgb image """
-        # get map id from EE
-        params = self._RGB_image_command(self.work_period)
-        return self._execute_cmd('/mapid', params)
-
-    def smaid(self):
-        """ return params to access NDFI rgb image """
-        # get map id from EE
-        params = self._SMA_image_command(self.work_period)
-        return self._execute_cmd('/mapid', params)
-
-    def ndfi0id(self):
-        # get map id from EE set long_span=1
-        params = self._NDFI_period_image_command(self.last_period, 1)
-        return self._execute_cmd('/mapid', params)
-
-    def baseline(self, asset_id):
-        params = self._baseline_image_command(asset_id)
-        return self._execute_cmd('/mapid', params)
-
-    def rgb0id(self):
-
-        quarter_msec = 1000 * 60 * 60 * 24 * 90
-        last_start = self.last_period['start']
-        last_period = dict(start=last_start - quarter_msec,
-                                 end=self.last_period['end'])
-        params = self._RGB_image_command(last_period)
-        return self._execute_cmd('/mapid', params)
-
-    def ndfi1id(self):
-        # get map id from EE
-        params = self._NDFI_period_image_command(self.work_period)
-        return self._execute_cmd('/mapid', params)
-
-    def rgb_strech(self, polygon, sensor, bands):
-        # this is an special call, the application needs to call /value
-        # before call /mapid in order to google earthn engine makes his work
-        cmd = self._RGB_streched_command(self.work_period, polygon, sensor, bands)
-        del cmd['bands']
-        if (sensor=="modis"):
-            cmd['fields'] = 'stats_sur_refl_b01,stats_sur_refl_b02,stats_sur_refl_b03,stats_sur_refl_b04,stats_sur_refl_b05'
-        else:
-            cmd['fields'] = 'stats_30,stats_20,stats_10'
-
-        self._execute_cmd('/value', cmd)
-        cmd = self._RGB_streched_command(self.work_period, polygon, sensor, bands)
-        return self._execute_cmd('/mapid', cmd)
 
     def _get_polygon_bbox(self, polygon):
         lats = [x[0] for x in polygon]
@@ -301,14 +309,6 @@ class NDFI(object):
     def _execute_cmd(self, url, cmd):
         params = "&".join(("%s=%s"% v for v in cmd.iteritems()))
         return self.ee.post(url, params)
-
-    def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
-        img = self._mapid2_cmd(asset_id, polygon, rows, cols)
-        cmd = {
-            "image": json.dumps(img),
-            "fields": 'ndfiSum'#','.join(fields)
-        }
-        return self._execute_cmd('/value', cmd)
 
 
     def _images_for_period(self, period):
