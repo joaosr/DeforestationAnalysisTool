@@ -573,7 +573,7 @@ def get_thumbnail(landsat_image_id):
 
 
 def _get_area_histogram(image, polygons, classes, scale=120):
-    area = ee.Image({'algorithm': 'Image.area'})
+    area = ee.Image.pixelArea()
     sum_reducer = ee.call('Reducer.sum')
 
     def calculateArea(feature):
