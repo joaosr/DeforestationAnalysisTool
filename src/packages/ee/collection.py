@@ -149,7 +149,6 @@ class Collection(object):
 
     This limits a collection to the specified number of elements, optionally
     sorting them by a specified property first.
-    NOTE: THIS IS DONE IN PLACE!
 
     Args:
        maximum: The number to limit the collection to.

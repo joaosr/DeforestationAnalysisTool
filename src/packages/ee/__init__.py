@@ -49,22 +49,32 @@ def Initialize(credentials=None, opt_url=None):
     data.TILE_URL = opt_url
 
   # pylint: disable-msg=W0212
-  algorithms._addFunctions(Image, 'Image')
-  algorithms._addFunctions(Feature, 'Feature')
-  algorithms._addFunctions(FeatureCollection, 'FeatureCollection')
-  algorithms._addFunctions(Image, 'Window', 'focal_')
-  algorithms._addFunctions(ImageCollection, 'ImageCollection')
-  algorithms._addFunctions(ImageCollection, 'reduce')
-  algorithms._addFunctions(Collection, 'Collection')
+  algorithms._addFunctions(
+      Image, 'Image', 'Image')
+  algorithms._addFunctions(
+      Feature, 'Feature', 'Feature')
+  algorithms._addFunctions(
+      FeatureCollection, 'FeatureCollection', 'FeatureCollection')
+  algorithms._addFunctions(
+      Image, 'Window', 'Image', 'focal_')
+  algorithms._addFunctions(
+      ImageCollection, 'ImageCollection', 'ImageCollection')
+  algorithms._addFunctions(
+      ImageCollection, 'reduce', 'ImageCollection')
+  algorithms._addFunctions(
+      Collection, 'Collection', 'Collection')
   algorithms._addFunctions(Collection,
                            'AggregateFeatureCollection',
+                           'Collection',
                            'aggregate_',
                            algorithms._makeAggregateFunction)
   algorithms._addFunctions(ImageCollection,
                            'Image',
+                           'Image',
                            'map_',
                            algorithms._makeMapFunction)
   algorithms._addFunctions(FeatureCollection,
+                           'Feature',
                            'Feature',
                            'map_',
                            algorithms._makeMapFunction)
