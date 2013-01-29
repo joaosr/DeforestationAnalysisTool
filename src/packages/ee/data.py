@@ -211,6 +211,18 @@ def getAlgorithms():
   return send_('/algorithms', {}, 'GET')
 
 
+def createAsset(value):
+  """Save an asset.
+
+  Args:
+    value: The JSON-serialized value of the asset.
+
+  Returns:
+    A description of the saved asset, including a generated ID.
+  """
+  return send_('/create', {'value': value})
+
+
 def send_(path, params, opt_method='POST', opt_raw=False):
   """Send an API call.
 
