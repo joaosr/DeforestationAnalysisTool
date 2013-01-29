@@ -21,16 +21,16 @@ CALL_SCOPE = "SAD"
 KRIGING = "kriging/com.google.earthengine.examples.kriging.KrigedModisImage"
 
 # The class values used to represent pixels of different types.
-CLASS_UNCLASSIFIED = 0
-CLASS_FOREST = 1
-CLASS_DEFORESTED = 2
-CLASS_DEGRADED = 3
-CLASS_BASELINE = 4
-CLASS_CLOUD = 5
-CLASS_OLD_DEFORESTATION = 6
-CLASS_EDITED_DEFORESTATION = 7
-CLASS_EDITED_DEGRADATION = 8
-CLASS_EDITED_OLD_DEGRADATION = 9
+CLS_UNCLASSIFIED = 0
+CLS_FOREST = 1
+CLS_DEFORESTED = 2
+CLS_DEGRADED = 3
+CLS_BASELINE = 4
+CLS_CLOUD = 5
+CLS_OLD_DEFORESTATION = 6
+CLS_EDITED_DEFORESTATION = 7
+CLS_EDITED_DEGRADATION = 8
+CLS_EDITED_OLD_DEGRADATION = 9
 
 # Initialize the EE API.
 ee.data.DEFAULT_DEADLINE = 600
@@ -38,20 +38,14 @@ ee.Initialize(settings.EE_CREDENTIALS, 'http://maxus.mtv:12345/')
 
 
 class Stats(object):
-    DEFORESTATION = CLASS_EDITED_DEFORESTATION
-    DEGRADATION = CLASS_EDITED_DEGRADATION
-
-    def _paint(self, current_asset, report_id, table, value):
-        fc = ee.FeatureCollection(int(table))
-        fc = fc.filterMetadata('report_id', 'equals', int(report_id))
-        fc = fc.filterMetadata('type', 'equals', value)
-        return current_asset.paint(fc, value)
+    DEFORESTATION = CLS_EDITED_DEFORESTATION
+    DEGRADATION = CLS_EDITED_DEGRADATION
 
     def _get_historical_freeze(self, report_id, frozen_image):
         remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
                                       [0,1,2,3,4,5,6,1,1,9])
-        def_image = self._paint(remapped, report_id, settings.FT_TABLE_ID, 7)
-        deg_image = self._paint(def_image, report_id, settings.FT_TABLE_ID, 8)
+        def_image = _paint(remapped, report_id, settings.FT_TABLE_ID, 7)
+        deg_image = _paint(def_image, report_id, settings.FT_TABLE_ID, 8)
         return deg_image.select(['remapped'], ['class'])
 
     def _get_area(self, report_id, image_id, polygons):
@@ -140,8 +134,8 @@ class NDFI(object):
         frozen_image = _remap_prodes_classes(asset)[0]
         remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
                                       [0,1,2,3,4,5,6,2,3,9])
-        def_image = self._paint(remapped, int(report_id), table, 7)
-        deg_image = self._paint(def_image, int(report_id), table, 8)
+        def_image = _paint(remapped, int(report_id), table, 7)
+        deg_image = _paint(def_image, int(report_id), table, 8)
         map_image = deg_image.select(['remapped'], ['classification'])
         # Make sure we keep the metadata.
         result = asset.addBands(map_image, ['classification'], True)
@@ -160,7 +154,8 @@ class NDFI(object):
         return self._NDFI_period_image_command(self.last_period, 1)
 
     def baseline(self, asset_id):
-        return ee.Image(self._baseline_image(asset_id)).getMapId()
+        classification = ee.Image(asset_id).select('classification')
+        return classification.mask(classification.eq(4)).getMapId()
 
     def rgb0id(self):
         """Returns params to access NDFI RGB image for the last quarter."""
@@ -232,7 +227,7 @@ class NDFI(object):
                 'filter':[{"property":"Compounddate","equals":int(previous)}]},
             {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()),
                 'filter':[{"property":"Compounddate","equals":int(end)}]},
-            deforested_asset,
+            json.loads(deforested_asset.serialize()),
             polygon,
             rows,
             cols]
@@ -253,35 +248,12 @@ class NDFI(object):
         return this_time[0]
 
     def _paint_deforestation(self, asset_id, month, year):
-        year_str = "%04d" % (year)
-        #end = "%04d%02d" % (year, month)
-        return {
-          "type": "Image", "creator": "Paint", "args": [asset_id,
-          {
-            "table_id": int(settings.FT_TABLE_ID), "type": "FeatureCollection",
-            "filter":[{"property":"type","equals":7}, {"property":"asset_id","contains":year_str}]},
-          4]
-        }
-
-    def _paint(self, current_asset, report_id, table, value):
-        fc = ee.FeatureCollection(int(table))
-        fc = fc.filterMetadata('report_id', 'equals', int(report_id))
-        fc = fc.filterMetadata('type', 'equals', value)
-        return current_asset.paint(fc, value)
-
-    def _baseline_image(self, asset_id):
-
-        classification = {"algorithm":"Image.select",
-                 "input":{"type":"Image", "id":asset_id},
-                 "bandSelectors":["classification"]}
-
-        mask = {"algorithm":"Image.eq",
-                "image1":classification,
-                "image2":{"algorithm":"Constant","value":4}}
-
-        image = {"algorithm":"Image.mask", "image":classification, "mask":mask}
-        return image
-
+        date = '%04d' % year
+        # date = '%04d_%02d' % (year, month)
+        table = ee.FeatureCollection(int(settings.FT_TABLE_ID))
+        table = table.filterMetadata('type', 'equals', CLS_EDITED_DEFORESTATION)
+        table = table.filterMetadata('asset_id', 'contains', date)
+        return ee.Image(asset_id).paint(table, CLS_BASELINE)
 
     def _krig_filter(self, period):
         work_month = self._getMidMonth(period['start'], period['end'])
@@ -289,8 +261,6 @@ class NDFI(object):
         end = "%04d%02d" % (work_year, work_month)
         filter = [{'property':'Compounddate','equals':int(end)}]
         return filter
-
-
 
     def _NDFI_image(self, period, long_span=0):
         """ given image list from EE, returns the operator chain to return NDFI image """
@@ -552,3 +522,10 @@ def _remap_prodes_classes(img):
     remapped = img.remap(classes_from, classes_to, UNCLASSIFIED)
     final = remapped.mask(img.mask()).select(['remapped'], ['class'])
     return (final, set(classes_to))
+
+
+def _paint(self, current_asset, report_id, table, value):
+    fc = ee.FeatureCollection(int(table))
+    fc = fc.filterMetadata('report_id', 'equals', int(report_id))
+    fc = fc.filterMetadata('type', 'equals', value)
+    return current_asset.paint(fc, value)
