@@ -14,19 +14,33 @@ import ee
 from time_utils import timestamp
 from datetime import timedelta, date
 
+# A multiplier to convert square meters to square kilometers.
 METER2_TO_KM2 = 1.0/(1000*1000)
 
+# JAR-loading path fragments.
 CALL_SCOPE = "SAD"
-#CALL_SCOPE = "sad_test"
 KRIGING = "kriging/com.google.earthengine.examples.kriging.KrigedModisImage"
 
+# The class values used to represent pixels of different types.
+CLASS_UNCLASSIFIED = 0
+CLASS_FOREST = 1
+CLASS_DEFORESTED = 2
+CLASS_DEGRADED = 3
+CLASS_BASELINE = 4
+CLASS_CLOUD = 5
+CLASS_OLD_DEFORESTATION = 6
+CLASS_EDITED_DEFORESTATION = 7
+CLASS_EDITED_DEGRADATION = 8
+CLASS_EDITED_OLD_DEGRADATION = 9
+
+# Initialize the EE API.
 ee.data.DEFAULT_DEADLINE = 600
-ee.Initialize(settings.EE_CREDENTIALS)
+ee.Initialize(settings.EE_CREDENTIALS, 'http://maxus.mtv:12345/')
 
 
 class Stats(object):
-    DEFORESTATION = 7
-    DEGRADATION = 8
+    DEFORESTATION = CLASS_EDITED_DEFORESTATION
+    DEGRADATION = CLASS_EDITED_DEGRADATION
 
     def _paint(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
@@ -619,31 +633,31 @@ def _visualize_classes(img):
 
 
 def _remap_prodes_classes(img):
+    """Remaps the values of the first band of a PRODES classification image.
+
+    Uses the metadata fields class_names and class_indexes, taken either from
+    the band, or if that's not available, the image. The class names are
+    checked against some simple regular expressions to map to the class values
+    used by this application.
+    """
     RE_FOREST = re.compile(r'^floresta$')
     RE_BASELINE = re.compile(r'^(baseline|d[12]\d{3}.*)$')
     RE_DEFORESTATION = re.compile(r'^desmatamento$')
     RE_DEGRADATION = re.compile(r'^degradacao$')
     RE_CLOUD = re.compile(r'^nuvem$')
-    RE_NEW_DEFORESTATION = re.compile(r'^new_deforestation$');
-    RE_OLD_DEFORESTATION = re.compile(r'^desmat antigo$');
-    RE_EDITED_DEFORESTATION = re.compile(r'^desmat editado$');
-    RE_EDITED_DEGRADATION = re.compile(r'^degrad editado$');
-    RE_EDITED_OLD_DEGRADATION = re.compile(r'^desmat antigo editado$');
+    RE_NEW_DEFORESTATION = re.compile(r'^new_deforestation$')
+    RE_OLD_DEFORESTATION = re.compile(r'^desmat antigo$')
+    RE_EDITED_DEFORESTATION = re.compile(r'^desmat editado$')
+    RE_EDITED_DEGRADATION = re.compile(r'^degrad editado$')
+    RE_EDITED_OLD_DEGRADATION = re.compile(r'^desmat antigo editado$')
 
-    UNCLASSIFIED = 0
-    FOREST = 1
-    DEFORESTED = 2
-    DEGRADED = 3
-    BASELINE = 4
-    CLOUD = 5
-    OLD_DEFORESTATION = 6
-    EDITED_DEFORESTATION = 7
-    EDITED_DEGRADATION = 8
-    EDITED_OLD_DEGRADATION = 9
-
-    metadata = img.getInfo()['bands'][0]['properties']
-    class_names = metadata['class_names']
-    classes_from = metadata['class_indexes']
+    # Try band metadata first. If not available, use image metadata.
+    band_metadata = img.getInfo()['bands'][0].get('properties', {})
+    image_metadata = img.getInfo()['properties']
+    class_names = band_metadata.get(
+        'classes_from', image_metadata.get('class_names'))
+    class_names = band_metadata.get(
+        'class_indexes', image_metadata.get('class_indexes'))
     classes_to = []
 
     for src_class, name in zip(classes_from, class_names):
