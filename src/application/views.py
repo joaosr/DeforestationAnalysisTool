@@ -46,8 +46,7 @@ def default_maps():
     if 'data' in d:
         maps.append({'data': d['data'], 'info': 'SMA'})
     d = ndfi.rgbid()
-    if 'data' in d:
-        maps.append({'data': d['data'], 'info': 'RGB'})
+    if d: maps.append({'data': d, 'info': 'RGB'})
     d = ndfi.ndfi0id()
     if 'data' in d:
         maps.append({'data': d['data'], 'info': 'NDFI T0'})
@@ -58,8 +57,7 @@ def default_maps():
     if 'data' in d:
     	maps.append({'data' :d['data'], 'info': 'Baseline'})
     d = ndfi.rgb0id()
-    if 'data' in d:
-    	maps.append({'data' :d['data'], 'info': 'Previous RGB'})
+    if d: maps.append({'data': d, 'info': 'Previous RGB'})
     return maps
 
 def get_or_create_user():

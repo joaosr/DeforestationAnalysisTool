@@ -37,10 +37,8 @@ class NDFIMapApi(Resource):
                 r.comparation_range(),
                 r.range())
             data = ndfi.mapid2(r.base_map())
-            logging.info(data)
-            if 'data' not in data:
+            if not data:
                 abort(404)
-            data = data['data']
             memcache.add(key=cache_key, value=data, time=3600)
         return jsonify(data)
 

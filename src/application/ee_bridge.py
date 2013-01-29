@@ -126,19 +126,21 @@ class EELandsat(object):
 
 
 class NDFI(object):
-    """ ndfi info for a period of time
-    """
-
-    # hardcoded data for request
+    """NDFI info for a period of time."""
 
     PRODES_IMAGE = {
         "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.ProdesImage',
         "args": ["PRODES_2009"]
-    };
+    }
 
     MODIS_BANDS = [
-        'sur_refl_b01_250m', 'sur_refl_b02_250m', 'sur_refl_b03_500m',
-        'sur_refl_b04_500m', 'sur_refl_b06_500m', 'sur_refl_b07_500m'];
+        'sur_refl_b01_250m',
+        'sur_refl_b02_250m',
+        'sur_refl_b03_500m',
+        'sur_refl_b04_500m',
+        'sur_refl_b06_500m',
+        'sur_refl_b07_500m'
+    ]
 
     def __init__(self, ee_res, last_period, work_period):
         self.last_period = dict(start=last_period[0],
@@ -150,47 +152,24 @@ class NDFI(object):
         self._image_cache = {}
 
     def mapid2(self, asset_id):
-        cmd = {
-            "image": json.dumps(self._mapid2_cmd(asset_id)),
-            "format": 'png'
-
-        }
-        return self._execute_cmd('/mapid', cmd)
-
+        image = ee.Image(self._mapid2_cmd(asset_id))
+        return image.getMapId({'format': 'png'})
 
     def freeze_map(self, asset_id, table, report_id):
-        """
-        """
-        base_image = {"creator": CALL_SCOPE + "/com.google.earthengine.examples.sad.ProdesImage", "args":[asset_id]};
-
-        remapped = {"algorithm": "Image.remap", "image":base_image,
-          "from":[0,1,2,3,4,5,6,7,8,9], "to":[0,1,2,3,4,5,6,2,3,9]}
-
-        def_image = self._paint_call(remapped, int(report_id), table, 7)
-
-        selected_def = {"algorithm": "Image.select", "input": def_image,
-                        "bandSelectors":["remapped"]}
-
-        deg_image = self._paint_call(selected_def, int(report_id), table, 8)
-
-        renamed_image = {"algorithm": "Image.select", "input": deg_image,
-                        "bandSelectors":["remapped"], "newNames":["classification"]}
-
-        clipped_image = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.AddBB",
-                "args":[renamed_image, asset_id, "classification"]}
-
-        map_image = {"algorithm": "Image.addBands", "dstImg": asset_id, "srcImg": clipped_image,
-                    "names": ["classification"], "overwrite": True}
-
-        cmd = {"value": json.dumps(map_image)}
-
-        return self._execute_cmd('/create', cmd)
+        asset = ee.Image(asset_id)
+        frozen_image = _remap_prodes_classes(asset)[0]
+        remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
+                                      [0,1,2,3,4,5,6,2,3,9])
+        def_image = self._paint(remapped, int(report_id), table, 7)
+        deg_image = self._paint(def_image, int(report_id), table, 8)
+        map_image = deg_image.select(['remapped'], ['classification'])
+        # Make sure we keep the metadata.
+        result = asset.addBands(map_image, ['classification'], True)
+        return ee.data.createAsset(result.serialize())
 
     def rgbid(self):
-        """ return params to access NDFI rgb image """
-        # get map id from EE
-        params = self._RGB_image_command(self.work_period)
-        return self._execute_cmd('/mapid', params)
+        """Returns params to access NDFI RGB image."""
+        return self._RGB_image_command(self.work_period)
 
     def smaid(self):
         """ return params to access NDFI rgb image """
@@ -208,13 +187,12 @@ class NDFI(object):
         return self._execute_cmd('/mapid', params)
 
     def rgb0id(self):
-
+        """Returns params to access NDFI RGB image for the last quarter."""
         quarter_msec = 1000 * 60 * 60 * 24 * 90
         last_start = self.last_period['start']
         last_period = dict(start=last_start - quarter_msec,
-                                 end=self.last_period['end'])
-        params = self._RGB_image_command(last_period)
-        return self._execute_cmd('/mapid', params)
+                           end=self.last_period['end'])
+        return self._RGB_image_command(last_period)
 
     def ndfi1id(self):
         # get map id from EE
@@ -306,10 +284,14 @@ class NDFI(object):
         }
 
     def _paint_call(self, current_asset, report_id, table, value):
+        result = self._paint(ee.Image(current_asset), report_id, table, value)
+        return json.loads(result.serialize())
+
+    def _paint(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
         fc = fc.filterMetadata('report_id', 'equals', int(report_id))
         fc = fc.filterMetadata('type', 'equals', value)
-        return json.loads(ee.Image(current_asset).paint(fc, value).serialize())
+        return current_asset.paint(fc, value)
 
     def _get_polygon_bbox(self, polygon):
         lats = [x[0] for x in polygon]
@@ -351,8 +333,8 @@ class NDFI(object):
             specs.append({
               "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.ModisCombiner',
               "args": ['MOD09GA_005_' + name, 'MOD09GQ_005_' + name]
-            });
-        return specs;
+            })
+        return specs
 
     def _baseline_image(self, asset_id):
 
@@ -446,18 +428,24 @@ class NDFI(object):
 
     def _RGB_image_command(self, period):
         """ commands for RGB image """
-        filter = self._krig_filter(period)
-        return {
-            "image": json.dumps({
-               "creator": KRIGING,
-               "args": [ self._MakeMosaic(period),{'type':'FeatureCollection','table_id':4468280,
-                        'filter':filter,'mark':str(timestamp())} ]
-            }),
-            "bands": 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
-            "gain": 0.1,
-            "bias": 0.0,
-            "gamma": 1.6
-          };
+        image = ee.Image({
+            "creator": KRIGING,
+            "args": [
+                self._MakeMosaic(period),
+                ee.FeatureCollection({
+                    'type':'FeatureCollection',
+                    'table_id': 4468280,
+                    'filter': self._krig_filter(period),
+                    'mark': str(timestamp())
+                })
+            ]
+        })
+        return image.getMapId({
+            'bands': 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
+            'gain': 0.1,
+            'bias': 0.0,
+            'gamma': 1.6
+        })
 
     def _MakeMosaic(self, period, long_span=0):
         middle_seconds = int((period['end'] + period['start']) / 2000)
@@ -499,7 +487,7 @@ class NDFI(object):
             "gain": 256,
             "bias": 0.0,
             "gamma": 1.6
-        };
+        }
 
     def _RGB_streched_command(self, period, polygon, sensor, bands):
      filter = self._krig_filter(period)
