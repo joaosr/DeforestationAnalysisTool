@@ -18,7 +18,6 @@ METER2_TO_KM2 = 1.0/(1000*1000)
 
 # JAR-loading path fragments.
 CALL_SCOPE = "SAD"
-KRIGING = "kriging/com.google.earthengine.examples.kriging.KrigedModisImage"
 
 # The class values used to represent pixels of different types.
 CLS_UNCLASSIFIED = 0
@@ -236,17 +235,6 @@ class NDFI(object):
         logging.info(json_cmd)
         return json_cmd
 
-
-    def _getMidMonth(self, start, end):
-        middle_seconds = int((end + start) / 2000)
-        this_time = time.gmtime(middle_seconds)
-        return this_time[1]
-
-    def _getMidYear(self, start, end):
-        middle_seconds = int((end + start) / 2000)
-        this_time = time.gmtime(middle_seconds)
-        return this_time[0]
-
     def _paint_deforestation(self, asset_id, month, year):
         date = '%04d' % year
         # date = '%04d_%02d' % (year, month)
@@ -255,26 +243,13 @@ class NDFI(object):
         table = table.filterMetadata('asset_id', 'contains', date)
         return ee.Image(asset_id).paint(table, CLS_BASELINE)
 
-    def _krig_filter(self, period):
-        work_month = self._getMidMonth(period['start'], period['end'])
-        work_year = self._getMidYear(period['start'], period['end'])
-        end = "%04d%02d" % (work_year, work_month)
-        filter = [{'property':'Compounddate','equals':int(end)}]
-        return filter
-
     def _NDFI_image(self, period, long_span=0):
         """ given image list from EE, returns the operator chain to return NDFI image """
-        filter = self._krig_filter(period)
         return {
             "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.NDFIImage',
             "args": [{
               "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
-              "args": [{
-                "creator": KRIGING,
-                "args": [ self._MakeMosaic(period, long_span),
-                        {'type':'FeatureCollection','table_id':4468280,
-                                'filter':filter,'mark':str(timestamp())} ]
-              }]
+              "args": [self._kriged_mosaic(period, long_span)]
             }]
          }
 
@@ -289,19 +264,7 @@ class NDFI(object):
 
     def _RGB_image_command(self, period):
         """ commands for RGB image """
-        image = ee.Image({
-            "creator": KRIGING,
-            "args": [
-                self._MakeMosaic(period),
-                ee.FeatureCollection({
-                    'type':'FeatureCollection',
-                    'table_id': 4468280,
-                    'filter': self._krig_filter(period),
-                    'mark': str(timestamp())
-                })
-            ]
-        })
-        return image.getMapId({
+        return ee.Image(self._kriged_mosaic(period)).getMapId({
             'bands': 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
             'gain': 0.1,
             'bias': 0.0,
@@ -337,18 +300,7 @@ class NDFI(object):
     def _SMA_image_command(self, period):
         image = ee.Image({
             "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
-            "args": [ee.Image({
-                "creator": KRIGING,
-                "args": [
-                    self._MakeMosaic(period),
-                    ee.FeatureCollection({
-                        'type':'FeatureCollection',
-                        'table_id': 4468280,
-                        'filter': self._krig_filter(period),
-                        'mark': str(timestamp())
-                    })
-                ]
-            })]
+            "args": [ee.Image(self._kriged_mosaic(period))]
         })
         return image.getMapId({
             "bands": 'gv,soil,npv',
@@ -358,24 +310,22 @@ class NDFI(object):
         })
 
     def _RGB_streched_command(self, period, polygon, sensor, bands):
-     filter = self._krig_filter(period)
      if(sensor=="modis"):
         """ bands in format (1, 2, 3) """
         bands = "sur_refl_b0%d,sur_refl_b0%d,sur_refl_b0%d" % bands
         return {
             "image": json.dumps({
                 "creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.StretchImage",
-                "args":[{
-                    "creator":"ClipToMultiPolygon",
-                    "args":[
+                "args":[
                     {
-                        "creator":KRIGING,
-                        "args":[ self._MakeMosaic(period), {'type':'FeatureCollection','table_id':4468280,
-                                'filter':filter}]
+                        "creator":"ClipToMultiPolygon",
+                        "args":[
+                            self._kriged_mosaic(period),
+                            polygon
+                        ]
                     },
-                    polygon]},
-                 ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
-                 2
+                    ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
+                    2
                  ]
             }),
             "bands": bands
@@ -410,6 +360,34 @@ class NDFI(object):
             }),
             "bands": bands
         }
+
+    def _kriged_mosaic(self, period, long_span=0):
+        work_month = self._getMidMonth(period['start'], period['end'])
+        work_year = self._getMidYear(period['start'], period['end'])
+        date = "%04d%02d" % (work_year, work_month)
+        krig_filter = ee.Filter.eq('Compounddate', int(date))
+        return {
+            "creator": "kriging/com.google.earthengine.examples.kriging.KrigedModisImage",
+            "args": [
+                self._MakeMosaic(period, long_span),
+                {
+                    'type': 'FeatureCollection',
+                    'table_id': 4468280,
+                    'filter': json.loads(krig_filter.serialize()),
+                    'mark': str(timestamp())
+                }
+            ]
+        }
+
+    def _getMidMonth(self, start, end):
+        middle_seconds = int((end + start) / 2000)
+        this_time = time.gmtime(middle_seconds)
+        return this_time[1]
+
+    def _getMidYear(self, start, end):
+        middle_seconds = int((end + start) / 2000)
+        this_time = time.gmtime(middle_seconds)
+        return this_time[0]
 
 
 def get_prodes_stats(assetids, table_id):
