@@ -27,11 +27,8 @@ def default_maps():
     maps = []
     r = Report.current() 
     logging.info("report " + unicode(r))
-    ee_resource = 'MOD09GA'
     landsat = EELandsat()
-    ndfi = NDFI(ee_resource,
-        past_month_range(r.start),
-        r.range())
+    ndfi = NDFI(past_month_range(r.start), r.range())
 
     d = landsat.mapid(*r.range())
     maps.append({'data' :d, 'info': 'LANDSAT/L7_L1T'})

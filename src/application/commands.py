@@ -104,9 +104,7 @@ def ndfi_value_for_cells(cell_key):
 
     cell = Cell.get(Key(cell_key))
 
-    ndfi = NDFI('MOD09GA',
-            cell.report.comparation_range(),
-            cell.report.range())
+    ndfi = NDFI(cell.report.comparation_range(), cell.report.range())
 
     bounds = cell.bounds(amazon_bounds)
     logging.info(bounds)

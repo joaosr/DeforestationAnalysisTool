@@ -32,10 +32,7 @@ class NDFIMapApi(Resource):
         data = memcache.get(cache_key)
         if not data:
             r = Report.get(Key(report_id))
-            ee_resource = 'MOD09GA'
-            ndfi = NDFI(ee_resource,
-                r.comparation_range(),
-                r.range())
+            ndfi = NDFI(r.comparation_range(), r.range())
             data = ndfi.mapid2(r.base_map())
             if not data:
                 abort(404)
@@ -88,10 +85,7 @@ class ReportAPI(Resource):
         """ close current and create new one """
         r = Report.get(Key(report_id))
         if not r.finished:
-            ee_resource = 'MOD09GA'
-            ndfi = NDFI(ee_resource,
-                    r.comparation_range(),
-                    r.range())
+            ndfi = NDFI(r.comparation_range(), r.range())
             data = ndfi.freeze_map(r.base_map(), int(settings.FT_TABLE_ID), r.key().id())
             logging.info(data)
             if 'data' not in data:
@@ -158,9 +152,7 @@ class CellAPI(Resource):
         r = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(id)
         cell = Cell.get_or_default(r, x, y, z)
-        ee = ndfi = NDFI('MOD09GA',
-            r.comparation_range(),
-            r.range())
+        ee = ndfi = NDFI(r.comparation_range(), r.range())
 
         bounds = cell.bounds(amazon_bounds)
         ne = bounds[0]
@@ -173,7 +165,7 @@ class CellAPI(Resource):
             cols = rows = 5 
         data = ndfi.ndfi_change_value(r.base_map(), {"type":"Polygon","coordinates":[polygons]}, rows, cols)
         logging.info(data)
-        ndfi = data['data'] #data['data']['properties']['ndfiSum']['values']
+        ndfi = data #data['properties']['ndfiSum']['values']
         return Response(json.dumps(ndfi), mimetype='application/json')
 
     def bounds(self, report_id, id):
@@ -213,14 +205,12 @@ class CellAPI(Resource):
         report = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(id)
         cell = Cell.get_or_default(report, x, y, z)
-        ndfi = NDFI('MOD09GA',
-            report.comparation_range(),
-            report.range())
+        ndfi = NDFI(report.comparation_range(), report.range())
         poly = cell.bbox_polygon(amazon_bounds)
         mapid = ndfi.rgb_strech(poly, sensor, tuple(map(int, (r, g, b))))
-        if 'data' not in mapid:
+        if not mapid:
             abort(404)
-        return Response(json.dumps(mapid['data']), mimetype='application/json')
+        return Response(json.dumps(mapid), mimetype='application/json')
 
 
 class PolygonAPI(Resource):

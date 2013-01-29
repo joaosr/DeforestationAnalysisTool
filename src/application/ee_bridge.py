@@ -8,7 +8,6 @@ import urllib
 import re
 import time
 
-from earthengine.connector import EarthEngine
 import ee
 
 from time_utils import timestamp
@@ -128,28 +127,9 @@ class EELandsat(object):
 class NDFI(object):
     """NDFI info for a period of time."""
 
-    PRODES_IMAGE = {
-        "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.ProdesImage',
-        "args": ["PRODES_2009"]
-    }
-
-    MODIS_BANDS = [
-        'sur_refl_b01_250m',
-        'sur_refl_b02_250m',
-        'sur_refl_b03_500m',
-        'sur_refl_b04_500m',
-        'sur_refl_b06_500m',
-        'sur_refl_b07_500m'
-    ]
-
-    def __init__(self, ee_res, last_period, work_period):
-        self.last_period = dict(start=last_period[0],
-                                end=last_period[1])
-        self.work_period = dict(start=work_period[0],
-                                end=work_period[1])
-        self.earth_engine_resource = ee_res
-        self.ee = EarthEngine(settings.EE_TOKEN)
-        self._image_cache = {}
+    def __init__(self, last_period, work_period):
+        self.last_period = dict(start=last_period[0], end=last_period[1])
+        self.work_period = dict(start=work_period[0], end=work_period[1])
 
     def mapid2(self, asset_id):
         image = ee.Image(self._mapid2_cmd(asset_id))
@@ -195,26 +175,31 @@ class NDFI(object):
         return self._NDFI_period_image_command(self.work_period)
 
     def rgb_strech(self, polygon, sensor, bands):
-        # this is an special call, the application needs to call /value
-        # before call /mapid in order to google earthn engine makes his work
         cmd = self._RGB_streched_command(self.work_period, polygon, sensor, bands)
-        del cmd['bands']
-        if (sensor=="modis"):
-            cmd['fields'] = 'stats_sur_refl_b01,stats_sur_refl_b02,stats_sur_refl_b03,stats_sur_refl_b04,stats_sur_refl_b05'
-        else:
-            cmd['fields'] = 'stats_30,stats_20,stats_10'
 
-        self._execute_cmd('/value', cmd)
-        cmd = self._RGB_streched_command(self.work_period, polygon, sensor, bands)
-        return self._execute_cmd('/mapid', cmd)
+        # This call requires precomputed stats, so we have to call getValue
+        # before attempting to call getMapId.
+        if sensor == "modis":
+            fields = 'stats_sur_refl_b01,stats_sur_refl_b02,stats_sur_refl_b03,stats_sur_refl_b04,stats_sur_refl_b05'
+        else:
+            fields = 'stats_30,stats_20,stats_10'
+        ee.data.getValue({
+            'image': cmd['image'],
+            'fields': fields
+        })
+
+        return ee.data.getMapId({
+            'image': cmd['image'],
+            'bands': cmd['bands']
+        })
 
     def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
-        img = self._mapid2_cmd(asset_id, polygon, rows, cols)
-        cmd = {
-            "image": json.dumps(img),
-            "fields": 'ndfiSum'#','.join(fields)
-        }
-        return self._execute_cmd('/value', cmd)
+        """Returns the NDFI difference between two periods inside the specified polygons."""
+        image = ee.Image(self._mapid2_cmd(asset_id, polygon, rows, cols))
+        return ee.data.getValue({
+            'image': image.serialize(),
+            'fields': 'ndfiSum'
+        })
 
     def _mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
         year_msec = 1000 * 60 * 60 * 24 * 365
@@ -278,58 +263,11 @@ class NDFI(object):
           4]
         }
 
-    def _paint_call(self, current_asset, report_id, table, value):
-        result = self._paint(ee.Image(current_asset), report_id, table, value)
-        return json.loads(result.serialize())
-
     def _paint(self, current_asset, report_id, table, value):
         fc = ee.FeatureCollection(int(table))
         fc = fc.filterMetadata('report_id', 'equals', int(report_id))
         fc = fc.filterMetadata('type', 'equals', value)
         return current_asset.paint(fc, value)
-
-    def _get_polygon_bbox(self, polygon):
-        lats = [x[0] for x in polygon]
-        lngs = [x[1] for x in polygon]
-        max_lat = max(lats)
-        min_lat = min(lats)
-        max_lng = max(lngs)
-        min_lng = min(lngs)
-        return ((min_lat, max_lat), (min_lng, max_lng))
-
-    def _execute_cmd(self, url, cmd):
-        params = "&".join(("%s=%s"% v for v in cmd.iteritems()))
-        return self.ee.post(url, params)
-
-
-    def _images_for_period(self, period):
-        cache_key = "%d-%d" %(period['start'], period['end'])
-        if cache_key in self._image_cache:
-            img = self._image_cache[cache_key]
-        else:
-            reference_images = self.ee.get("/list?id=%s&starttime=%s&endtime=%s" % (
-                self.earth_engine_resource,
-                int(period['start']),
-                int(period['end'])
-            ))
-            logging.info(reference_images)
-            img = [x['id'] for x in reference_images['data']]
-            self._image_cache[cache_key] = img
-        return img
-
-    def _image_composition(self, image_list):
-        """ create commands to compose images in google earth engine
-
-            ok, i really have NO idea what's going on :)
-        """
-        specs = []
-        for image in image_list:
-            name = image.split("_", 2)[-1]
-            specs.append({
-              "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.ModisCombiner',
-              "args": ['MOD09GA_005_' + name, 'MOD09GQ_005_' + name]
-            })
-        return specs
 
     def _baseline_image(self, asset_id):
 
@@ -369,40 +307,6 @@ class NDFI(object):
               }]
             }]
          }
-
-    def _change_detection_data(self, reference_period, work_period, polygons=[], cols=5, rows=5):
-        ndfi_image_1 = self._NDFI_image(reference_period)
-        ndfi_image_2 = self._NDFI_image(work_period)
-        return {
-               "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.ChangeDetectionData',
-               "args": [ndfi_image_1,
-                        ndfi_image_2,
-                        self.PRODES_IMAGE,
-                        polygons,
-                        rows,
-                        cols]
-        }
-
-
-    def _NDFI_change_value(self, reference_period, work_period, polygons, cols=5, rows=5):
-        """ calc the ndfi change value between two periods inside specified polys
-
-            ``polygons`` are a list of closed polygons defined by lat, lon::
-
-            [
-                [ [lat, lon], [lat, lon]...],
-                [ [lat, lon], [lat, lon]...]
-            ]
-
-        """
-        POLY = []
-        fields = []
-
-        image = self._change_detection_data(reference_period, work_period, [polygons], cols, rows)
-        return {
-            "image": json.dumps(image),
-            "fields": 'ndfiSum'#','.join(fields)
-        }
 
     def _NDFI_period_image_command(self, period, long_span=0):
         """ get NDFI command to get map of NDFI for a period of time """
@@ -589,29 +493,6 @@ def _get_area_histogram(image, polygons, classes, scale=120):
 
     result = polygons.map(calculateArea).getInfo()
     return [i['properties'] for i in result['features']]
-
-
-def _make_prodes_image(prodes):
-    """Create a baseline classification image from an ingested PRODES map."""
-    remapped = _remap_prodes_classes(prodes)
-    return ee.Image.cat(remapped, _visualize_classes(remapped), prodes)
-
-
-def _visualize_classes(img):
-    PALETTE = [
-        'ffffff',  # unclassified
-        '00ff00',  # forest  (was 0x00c800)
-        'ee0000',  # deforested (was 0xff0000)
-        'ff7150',  # degraded
-        '000000',  # baseline
-        'd8bfd8',  # cloud (was 0x7f7f7f)
-        '0000ff',  # old_deforestation (was ffff00)
-        '00ffff',  # edited deforestation
-        'a020f0',  # edited degradation
-        'ff00ff'   # edited old deforestation
-    ]
-    return img.visualize(
-        null, null, null, [0], [PALETTE.length - 1], null, null, PALETTE)
 
 
 def _remap_prodes_classes(img):

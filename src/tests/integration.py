@@ -25,10 +25,7 @@ class StatsTest(unittest.TestCase):
         self.area = Area(geo=json.dumps(self.inv_polygon), added_by=None, type=1, cell=self.cell)
         self.area.put()
         self.area.create_fusion_tables()
-        ee_resource = 'MOD09GA'
-        self.ndfi = NDFI(ee_resource,
-                    self.r.comparation_range(),
-                    self.r.range())
+        self.ndfi = NDFI(self.r.comparation_range(), self.r.range())
         self.stats = Stats()
 
     def test_stats(self):
