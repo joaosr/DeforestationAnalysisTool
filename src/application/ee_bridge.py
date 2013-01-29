@@ -125,8 +125,7 @@ class NDFI(object):
         self.work_period = dict(start=work_period[0], end=work_period[1])
 
     def mapid2(self, asset_id):
-        image = ee.Image(self._mapid2_cmd(asset_id))
-        return image.getMapId({'format': 'png'})
+        return self._mapid2_cmd(asset_id).getMapId({'format': 'png'})
 
     def freeze_map(self, asset_id, table, report_id):
         asset = ee.Image(asset_id)
@@ -189,9 +188,8 @@ class NDFI(object):
 
     def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
         """Returns the NDFI difference between two periods inside the specified polygons."""
-        image = ee.Image(self._mapid2_cmd(asset_id, polygon, rows, cols))
         return ee.data.getValue({
-            'image': image.serialize(),
+            'image': self._mapid2_cmd(asset_id, polygon, rows, cols).serialize(),
             'fields': 'ndfiSum'
         })
 
@@ -233,7 +231,7 @@ class NDFI(object):
         }
         logging.info("GetNDFIDelta")
         logging.info(json_cmd)
-        return json_cmd
+        return ee.Image(json_cmd)
 
     def _paint_deforestation(self, asset_id, month, year):
         date = '%04d' % year
@@ -280,14 +278,14 @@ class NDFI(object):
 
     def _RGB_image_command(self, period):
         """ commands for RGB image """
-        return ee.Image(self._kriged_mosaic(period)).getMapId({
+        return self._kriged_mosaic(period).getMapId({
             'bands': 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
             'gain': 0.1,
             'bias': 0.0,
             'gamma': 1.6
         })
 
-    def _MakeMosaic(self, period, long_span=0):
+    def _make_mosaic(self, period, long_span=0):
         middle_seconds = int((period['end'] + period['start']) / 2000)
         this_time = time.gmtime(middle_seconds)
         month = this_time[1]
@@ -296,22 +294,51 @@ class NDFI(object):
         micro_yesterday = time.mktime(yesterday.timetuple()) * 1000000
         logging.info("month " + str(month))
         logging.info("year " + str(year))
+
         if long_span == 0:
-          filter = [{'property':'month','equals':month},{'property':'year','equals':year}]
+          filter = [
+              {'property':'month','equals':month},
+              {'property':'year','equals':year}
+          ]
           start_time = period['start']
         else:
           start = "%04d%02d" % (year - 1, month)
           end = "%04d%02d" % (year, month)
           start_time = period['start'] - 1000 * 60 * 60 * 24 * 365
-          filter = [{'property':'compounddate','greater_than':start},
-                {'or': [{'property':'compounddate','less_than':end}, {'property':'compounddate','equals':end}]}]
-        return {
-          "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.MakeMosaic',
-          "args": [{"id":"MODIS/MOD09GA","version":micro_yesterday,"start_time":start_time,"end_time":period['end']},
-                   {"id":"MODIS/MOD09GQ","version":micro_yesterday,"start_time":start_time,"end_time":period['end']},
-                   {'type':'FeatureCollection','id':'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc',
-                      'filter':filter}, start_time, period['end']]
-        }
+          filter = [
+              {'property':'compounddate','greater_than':start},
+              {
+                  'or': [
+                    {'property':'compounddate','less_than':end},
+                    {'property':'compounddate','equals':end}
+                  ]
+              }
+          ]
+
+        return ee.Image({
+            "creator": 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
+            "args": [
+                {
+                    "id":"MODIS/MOD09GA",
+                    "version": micro_yesterday,
+                    "start_time": start_time,
+                    "end_time": period['end']
+                },
+                {
+                    "id":"MODIS/MOD09GQ",
+                    "version": micro_yesterday,
+                    "start_time": start_time,
+                    "end_time": period['end']
+                },
+                {
+                    'type': 'FeatureCollection',
+                    'id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc',
+                    'filter': filter
+                },
+                start_time,
+                period['end']
+            ]
+        })
 
     def _SMA_image_command(self, period):
         return self._unmixed_mosaic(period).getMapId({
@@ -331,7 +358,7 @@ class NDFI(object):
       ]
       OUTPUTS = ['gv', 'soil', 'npv']
 
-      base = ee.Image(self._kriged_mosaic(period, long_span))
+      base = self._kriged_mosaic(period, long_span)
       unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
       percents = unmixed.max(0).multiply(100).round()
       result = unmixed.addBands(percents)
@@ -343,7 +370,7 @@ class NDFI(object):
         """ bands in format (1, 2, 3) """
         bands = "sur_refl_b0%d,sur_refl_b0%d,sur_refl_b0%d" % bands
         return {
-            "image": json.dumps({
+            "image": ee.Image({
                 "creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.StretchImage",
                 "args":[
                     {
@@ -356,7 +383,7 @@ class NDFI(object):
                     ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
                     2
                  ]
-            }),
+            }).serialize(),
             "bands": bands
         }
      else:
@@ -369,7 +396,7 @@ class NDFI(object):
         creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
         bands = "%d,%d,%d" % bands
         return {
-            "image": json.dumps({
+            "image": ee.Image({
                 "creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.StretchImage",
                 "args":[{
                     "creator":"LonLatReproject",
@@ -386,7 +413,7 @@ class NDFI(object):
                  landsat_bands,
                  2
                  ]
-            }),
+            }).serialize(),
             "bands": bands
         }
 
@@ -395,10 +422,10 @@ class NDFI(object):
         work_year = self._getMidYear(period['start'], period['end'])
         date = "%04d%02d" % (work_year, work_month)
         krig_filter = ee.Filter.eq('Compounddate', int(date))
-        return {
+        return ee.Image({
             "creator": "kriging/com.google.earthengine.examples.kriging.KrigedModisImage",
             "args": [
-                self._MakeMosaic(period, long_span),
+                self._make_mosaic(period, long_span),
                 {
                     'type': 'FeatureCollection',
                     'table_id': 4468280,
@@ -406,7 +433,7 @@ class NDFI(object):
                     'mark': str(timestamp())
                 }
             ]
-        }
+        })
 
     def _getMidMonth(self, start, end):
         middle_seconds = int((end + start) / 2000)
