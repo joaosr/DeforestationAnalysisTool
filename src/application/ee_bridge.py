@@ -245,17 +245,33 @@ class NDFI(object):
 
     def _NDFI_image(self, period, long_span=0):
         """ given image list from EE, returns the operator chain to return NDFI image """
-        return {
-            "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.NDFIImage',
-            "args": [{
-              "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
-              "args": [self._kriged_mosaic(period, long_span)]
-            }]
-         }
+        base = self._unmixed_mosaic(period, long_span)
+
+        # Calculate NDFI.
+        UNCLASSIFIED = 201
+        clamped = base.max(0)
+        sum = clamped.expression('b("gv") + b("soil") + b("npv")')
+        gv_shade = clamped.select('gv').divide(sum)
+        npv_plus_soil = clamped.select('npv').add(clamped.select('soil'))
+        raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
+        ndfi = raw_ndfi.multiply(100).add(100).byte()
+        ndfi = ndfi.where(sum.eq(0), UNCLASSIFIED)
+        ndfi = ndfi.select([0], ['ndfi'])
+
+        # Visualize.
+        red = ndfi.interpolate([150, 185], [255, 0], 'clamp')
+        green = ndfi.interpolate([  0, 100, 125, 150, 185, 200, 201],
+                                 [255,   0, 255, 165, 140,  80,   0], 'clamp')
+        blue = ndfi.interpolate([100, 125], [255, 0], 'clamp')
+        vis = ee.Image.cat(red, green, blue).round().byte()
+        vis = vis.select([0, 1, 2], ['vis-red', 'vis-green', 'vis-blue'])
+
+        # Collect the bands.
+        return ee.Image.cat(ndfi, vis, base)
 
     def _NDFI_period_image_command(self, period, long_span=0):
         """ get NDFI command to get map of NDFI for a period of time """
-        return ee.Image(self._NDFI_image(period, long_span)).getMapId({
+        return self._NDFI_image(period, long_span).getMapId({
             "bands": 'vis-red,vis-green,vis-blue',
             "gain": 1,
             "bias": 0.0,
@@ -298,16 +314,29 @@ class NDFI(object):
         }
 
     def _SMA_image_command(self, period):
-        image = ee.Image({
-            "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
-            "args": [ee.Image(self._kriged_mosaic(period))]
-        })
-        return image.getMapId({
+        return self._unmixed_mosaic(period).getMapId({
             "bands": 'gv,soil,npv',
             "gain": 256,
             'bias': 0.0,
             'gamma': 1.6
         })
+
+    def _unmixed_mosaic(self, period, long_span=0):
+      BAND_FORMAT = 'sur_refl_b0%d'
+      BANDS = [3, 4, 1, 2, 6, 7]
+      ENDMEMBERS = [
+          [226.0,  710.0,  349.0, 5736.0, 2213.0,  520.0],  # GV
+          [838.0, 1576.0, 2527.0, 4305.0, 5885.0, 3760.0],  # Soil
+          [696.0, 1235.0, 1841.0, 2763.0, 4443.0, 4232.0]   # NPV
+      ]
+      OUTPUTS = ['gv', 'soil', 'npv']
+
+      base = ee.Image(self._kriged_mosaic(period, long_span))
+      unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
+      percents = unmixed.max(0).multiply(100).round()
+      result = unmixed.addBands(percents)
+      return result.select([0, 1, 2, 3, 4, 5],
+                           OUTPUTS + [i + '_100' for i in OUTPUTS])
 
     def _RGB_streched_command(self, period, polygon, sensor, bands):
      if(sensor=="modis"):
