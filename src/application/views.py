@@ -40,22 +40,17 @@ def default_maps():
     maps.append({'data' :d, 'info': 'LANDSAT/L7_L1T-old'})
     """
     #d = ndfi.mapid2()
-    #if 'data' in d:
-        #maps.append({'data' :d['data'], 'info': 'ndfi difference'})
+    #if d: maps.append({'data' :d, 'info': 'ndfi difference'})
     d = ndfi.smaid()
-    if 'data' in d:
-        maps.append({'data': d['data'], 'info': 'SMA'})
+    if d: maps.append({'data': d, 'info': 'SMA'})
     d = ndfi.rgbid()
     if d: maps.append({'data': d, 'info': 'RGB'})
     d = ndfi.ndfi0id()
-    if 'data' in d:
-        maps.append({'data': d['data'], 'info': 'NDFI T0'})
+    if d: maps.append({'data': d, 'info': 'NDFI T0'})
     d = ndfi.ndfi1id()
-    if 'data' in d:
-        maps.append({'data' :d['data'], 'info': 'NDFI T1'})
+    if d: maps.append({'data' :d, 'info': 'NDFI T1'})
     d = ndfi.baseline(r.base_map())
-    if 'data' in d:
-    	maps.append({'data' :d['data'], 'info': 'Baseline'})
+    if d: maps.append({'data' :d, 'info': 'Baseline'})
     d = ndfi.rgb0id()
     if d: maps.append({'data': d, 'info': 'Previous RGB'})
     return maps

@@ -168,23 +168,19 @@ class NDFI(object):
         return ee.data.createAsset(result.serialize())
 
     def rgbid(self):
-        """Returns params to access NDFI RGB image."""
+        """Returns mapid to access NDFI RGB image."""
         return self._RGB_image_command(self.work_period)
 
     def smaid(self):
-        """ return params to access NDFI rgb image """
-        # get map id from EE
-        params = self._SMA_image_command(self.work_period)
-        return self._execute_cmd('/mapid', params)
+        """Returns mapid to access NDFI SMA image."""
+        return self._SMA_image_command(self.work_period)
 
     def ndfi0id(self):
-        # get map id from EE set long_span=1
-        params = self._NDFI_period_image_command(self.last_period, 1)
-        return self._execute_cmd('/mapid', params)
+        """Returns mapid to access NDFI T0 image."""
+        return self._NDFI_period_image_command(self.last_period, 1)
 
     def baseline(self, asset_id):
-        params = self._baseline_image_command(asset_id)
-        return self._execute_cmd('/mapid', params)
+        return ee.Image(self._baseline_image(asset_id)).getMapId()
 
     def rgb0id(self):
         """Returns params to access NDFI RGB image for the last quarter."""
@@ -195,9 +191,8 @@ class NDFI(object):
         return self._RGB_image_command(last_period)
 
     def ndfi1id(self):
-        # get map id from EE
-        params = self._NDFI_period_image_command(self.work_period)
-        return self._execute_cmd('/mapid', params)
+        """Returns mapid to access NDFI T1 image."""
+        return self._NDFI_period_image_command(self.work_period)
 
     def rgb_strech(self, polygon, sensor, bands):
         # this is an special call, the application needs to call /value
@@ -411,20 +406,12 @@ class NDFI(object):
 
     def _NDFI_period_image_command(self, period, long_span=0):
         """ get NDFI command to get map of NDFI for a period of time """
-        ndfi_image = self._NDFI_image(period, long_span)
-        return {
-            "image": json.dumps(ndfi_image),
+        return ee.Image(self._NDFI_image(period, long_span)).getMapId({
             "bands": 'vis-red,vis-green,vis-blue',
             "gain": 1,
             "bias": 0.0,
             "gamma": 1.6
-        }
-
-    def _baseline_image_command(self, asset_id):
-        baseline_image = self._baseline_image(asset_id)
-        return {
-            "image": json.dumps(baseline_image)
-        }
+        })
 
     def _RGB_image_command(self, period):
         """ commands for RGB image """
@@ -474,20 +461,27 @@ class NDFI(object):
         }
 
     def _SMA_image_command(self, period):
-        filter = self._krig_filter(period)
-        return {
-            "image": json.dumps({
-              "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
-              "args": [{
+        image = ee.Image({
+            "creator": CALL_SCOPE + '/com.google.earthengine.examples.sad.UnmixModis',
+            "args": [ee.Image({
                 "creator": KRIGING,
-                "args": [self._MakeMosaic(period), {'type':'FeatureCollection','table_id':4468280,'filter':filter}]
-              }]
-            }),
+                "args": [
+                    self._MakeMosaic(period),
+                    ee.FeatureCollection({
+                        'type':'FeatureCollection',
+                        'table_id': 4468280,
+                        'filter': self._krig_filter(period),
+                        'mark': str(timestamp())
+                    })
+                ]
+            })]
+        })
+        return image.getMapId({
             "bands": 'gv,soil,npv',
             "gain": 256,
-            "bias": 0.0,
-            "gamma": 1.6
-        }
+            'bias': 0.0,
+            'gamma': 1.6
+        })
 
     def _RGB_streched_command(self, period, polygon, sensor, bands):
      filter = self._krig_filter(period)
