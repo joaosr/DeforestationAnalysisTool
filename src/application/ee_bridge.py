@@ -174,12 +174,12 @@ class NDFI(object):
         else:
             fields = 'stats_30,stats_20,stats_10'
         ee.data.getValue({
-            'image': cmd['image'],
+            'image': cmd['image'].serialize(),
             'fields': fields
         })
 
         return ee.data.getMapId({
-            'image': cmd['image'],
+            'image': cmd['image'].serialize(),
             'bands': cmd['bands']
         })
 
@@ -320,73 +320,67 @@ class NDFI(object):
         })
 
     def _unmixed_mosaic(self, period, long_span=0):
-      BAND_FORMAT = 'sur_refl_b0%d'
-      BANDS = [3, 4, 1, 2, 6, 7]
-      ENDMEMBERS = [
-          [226.0,  710.0,  349.0, 5736.0, 2213.0,  520.0],  # GV
-          [838.0, 1576.0, 2527.0, 4305.0, 5885.0, 3760.0],  # Soil
-          [696.0, 1235.0, 1841.0, 2763.0, 4443.0, 4232.0]   # NPV
-      ]
-      OUTPUTS = ['gv', 'soil', 'npv']
+        BAND_FORMAT = 'sur_refl_b0%d'
+        BANDS = [3, 4, 1, 2, 6, 7]
+        ENDMEMBERS = [
+            [226.0,  710.0,  349.0, 5736.0, 2213.0,  520.0],  # GV
+            [838.0, 1576.0, 2527.0, 4305.0, 5885.0, 3760.0],  # Soil
+            [696.0, 1235.0, 1841.0, 2763.0, 4443.0, 4232.0]   # NPV
+        ]
+        OUTPUTS = ['gv', 'soil', 'npv']
 
-      base = self._kriged_mosaic(period, long_span)
-      unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
-      percents = unmixed.max(0).multiply(100).round()
-      result = unmixed.addBands(percents)
-      return result.select([0, 1, 2, 3, 4, 5],
-                           OUTPUTS + [i + '_100' for i in OUTPUTS])
+        base = self._kriged_mosaic(period, long_span)
+        unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
+        percents = unmixed.max(0).multiply(100).round()
+        result = unmixed.addBands(percents)
+        return result.select([0, 1, 2, 3, 4, 5],
+                             OUTPUTS + [i + '_100' for i in OUTPUTS])
 
     def _RGB_streched_command(self, period, polygon, sensor, bands):
-     if(sensor=="modis"):
         """ bands in format (1, 2, 3) """
-        bands = "sur_refl_b0%d,sur_refl_b0%d,sur_refl_b0%d" % bands
-        return {
-            "image": ee.Image({
-                "creator":"SAD/com.google.earthengine.examples.sad.StretchImage",
-                "args":[
-                    {
-                        "creator":"ClipToMultiPolygon",
-                        "args":[
-                            self._kriged_mosaic(period),
-                            polygon
-                        ]
-                    },
-                    ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
-                    2
-                 ]
-            }).serialize(),
-            "bands": bands
-        }
-     else:
-        three_months = timedelta(days=90)
-        work_period_end   = self.work_period['end']
-        work_period_start = self.work_period['start'] - 7776000000 #three_months
-        yesterday = date.today() - timedelta(1)
-        micro_yesterday = time.mktime(yesterday.timetuple()) * 1000000
-        landsat_bands = ['10','20','30','40','50','70','80','61','62']
-        creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
-        bands = "%d,%d,%d" % bands
-        return {
-            "image": ee.Image({
-                "creator": "SAD/com.google.earthengine.examples.sad.StretchImage",
-                "args":[{
-                    "creator":"LonLatReproject",
+        if sensor == 'modis':
+            bands = "sur_refl_b0%d,sur_refl_b0%d,sur_refl_b0%d" % bands
+            return {
+                "image": ee.Image({
+                    "creator":"SAD/com.google.earthengine.examples.sad.StretchImage",
+                    "args":[
+                        self._kriged_mosaic(period).clip(polygon),
+                        ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
+                        2
+                     ]
+                }),
+                "bands": bands
+            }
+        else:
+            three_months = timedelta(days=90)
+            work_period_end   = self.work_period['end']
+            work_period_start = self.work_period['start'] - 7776000000 #three_months
+            yesterday = date.today() - timedelta(1)
+            micro_yesterday = time.mktime(yesterday.timetuple()) * 1000000
+            landsat_bands = ['10','20','30','40','50','70','80','61','62']
+            creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
+            bands = "%d,%d,%d" % bands
+            return {
+                "image": ee.Image({
+                    "creator": "SAD/com.google.earthengine.examples.sad.StretchImage",
                     "args":[{
-                       "creator":"SimpleMosaic",
-                       "args":[{
-                          "creator":"LANDSAT/LandsatTOA",
-                          "input":{"id":"LANDSAT/L7_L1T","version":micro_yesterday},
-                          "bands":creator_bands,
-                          "start_time": work_period_start, #131302801000
-                          "end_time": work_period_end }] #1313279999000
-                    },polygon, 30]
-                 },
-                 landsat_bands,
-                 2
-                 ]
-            }).serialize(),
-            "bands": bands
-        }
+                        "creator":"LonLatReproject",
+                        "args":[{
+                           "creator":"SimpleMosaic",
+                           "args":[{
+                              "creator":"LANDSAT/LandsatTOA",
+                              "input":{"id":"LANDSAT/L7_L1T","version":micro_yesterday},
+                              "bands":creator_bands,
+                              "start_time": work_period_start, #131302801000
+                              "end_time": work_period_end }] #1313279999000
+                        },polygon, 30]
+                     },
+                     landsat_bands,
+                     2
+                     ]
+                }),
+                "bands": bands
+            }
 
     def _kriged_mosaic(self, period, long_span=0):
         work_month = self._getMidMonth(period['start'], period['end'])
