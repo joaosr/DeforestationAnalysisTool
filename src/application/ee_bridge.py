@@ -291,53 +291,27 @@ class NDFI(object):
         month = this_time[1]
         year = this_time[0]
         yesterday = date.today() - timedelta(1)
-        micro_yesterday = time.mktime(yesterday.timetuple()) * 1000000
-        logging.info("month " + str(month))
-        logging.info("year " + str(year))
+        micro_yesterday = long(time.mktime(yesterday.timetuple()) * 1000000)
 
         if long_span == 0:
-          filter = [
-              {'property':'month','equals':month},
-              {'property':'year','equals':year}
-          ]
+          filter = ee.Filter.eq('compounddate', '%04d%02d' % (year, month))
           start_time = period['start']
         else:
-          start = "%04d%02d" % (year - 1, month)
-          end = "%04d%02d" % (year, month)
+          start = '%04d%02d' % (year - 1, month)
+          end = '%04d%02d' % (year, month)
+          filter = ee.Filter.And(
+              ee.Filter.gt('compounddate', start),
+              ee.Filter.lte('compounddate', end))
           start_time = period['start'] - 1000 * 60 * 60 * 24 * 365
-          filter = [
-              {'property':'compounddate','greater_than':start},
-              {
-                  'or': [
-                    {'property':'compounddate','less_than':end},
-                    {'property':'compounddate','equals':end}
-                  ]
-              }
-          ]
+
+        ga = ee.ImageCollection({"id":"MODIS/MOD09GA", "version": micro_yesterday})
+        gq = ee.ImageCollection({"id":"MODIS/MOD09GQ", "version": micro_yesterday})
+        table = ee.FeatureCollection('ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc')
+        table = table.filter(filter)
 
         return ee.Image({
             "creator": 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-            "args": [
-                {
-                    "id":"MODIS/MOD09GA",
-                    "version": micro_yesterday,
-                    "start_time": start_time,
-                    "end_time": period['end']
-                },
-                {
-                    "id":"MODIS/MOD09GQ",
-                    "version": micro_yesterday,
-                    "start_time": start_time,
-                    "end_time": period['end']
-                },
-                {
-                    'type': 'FeatureCollection',
-                    'id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc',
-                    'filter': filter
-                },
-                start_time,
-                period['end']
-            ]
+            "args": [ga, gq, table, start_time, period['end']]
         })
 
     def _SMA_image_command(self, period):
