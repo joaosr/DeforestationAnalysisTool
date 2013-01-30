@@ -16,9 +16,6 @@ from datetime import timedelta, date
 # A multiplier to convert square meters to square kilometers.
 METER2_TO_KM2 = 1.0/(1000*1000)
 
-# JAR-loading path fragments.
-CALL_SCOPE = "SAD"
-
 # The class values used to represent pixels of different types.
 CLS_UNCLASSIFIED = 0
 CLS_FOREST = 1
@@ -210,7 +207,7 @@ class NDFI(object):
         start_filter = [{'property':'compounddate','greater_than':start},{'property':'compounddate','less_than':end}]
         deforested_asset = self._paint_deforestation(asset_id, work_month, work_year)
         # 1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc  was 1868251
-        json_cmd = {"creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.GetNDFIDelta","args": [
+        json_cmd = {"creator":"SAD/com.google.earthengine.examples.sad.GetNDFIDelta","args": [
             self.last_period['start'] - year_msec,
             self.last_period['end'],
             self.work_period['start'],
@@ -345,7 +342,7 @@ class NDFI(object):
         bands = "sur_refl_b0%d,sur_refl_b0%d,sur_refl_b0%d" % bands
         return {
             "image": ee.Image({
-                "creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.StretchImage",
+                "creator":"SAD/com.google.earthengine.examples.sad.StretchImage",
                 "args":[
                     {
                         "creator":"ClipToMultiPolygon",
@@ -371,7 +368,7 @@ class NDFI(object):
         bands = "%d,%d,%d" % bands
         return {
             "image": ee.Image({
-                "creator":CALL_SCOPE + "/com.google.earthengine.examples.sad.StretchImage",
+                "creator": "SAD/com.google.earthengine.examples.sad.StretchImage",
                 "args":[{
                     "creator":"LonLatReproject",
                     "args":[{
