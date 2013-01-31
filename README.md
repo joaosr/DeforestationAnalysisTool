@@ -1,15 +1,21 @@
 Imazon-Sad application
-================
+======================
 
-This is a highly specific application to track deforestation on the amazonas. More specifically is a tool to do validation of deforestation detected by algorithms using satellite imagery. The algorithm and the metodology has been developed by Imazon (links to scientific papers) and is been implemented in Google Earth Engine by David Thau. The frontend development and the application architecture has been developed by Vizzuality.
+This is a highly specialized application to track deforestation on the Amazonas. More specifically,
+it is a tool to do validation of deforestation detected by algorithms using satellite imagery.
+The algorithm and the methodology has been developed by Imazon (TODO: links to scientific papers).
+The frontend and the application architecture has been developed by Vizzuality. The backend support
+for Google Earth Engine has been provided by David Thau. 
 
-The tool works on Appengine together with Google Earth Engine (GEE) and Fusion Tables (FT). There is a lot of dependencies on those so you are probably gonna need to contact us if you want to run the application (contact@vizzuality.com or thau@google.com).
+The tool runs on Google App Engine (GAE) and uses Google Earth Engine (GEE) and Fusion Tables (FT) APIs.
+You may beed certain API keys to run the application - contact thau@google.com for details.
 
 How to run the application
----------------------
+--------------------------
 
-The tool is intended to be use directly online (still pending the final URL) so the following instructions only apply for developers on the project. The instructions are specific for development under Mac OS X Lion and Snow Leopard, but shouldnt be complicate to make it run in other unix systems.
-
+The tool is intended to be use directly online (still pending the final URL) so the following instructions
+only apply for developers on the project. The instructions are specific for development under Mac OS X Lion
+and Snow Leopard, but it shouldn't be complicated to make it run in other Unix-like systems.
 
 1. Install [Appengine](http://code.google.com/intl/en/appengine/)
    * Specifically use the [Python SDK](http://code.google.com/intl/en/appengine/downloads.html#Google_App_Engine_SDK_for_Python)
