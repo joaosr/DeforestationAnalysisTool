@@ -235,6 +235,7 @@ class NDFI(object):
         })
 
     def _mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
+        # Calculate dates.
         year_msec = 1000 * 60 * 60 * 24 * 365
         month_msec = 1000 * 60 * 60 * 24 * 30
         six_months_ago = self.work_period['end'] - month_msec * 6
@@ -245,34 +246,56 @@ class NDFI(object):
         previous_year = time.gmtime(int(one_month_ago / 1000))[0]
         work_month = self._getMidMonth(self.work_period['start'], self.work_period['end'])
         work_year = self._getMidYear(self.work_period['start'], self.work_period['end'])
-        end = "%04d%02d" % (work_year, work_month)
         start = "%04d%02d" % (last_year, last_month)
+        end = "%04d%02d" % (work_year, work_month)
         previous = "%04d%02d" % (previous_year, previous_month)
-        start_filter = [{'property':'compounddate','greater_than':start},{'property':'compounddate','less_than':end}]
-        deforested_asset = self._paint_deforestation(asset_id, work_month, work_year)
-        # 1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc  was 1868251
-        json_cmd = {"creator":"SAD/com.google.earthengine.examples.sad.GetNDFIDelta","args": [
-            self.last_period['start'] - year_msec,
-            self.last_period['end'],
-            self.work_period['start'],
-            self.work_period['end'],
-            "MODIS/MOD09GA",
-            "MODIS/MOD09GQ",
-            {'type':'FeatureCollection','id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 'mark': str(timestamp()), 'filter':start_filter},
-            {'type':'FeatureCollection','id': 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc', 'mark': str(timestamp()),
-                'filter':[{"property":"month","equals":work_month},{"property":"year","equals":work_year}]},
-            {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()),
-                'filter':[{"property":"Compounddate","equals":int(previous)}]},
-            {'type':'FeatureCollection','table_id': 4468280, 'mark': str(timestamp()),
-                'filter':[{"property":"Compounddate","equals":int(end)}]},
-            json.loads(deforested_asset.serialize()),
-            polygon,
-            rows,
-            cols]
-        }
-        logging.info("GetNDFIDelta")
-        logging.info(json_cmd)
-        return ee.Image(json_cmd)
+
+        # Prepare dates.
+        t0_start = self.last_period['start'] - year_msec
+        t0_end = self.last_period['end']
+        t1_start = self.work_period['start']
+        t1_end = self.work_period['end']
+
+        # Prepare imagery.
+        baseline = self._paint_deforestation(asset_id, work_month, work_year)
+        modis_ga = ee.ImageCollection('MODIS/MOD09GA')
+        modis_gq = ee.ImageCollection('MODIS/MOD09GQ')
+
+        # Prepare tables.
+        inclusions = ee.FeatureCollection('ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc')
+        t0_inclusions = inclusions.filter(
+            ee.Filter.And(ee.Filter.gt('compounddate', start),
+                          ee.Filter.lt('compounddate', end)))
+        t1_inclusions = inclusions.filter(
+            ee.Filter.And(ee.Filter.eq('month', work_month),
+                          ee.Filter.eq('year', work_year)))
+
+        kriging_params = ee.FeatureCollection(4468280)
+        t0_kriging_params = kriging_params.filter(
+            ee.Filter.eq('compounddate', int(previous)))
+        t1_kriging_params = kriging_params.filter(
+            ee.Filter.eq('compounddate', int(end)))
+
+        # Construct the final query.
+        return ee.Image({
+            "creator":"SAD/com.google.earthengine.examples.sad.GetNDFIDelta",
+            "args": [
+                t0_start,
+                t0_end,
+                t1_start,
+                t1_end,
+                modis_ga,
+                modis_gq,
+                t0_inclusions,
+                t1_inclusions,
+                t0_kriging_params,
+                t1_kriging_params,
+                baseline,
+                polygon,
+                rows,
+                cols
+            ]
+        })
 
     def _paint_deforestation(self, asset_id, month, year):
         date = '%04d' % year
