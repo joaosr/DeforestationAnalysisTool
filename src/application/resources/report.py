@@ -207,7 +207,7 @@ class CellAPI(Resource):
         cell = Cell.get_or_default(report, x, y, z)
         ndfi = NDFI(report.comparation_range(), report.range())
         poly = cell.bbox_polygon(amazon_bounds)
-        mapid = ndfi.rgb_strech(poly, sensor, tuple(map(int, (r, g, b))))
+        mapid = ndfi.rgb_stretch(poly, sensor, tuple(map(int, (r, g, b))))
         if not mapid:
             abort(404)
         return Response(json.dumps(mapid), mimetype='application/json')

@@ -107,7 +107,7 @@ class EELandsat(object):
     def mapid(self, start, end):
         MAP_IMAGE_BANDS = ['30','20','10']
         PREVIEW_GAIN = 500
-        collection = ee.ImageCollection('L7_L1T_TOA').filterDate(start, end)
+        collection = _get_landsat_toa(start, end)
         return collection.mosaic().getMapId({
             'bands': ','.join(MAP_IMAGE_BANDS),
             'gain': PREVIEW_GAIN
@@ -164,23 +164,67 @@ class NDFI(object):
         """Returns mapid to access NDFI T1 image."""
         return self._NDFI_period_image_command(self.work_period)
 
-    def rgb_strech(self, polygon, sensor, bands):
-        cmd = self._RGB_streched_command(self.work_period, polygon, sensor, bands)
+    def rgb_stretch(self, polygon, sensor, bands):
+        NUM_SAMPLES = 999999
+        STD_DEVS = 2
 
-        # This call requires precomputed stats, so we have to call getValue
-        # before attempting to call getMapId.
-        if sensor == "modis":
-            fields = 'stats_sur_refl_b01,stats_sur_refl_b02,stats_sur_refl_b03,stats_sur_refl_b04,stats_sur_refl_b05'
+        if sensor == 'modis':
+            bands = ['sur_refl_b0%d' % i for i in bands]
+            # Kriging is very expensive and does not significantly affect
+            # value distribution. Skip it for the stats aggregation.
+            stats_image = self._make_mosaic(self.work_period)
+            stats_image = stats_image.select(
+                ['sur_refl_b01_250m',
+                 'sur_refl_b02_250m',
+                 'sur_refl_b03_500m',
+                 'sur_refl_b04_500m',
+                 'sur_refl_b05_500m',
+                 'sur_refl_b06_500m',
+                 'sur_refl_b07_500m'],
+                ['sur_refl_b01',
+                 'sur_refl_b02',
+                 'sur_refl_b03',
+                 'sur_refl_b04',
+                 'sur_refl_b05',
+                 'sur_refl_b06',
+                 'sur_refl_b07'])
+            display_image = self._kriged_mosaic(self.work_period)
+        elif sensor == 'landsat':
+            bands = ['%d' % i for i in bands]
+            yesterday = date.today() - timedelta(1)
+            collection = _get_landsat_toa(
+                self.work_period['start'] - 3 * 30 * 24 * 60 * 60 * 1000,
+                self.work_period['end'],
+                int(time.mktime(yesterday.timetuple()) * 1000000))
+            stats_image = display_image = collection.mosaic()
         else:
-            fields = 'stats_30,stats_20,stats_10'
-        ee.data.getValue({
-            'image': cmd['image'].serialize(),
-            'fields': fields
-        })
+            raise RuntimeError('Sensor %s neither modis nor landsat.' % sensor)
+        stats_image = stats_image.select(bands)
+        display_image = display_image.select(bands)
 
-        return ee.data.getMapId({
-            'image': cmd['image'].serialize(),
-            'bands': cmd['bands']
+        # Calculate stats.
+        bbox = self._get_polygon_bbox(polygon)
+        stats = ee.data.getValue({
+            'image': stats_image.stats(NUM_SAMPLES, bbox).serialize(),
+            'fields': ','.join(bands)
+        })
+        mins = []
+        maxs = []
+        for band in bands:
+          band_stats = stats['properties'][band]['values'];
+          min = band_stats['mean'] - STD_DEVS * band_stats['total_sd']
+          max = band_stats['mean'] + STD_DEVS * band_stats['total_sd']
+          if min == max:
+            min -= 1
+            max += 1
+          mins.append(min)
+          maxs.append(max)
+
+        # Get stretched image.
+        return display_image.clip(polygon).getMapId({
+            'bands': ','.join(bands),
+            'min': ','.join(str(i) for i in mins),
+            'max': ','.join(str(i) for i in maxs)
         })
 
     def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
@@ -336,52 +380,6 @@ class NDFI(object):
         return result.select([0, 1, 2, 3, 4, 5],
                              OUTPUTS + [i + '_100' for i in OUTPUTS])
 
-    def _RGB_streched_command(self, period, polygon, sensor, bands):
-        """ bands in format (1, 2, 3) """
-        if sensor == 'modis':
-            bands = "sur_refl_b0%d,sur_refl_b0%d,sur_refl_b0%d" % bands
-            return {
-                "image": ee.Image({
-                    "creator":"SAD/com.google.earthengine.examples.sad.StretchImage",
-                    "args":[
-                        self._kriged_mosaic(period).clip(polygon),
-                        ["sur_refl_b01","sur_refl_b02","sur_refl_b03","sur_refl_b04","sur_refl_b05"],
-                        2
-                     ]
-                }),
-                "bands": bands
-            }
-        else:
-            three_months = timedelta(days=90)
-            work_period_end   = self.work_period['end']
-            work_period_start = self.work_period['start'] - 7776000000 #three_months
-            yesterday = date.today() - timedelta(1)
-            micro_yesterday = time.mktime(yesterday.timetuple()) * 1000000
-            landsat_bands = ['10','20','30','40','50','70','80','61','62']
-            creator_bands =[{'id':id, 'data_type':'float'} for id in landsat_bands]
-            bands = "%d,%d,%d" % bands
-            return {
-                "image": ee.Image({
-                    "creator": "SAD/com.google.earthengine.examples.sad.StretchImage",
-                    "args":[{
-                        "creator":"LonLatReproject",
-                        "args":[{
-                           "creator":"SimpleMosaic",
-                           "args":[{
-                              "creator":"LANDSAT/LandsatTOA",
-                              "input":{"id":"LANDSAT/L7_L1T","version":micro_yesterday},
-                              "bands":creator_bands,
-                              "start_time": work_period_start, #131302801000
-                              "end_time": work_period_end }] #1313279999000
-                        },polygon, 30]
-                     },
-                     landsat_bands,
-                     2
-                     ]
-                }),
-                "bands": bands
-            }
-
     def _kriged_mosaic(self, period, long_span=0):
         work_month = self._getMidMonth(period['start'], period['end'])
         work_year = self._getMidYear(period['start'], period['end'])
@@ -399,6 +397,16 @@ class NDFI(object):
                 }
             ]
         })
+
+    def _get_polygon_bbox(self, polygon):
+        coordinates = sum(polygon['coordinates'], [])
+        lngs = [x[0] for x in coordinates]
+        lats = [x[1] for x in coordinates]
+        max_lng = max(lngs)
+        min_lng = min(lngs)
+        max_lat = max(lats)
+        min_lat = min(lats)
+        return ee.Feature.Rectangle(min_lng, min_lat, max_lng, max_lat)
 
     def _getMidMonth(self, start, end):
         middle_seconds = int((end + start) / 2000)
@@ -528,3 +536,12 @@ def _paint(self, current_asset, report_id, table, value):
     fc = fc.filterMetadata('report_id', 'equals', int(report_id))
     fc = fc.filterMetadata('type', 'equals', value)
     return current_asset.paint(fc, value)
+
+
+def _get_landsat_toa(start_time, end_time, version=-1):
+  collection = ee.ImageCollection({
+      'id': 'L7_L1T',
+      'version': version
+  })
+  collection = collection.filterDate(start_time, end_time)
+  return collection.map(lambda img: ee.call('LandsatTOA', img))
