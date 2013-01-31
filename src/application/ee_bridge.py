@@ -457,13 +457,13 @@ def _get_area_histogram(image, polygons, classes, scale=120):
         geometry = feature.geometry()
         total = area.mask(image.mask())
         total_area = total.reduceRegion(
-            geometry, sum_reducer, scale, bestEffort=True)
+            sum_reducer, geometry, scale, bestEffort=True)
         properties = {'total': total_area}
 
         for class_value in classes:
             masked = area.mask(image.eq(class_value))
             class_area = masked.reduceRegion(
-                geometry, sum_reducer, scale, bestEffort=True)
+                sum_reducer, geometry, scale, bestEffort=True)
             properties[str(class_value)] = class_area
 
         return ee.call('SetProperties', feature, properties)
@@ -531,7 +531,7 @@ def _remap_prodes_classes(img):
     return (final, set(classes_to))
 
 
-def _paint(self, current_asset, report_id, table, value):
+def _paint(current_asset, report_id, table, value):
     fc = ee.FeatureCollection(int(table))
     fc = fc.filterMetadata('report_id', 'equals', int(report_id))
     fc = fc.filterMetadata('type', 'equals', value)
