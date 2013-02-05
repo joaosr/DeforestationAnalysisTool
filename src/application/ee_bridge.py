@@ -28,6 +28,9 @@ CLS_EDITED_DEFORESTATION = 7
 CLS_EDITED_DEGRADATION = 8
 CLS_EDITED_OLD_DEGRADATION = 9
 
+# A value that signifies invalid NDFI.
+INVALID_NDFI = 201
+
 # Initialize the EE API.
 ee.data.DEFAULT_DEADLINE = 600
 ee.Initialize(settings.EE_CREDENTIALS, 'http://maxus.mtv:12345/')
@@ -266,9 +269,7 @@ class NDFI(object):
         t0_inclusions = inclusions.filter(
             ee.Filter.And(ee.Filter.gt('compounddate', start),
                           ee.Filter.lt('compounddate', end)))
-        t1_inclusions = inclusions.filter(
-            ee.Filter.And(ee.Filter.eq('month', work_month),
-                          ee.Filter.eq('year', work_year)))
+        t1_inclusions = inclusions.filter(ee.Filter.eq('compounddate', end))
 
         kriging_params = ee.FeatureCollection(4468280)
         t0_kriging_params = kriging_params.filter(
@@ -306,19 +307,20 @@ class NDFI(object):
         return ee.Image(asset_id).paint(table, CLS_BASELINE)
 
     def _NDFI_image(self, period, long_span=0):
-        """ given image list from EE, returns the operator chain to return NDFI image """
         base = self._unmixed_mosaic(period, long_span)
 
         # Calculate NDFI.
-        UNCLASSIFIED = 201
         clamped = base.max(0)
         sum = clamped.expression('b("gv") + b("soil") + b("npv")')
         gv_shade = clamped.select('gv').divide(sum)
         npv_plus_soil = clamped.select('npv').add(clamped.select('soil'))
         raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
         ndfi = raw_ndfi.multiply(100).add(100).byte()
-        ndfi = ndfi.where(sum.eq(0), UNCLASSIFIED)
-        ndfi = ndfi.select([0], ['ndfi'])
+        ndfi = ndfi.where(sum.eq(0), INVALID_NDFI)
+        return ndfi.select([0], ['ndfi'])
+
+    def _NDFI_visualize(self, period, long_span=0):
+        ndfi = self._NDFI_image(period, long_span)
 
         # Visualize.
         red = ndfi.interpolate([150, 185], [255, 0], 'clamp')
@@ -333,7 +335,7 @@ class NDFI(object):
 
     def _NDFI_period_image_command(self, period, long_span=0):
         """ get NDFI command to get map of NDFI for a period of time """
-        return self._NDFI_image(period, long_span).getMapId({
+        return self._NDFI_visualize(period, long_span).getMapId({
             "bands": 'vis-red,vis-green,vis-blue',
             "gain": 1,
             "bias": 0.0,
@@ -524,32 +526,32 @@ def _remap_prodes_classes(img):
     classes_to = []
 
     for src_class, name in zip(classes_from, class_names):
-      dst_class = UNCLASSIFIED
+      dst_class = CLS_UNCLASSIFIED
 
       if RE_FOREST.match(name):
-        dst_class = FOREST
+        dst_class = CLS_FOREST
       elif RE_BASELINE.match(name):
-        dst_class = BASELINE
+        dst_class = CLS_BASELINE
       elif RE_CLOUD.match(name):
-        dst_class = CLOUD
+        dst_class = CLS_CLOUD
       elif RE_NEW_DEFORESTATION.match(name):
-        dst_class = DEFORESTED
+        dst_class = CLS_DEFORESTED
       elif RE_DEFORESTATION.match(name):
-        dst_class = DEFORESTED
+        dst_class = CLS_DEFORESTED
       elif RE_DEGRADATION.match(name):
-        dst_class = DEGRADED
+        dst_class = CLS_DEGRADED
       elif RE_OLD_DEFORESTATION.match(name):
-        dst_class = OLD_DEFORESTATION
+        dst_class = CLS_OLD_DEFORESTATION
       elif RE_EDITED_DEFORESTATION.match(name):
-        dst_class = EDITED_DEFORESTATION
+        dst_class = CLS_EDITED_DEFORESTATION
       elif RE_EDITED_DEGRADATION.match(name):
-        dst_class = EDITED_DEGRADATION
+        dst_class = CLS_EDITED_DEGRADATION
       elif RE_EDITED_OLD_DEGRADATION.match(name):
-        dst_class = EDITED_OLD_DEGRADATION
+        dst_class = CLS_EDITED_OLD_DEGRADATION
 
       classes_to.append(dst_class)
 
-    remapped = img.remap(classes_from, classes_to, UNCLASSIFIED)
+    remapped = img.remap(classes_from, classes_to, CLS_UNCLASSIFIED)
     final = remapped.mask(img.mask()).select(['remapped'], ['class'])
     return (final, set(classes_to))
 
