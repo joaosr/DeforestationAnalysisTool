@@ -137,7 +137,7 @@ class NDFI(object):
         map_image = deg_image.select(['remapped'], ['classification'])
         # Make sure we keep the metadata.
         result = asset.addBands(map_image, ['classification'], True)
-        return ee.data.createAsset(result.serialize())
+        return ee.data.createAsset(result.serialize(False))
 
     def rgbid(self):
         """Returns mapid to access NDFI RGB image."""
@@ -208,7 +208,7 @@ class NDFI(object):
         # Calculate stats.
         bbox = self._get_polygon_bbox(polygon)
         stats = ee.data.getValue({
-            'image': stats_image.stats(NUM_SAMPLES, bbox).serialize(),
+            'image': stats_image.stats(NUM_SAMPLES, bbox).serialize(False),
             'fields': ','.join(bands)
         })
         mins = []
@@ -469,7 +469,7 @@ def get_prodes_stats(assetids, table_id):
 
 def get_thumbnail(landsat_image_id):
     return ee.data.getThumbId({
-        'image': ee.Image(landsat_image_id).serialize(),
+        'image': ee.Image(landsat_image_id).serialize(False),
         'bands': '30,20,10'
     })
 
