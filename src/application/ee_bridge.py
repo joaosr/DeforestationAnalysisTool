@@ -421,17 +421,11 @@ class NDFI(object):
         work_year = self._getMidYear(period['start'], period['end'])
         date = "%04d%02d" % (work_year, work_month)
         krig_filter = ee.Filter.eq('Compounddate', int(date))
+        params = ee.FeatureCollection(
+            'ft:17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo').filter(krig_filter)
         return ee.Image({
             "creator": "kriging/com.google.earthengine.examples.kriging.KrigedModisImage",
-            "args": [
-                self._make_mosaic(period, long_span),
-                {
-                    'type': 'FeatureCollection',
-                    'table_id': 4468280,
-                    'filter': json.loads(krig_filter.serialize()),
-                    'mark': str(timestamp())
-                }
-            ]
+            "args": [self._make_mosaic(period, long_span), params]
         })
 
     def _get_polygon_bbox(self, polygon):
