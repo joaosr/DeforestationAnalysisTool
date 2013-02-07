@@ -214,14 +214,14 @@ class NDFI(object):
         mins = []
         maxs = []
         for band in bands:
-          band_stats = stats['properties'][band]['values'];
-          min = band_stats['mean'] - STD_DEVS * band_stats['total_sd']
-          max = band_stats['mean'] + STD_DEVS * band_stats['total_sd']
-          if min == max:
-            min -= 1
-            max += 1
-          mins.append(min)
-          maxs.append(max)
+            band_stats = stats['properties'][band]['values']
+            min = band_stats['mean'] - STD_DEVS * band_stats['total_sd']
+            max = band_stats['mean'] + STD_DEVS * band_stats['total_sd']
+            if min == max:
+                min -= 1
+                max += 1
+            mins.append(min)
+            maxs.append(max)
 
         # Get stretched image.
         return display_image.clip(polygon).getMapId({
@@ -526,30 +526,30 @@ def _remap_prodes_classes(img):
     classes_to = []
 
     for src_class, name in zip(classes_from, class_names):
-      dst_class = CLS_UNCLASSIFIED
+        dst_class = CLS_UNCLASSIFIED
 
-      if RE_FOREST.match(name):
-        dst_class = CLS_FOREST
-      elif RE_BASELINE.match(name):
-        dst_class = CLS_BASELINE
-      elif RE_CLOUD.match(name):
-        dst_class = CLS_CLOUD
-      elif RE_NEW_DEFORESTATION.match(name):
-        dst_class = CLS_DEFORESTED
-      elif RE_DEFORESTATION.match(name):
-        dst_class = CLS_DEFORESTED
-      elif RE_DEGRADATION.match(name):
-        dst_class = CLS_DEGRADED
-      elif RE_OLD_DEFORESTATION.match(name):
-        dst_class = CLS_OLD_DEFORESTATION
-      elif RE_EDITED_DEFORESTATION.match(name):
-        dst_class = CLS_EDITED_DEFORESTATION
-      elif RE_EDITED_DEGRADATION.match(name):
-        dst_class = CLS_EDITED_DEGRADATION
-      elif RE_EDITED_OLD_DEGRADATION.match(name):
-        dst_class = CLS_EDITED_OLD_DEGRADATION
+        if RE_FOREST.match(name):
+            dst_class = CLS_FOREST
+        elif RE_BASELINE.match(name):
+            dst_class = CLS_BASELINE
+        elif RE_CLOUD.match(name):
+            dst_class = CLS_CLOUD
+        elif RE_NEW_DEFORESTATION.match(name):
+            dst_class = CLS_DEFORESTED
+        elif RE_DEFORESTATION.match(name):
+            dst_class = CLS_DEFORESTED
+        elif RE_DEGRADATION.match(name):
+            dst_class = CLS_DEGRADED
+        elif RE_OLD_DEFORESTATION.match(name):
+            dst_class = CLS_OLD_DEFORESTATION
+        elif RE_EDITED_DEFORESTATION.match(name):
+            dst_class = CLS_EDITED_DEFORESTATION
+        elif RE_EDITED_DEGRADATION.match(name):
+            dst_class = CLS_EDITED_DEGRADATION
+        elif RE_EDITED_OLD_DEGRADATION.match(name):
+            dst_class = CLS_EDITED_OLD_DEGRADATION
 
-      classes_to.append(dst_class)
+        classes_to.append(dst_class)
 
     remapped = img.remap(classes_from, classes_to, CLS_UNCLASSIFIED)
     final = remapped.mask(img.mask()).select(['remapped'], ['class'])
