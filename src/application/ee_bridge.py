@@ -31,6 +31,9 @@ CLS_EDITED_OLD_DEGRADATION = 9
 # A value that signifies invalid NDFI.
 INVALID_NDFI = 201
 
+# The length of a "long" time period in milliseconds.
+LONG_SPAN_SIZE_MS = 1000 * 60 * 60 * 24 * 30 * 3
+
 # Initialize the EE API.
 ee.data.DEFAULT_DEADLINE = 60 * 20
 ee.Initialize(settings.EE_CREDENTIALS, 'http://maxus.mtv:12345/')
@@ -306,7 +309,7 @@ class NDFI(object):
         table = table.filterMetadata('asset_id', 'contains', date)
         return ee.Image(asset_id).paint(table, CLS_BASELINE)
 
-    def _NDFI_image(self, period, long_span=0):
+    def _NDFI_image(self, period, long_span=False):
         base = self._unmixed_mosaic(period, long_span)
 
         # Calculate NDFI.
@@ -319,7 +322,7 @@ class NDFI(object):
         ndfi = ndfi.where(sum.eq(0), INVALID_NDFI)
         return ndfi.select([0], ['ndfi'])
 
-    def _NDFI_visualize(self, period, long_span=0):
+    def _NDFI_visualize(self, period, long_span=False):
         ndfi = self._NDFI_image(period, long_span)
 
         # Visualize.
@@ -333,7 +336,7 @@ class NDFI(object):
         # Collect the bands.
         return ee.Image.cat(ndfi, vis, base)
 
-    def _NDFI_period_image_command(self, period, long_span=0):
+    def _NDFI_period_image_command(self, period, long_span=False):
         """ get NDFI command to get map of NDFI for a period of time """
         return self._NDFI_visualize(period, long_span).getMapId({
             "bands": 'vis-red,vis-green,vis-blue',
@@ -351,33 +354,41 @@ class NDFI(object):
             'gamma': 1.6
         })
 
-    def _make_mosaic(self, period, long_span=0):
-        middle_seconds = int((period['end'] + period['start']) / 2000)
-        this_time = time.gmtime(middle_seconds)
-        month = this_time[1]
-        year = this_time[0]
+    def _make_mosaic(self, period, long_span=False):
+        if long_span:
+          start_time = period['end'] - LONG_SPAN_SIZE_MS
+          end_time = period['end']
+          start_month = time.gmtime(start_time / 1000).tm_mon
+          start_year = time.gmtime(start_time / 1000).tm_year
+          end_month = time.gmtime(end_time / 1000).tm_mon
+          end_year = time.gmtime(end_time / 1000).tm_year
+          start = '%04d%02d' % (start_year, start_month)
+          end = '%04d%02d' % (end_year, end_month)
+          filter = ee.Filter.And(
+              ee.Filter.gte('compounddate', start),
+              ee.Filter.lte('compounddate', end))
+        else:
+          start_time = period['start']
+          end_time = period['end']
+          month = self._getMidMonth(start_time, end_time)
+          year = self._getMidYear(start_time, end_time)
+          filter = ee.Filter.eq('compounddate', '%04d%02d' % (year, month))
+
         yesterday = date.today() - timedelta(1)
         micro_yesterday = long(time.mktime(yesterday.timetuple()) * 1000000)
-
-        if long_span == 0:
-          filter = ee.Filter.eq('compounddate', '%04d%02d' % (year, month))
-          start_time = period['start']
-        else:
-          start = '%04d%02d' % (year - 1, month)
-          end = '%04d%02d' % (year, month)
-          filter = ee.Filter.And(
-              ee.Filter.gt('compounddate', start),
-              ee.Filter.lte('compounddate', end))
-          start_time = period['start'] - 1000 * 60 * 60 * 24 * 365
-
-        ga = ee.ImageCollection({"id":"MODIS/MOD09GA", "version": micro_yesterday})
-        gq = ee.ImageCollection({"id":"MODIS/MOD09GQ", "version": micro_yesterday})
+        modis_ga = ee.ImageCollection({
+            "id":"MODIS/MOD09GA",
+            "version": micro_yesterday
+        })
+        modis_gq = ee.ImageCollection({
+            "id":"MODIS/MOD09GQ", "version": micro_yesterday
+        })
         table = ee.FeatureCollection('ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc')
         table = table.filter(filter)
 
         return ee.Image({
             "creator": 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-            "args": [ga, gq, table, start_time, period['end']]
+            "args": [modis_ga, modis_gq, table, start_time, period['end']]
         })
 
     def _SMA_image_command(self, period):
@@ -388,7 +399,7 @@ class NDFI(object):
             'gamma': 1.6
         })
 
-    def _unmixed_mosaic(self, period, long_span=0):
+    def _unmixed_mosaic(self, period, long_span=False):
         BAND_FORMAT = 'sur_refl_b0%d'
         BANDS = [3, 4, 1, 2, 6, 7]
         ENDMEMBERS = [
@@ -405,7 +416,7 @@ class NDFI(object):
         return result.select([0, 1, 2, 3, 4, 5],
                              OUTPUTS + [i + '_100' for i in OUTPUTS])
 
-    def _kriged_mosaic(self, period, long_span=0):
+    def _kriged_mosaic(self, period, long_span=False):
         work_month = self._getMidMonth(period['start'], period['end'])
         work_year = self._getMidYear(period['start'], period['end'])
         date = "%04d%02d" % (work_year, work_month)
@@ -435,13 +446,11 @@ class NDFI(object):
 
     def _getMidMonth(self, start, end):
         middle_seconds = int((end + start) / 2000)
-        this_time = time.gmtime(middle_seconds)
-        return this_time[1]
+        return time.gmtime(middle_seconds).tm_mon
 
     def _getMidYear(self, start, end):
         middle_seconds = int((end + start) / 2000)
-        this_time = time.gmtime(middle_seconds)
-        return this_time[0]
+        return time.gmtime(middle_seconds).tm_year
 
 
 def get_prodes_stats(assetids, table_id):
