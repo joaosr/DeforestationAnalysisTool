@@ -113,10 +113,10 @@ def ndfi_value_for_cells(cell_key):
     polygons = [[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]
     data = ndfi.ndfi_change_value(cell.report.base_map(), [polygons])
     logging.info(data)
-    if 'data' not in data:
+    if not data:
         logging.error("can't get ndfi change value")
         return
-    ndfi = data['data']['properties']['ndfiSum']['values']
+    ndfi = data['properties']['ndfiSum']['values']
     for row in xrange(10):
         for col in xrange(10):
             idx = row*10 + col

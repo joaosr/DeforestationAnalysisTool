@@ -34,6 +34,14 @@ INVALID_NDFI = 201
 # The length of a "long" time period in milliseconds.
 LONG_SPAN_SIZE_MS = 1000 * 60 * 60 * 24 * 30 * 3
 
+# MODIS projection specification.
+MODIS_CRS = 'SR-ORG:6974'
+MODIS_250_SCALE = 231.65635681152344
+MODIS_TRANSFORM = [
+    MODIS_250_SCALE,  0, -8895720,
+    0, -MODIS_250_SCALE, 1112066.375
+]
+
 # Initialize the EE API.
 ee.data.DEFAULT_DEADLINE = 60 * 20
 ee.Initialize(settings.EE_CREDENTIALS, 'http://maxus.mtv:12345/')
@@ -128,7 +136,7 @@ class NDFI(object):
         self.work_period = dict(start=work_period[0], end=work_period[1])
 
     def mapid2(self, asset_id):
-        return self._mapid2_cmd(asset_id).getMapId({'format': 'png'})
+        return self._ndfi_delta(asset_id).getMapId({'format': 'png'})
 
     def freeze_map(self, asset_id, table, report_id):
         asset = ee.Image(asset_id)
@@ -209,7 +217,7 @@ class NDFI(object):
         display_image = display_image.select(bands)
 
         # Calculate stats.
-        bbox = self._get_polygon_bbox(polygon)
+        bbox = ee.Feature.Rectangle(*self._get_polygon_bbox(polygon))
         stats = ee.data.getValue({
             'image': stats_image.stats(NUM_SAMPLES, bbox).serialize(False),
             'fields': ','.join(bands)
@@ -235,71 +243,125 @@ class NDFI(object):
 
     def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
         """Returns the NDFI difference between two periods inside the specified polygons."""
-        return ee.data.getValue({
-            'image': self._mapid2_cmd(asset_id, polygon, rows, cols).serialize(),
-            'fields': 'ndfiSum'
-        })
+        # Get region bound.
+        bbox = self._get_polygon_bbox(polygon)
+        rect = ee.Feature.Rectangle(*bbox)
+        min_x = bbox[0]
+        min_y = bbox[1]
+        max_x = bbox[2]
+        max_y = bbox[3]
+        x_span = max_x - min_x
+        y_span = max_y - min_y
+        x_step = x_span / cols
+        y_step = y_span / rows
 
-    def _mapid2_cmd(self, asset_id, polygon=None, rows=5, cols=5):
-        # Calculate dates.
-        year_msec = 1000 * 60 * 60 * 24 * 365
-        month_msec = 1000 * 60 * 60 * 24 * 30
-        six_months_ago = self.work_period['end'] - month_msec * 6
-        one_month_ago = self.work_period['end'] - month_msec
-        last_month = time.gmtime(int(six_months_ago / 1000))[1]
-        last_year = time.gmtime(int(six_months_ago / 1000))[0]
-        previous_month = time.gmtime(int(one_month_ago / 1000))[1]
-        previous_year = time.gmtime(int(one_month_ago / 1000))[0]
-        work_month = self._getMidMonth(self.work_period['start'], self.work_period['end'])
-        work_year = self._getMidYear(self.work_period['start'], self.work_period['end'])
-        start = "%04d%02d" % (last_year, last_month)
-        end = "%04d%02d" % (work_year, work_month)
-        previous = "%04d%02d" % (previous_year, previous_month)
+        # Make a numbered grid image that will be used as a mask when selecting
+        # cells. We can't clip to geometry because that way some pixels will be
+        # included in multiple cells.
+        lngLat = ee.Image.pixelLonLat().clip(rect)
+        lng = lngLat.select(0)
+        lat = lngLat.select(1)
 
-        # Prepare dates.
-        t0_start = self.last_period['start'] - year_msec
-        t0_end = self.last_period['end']
-        t1_start = self.work_period['start']
-        t1_end = self.work_period['end']
+        lng = lng.subtract(min_x).unitScale(0, x_step).int()
+        lat = lat.subtract(min_y).unitScale(0, x_step).int()
+        index_image = lat.multiply(cols).add(lng)
 
-        # Prepare imagery.
+        # Get the NDFI data.
+        diff = self._ndfi_delta(asset_id).select(0)
+        masked = diff.mask(diff.mask().And(diff.lt(INVALID_NDFI)))
+
+        # Compose the reduction query for each cell.
+        count_reducer = ee.call('Reducer.count')
+        sum_reducer = ee.call('Reducer.sum')
+        def grid(img):
+            count_queries = []
+            sum_queries = []
+            for y in range(rows):
+                for x in range(cols):
+                    index = y * cols + x
+                    cell_img = img.mask(img.mask().And(index_image.eq(index)))
+                    count_queries.append(cell_img.reduceRegion(
+                        count_reducer, rect, None, MODIS_CRS, MODIS_TRANSFORM))
+                    sum_queries.append(cell_img.reduceRegion(
+                        sum_reducer, rect, None, MODIS_CRS, MODIS_TRANSFORM))
+            return [count_queries, sum_queries]
+        func = ee.lambda_(['img'], grid(ee.variable(ee.Image, 'img')))
+        final_query = ee.call(func, masked)
+
+        # Run the aggregations.
+        json = ee.serializer.toJSON(final_query, False)
+        result = ee.data.getValue({'json': json})
+
+        # Repackages the results in a backward-compatible form:
+        counts = [int(i['ndfi']) for i in result[0]]
+        sums = [int(i['ndfi']) for i in result[1]]
+        return {
+            'properties': {
+                'ndfiSum': {
+                    'values': {
+                        'count': counts,
+                        'sum': sums
+                    },
+                    'type': 'DataDictionary'
+                }
+            }
+        }
+
+    def _ndfi_delta(self, asset_id):
+        # Constants.
+        MIN_FOREST_SIZE = 41
+        MIN_UNMASKED_SIZE = 21
+        ALREADY_DEFORESTED_NDFI = 100
+        CLASSIFICATION_OFFSET = 201
+
+        # Get base NDFIs.
+        work_month = self._getMidMonth(self.work_period['start'],
+                                       self.work_period['end'])
+        work_year = self._getMidYear(self.work_period['start'],
+                                     self.work_period['end'])
         baseline = self._paint_deforestation(asset_id, work_month, work_year)
-        modis_ga = ee.ImageCollection('MODIS/MOD09GA')
-        modis_gq = ee.ImageCollection('MODIS/MOD09GQ')
+        ndfi0 = self._NDFI_image(self.last_period, 1)
+        ndfi1 = self._NDFI_image(self.work_period)
 
-        # Prepare tables.
-        inclusions = ee.FeatureCollection('ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc')
-        t0_inclusions = inclusions.filter(
-            ee.Filter.And(ee.Filter.gt('compounddate', start),
-                          ee.Filter.lt('compounddate', end)))
-        t1_inclusions = inclusions.filter(ee.Filter.eq('compounddate', end))
+        # Basic difference.
+        diff = ndfi1.subtract(ndfi0)
 
-        kriging_params = ee.FeatureCollection(4468280)
-        t0_kriging_params = kriging_params.filter(
-            ee.Filter.eq('compounddate', int(previous)))
-        t1_kriging_params = kriging_params.filter(
-            ee.Filter.eq('compounddate', int(end)))
+        # Initialize outcomes.
+        out_shifted_baseline = baseline.add(CLASSIFICATION_OFFSET)
+        out_shifted_deforestation = CLS_DEFORESTED + CLASSIFICATION_OFFSET
+        out_shifted_unclassified = CLS_UNCLASSIFIED + CLASSIFICATION_OFFSET
+        out_negated_diff = diff.multiply(-1)
 
-        # Construct the final query.
-        return ee.Image({
-            "creator":"SAD/com.google.earthengine.examples.sad.GetNDFIDelta",
-            "args": [
-                t0_start,
-                t0_end,
-                t1_start,
-                t1_end,
-                modis_ga,
-                modis_gq,
-                t0_inclusions,
-                t1_inclusions,
-                t0_kriging_params,
-                t1_kriging_params,
-                baseline,
-                polygon,
-                rows,
-                cols
-            ]
-        })
+        # Start with the diff.
+        raw_result = out_negated_diff
+
+        # Mask out improved areas.
+        raw_result = raw_result.where(diff.gt(0), out_shifted_baseline)
+
+        # Mask out already deforested areas.
+        already_deforested = ndfi0.lt(ALREADY_DEFORESTED_NDFI)
+        raw_result = raw_result.where(already_deforested,
+                                      out_shifted_deforestation)
+
+        # Mask out pixels that are unknown or not in a large enough forest.
+        baseline_segment_size = baseline.connectedPixelCount(MIN_FOREST_SIZE)
+        considered = baseline.neq(CLS_BASELINE).And(
+            baseline.neq(CLS_UNCLASSIFIED)).And(
+            baseline.neq(CLS_OLD_DEFORESTATION)).And(
+            ndfi0.neq(INVALID_NDFI)).And(
+            ndfi1.neq(INVALID_NDFI)).And(
+            baseline_segment_size.gte(MIN_FOREST_SIZE))
+        raw_result = raw_result.where(considered.Not(), out_shifted_baseline)
+
+        # Unclassify previously unclassified pixels and small forests.
+        cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
+        mask_segment_size = cloud_mask.connectedPixelCount(MIN_UNMASKED_SIZE)
+        to_unclassify = baseline.eq(CLS_FOREST).And(
+            baseline_segment_size.gte(MIN_FOREST_SIZE)).And(
+            mask_segment_size.lt(MIN_UNMASKED_SIZE))
+        result = raw_result.where(to_unclassify, out_shifted_unclassified)
+
+        return result.byte().addBands(baseline)
 
     def _paint_deforestation(self, asset_id, month, year):
         date = '%04d' % year
@@ -436,7 +498,7 @@ class NDFI(object):
         min_lng = min(lngs)
         max_lat = max(lats)
         min_lat = min(lats)
-        return ee.Feature.Rectangle(min_lng, min_lat, max_lng, max_lat)
+        return (min_lng, min_lat, max_lng, max_lat)
 
     def _getMidMonth(self, start, end):
         middle_seconds = int((end + start) / 2000)
