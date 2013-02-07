@@ -32,7 +32,7 @@ CLS_EDITED_OLD_DEGRADATION = 9
 INVALID_NDFI = 201
 
 # Initialize the EE API.
-ee.data.DEFAULT_DEADLINE = 600
+ee.data.DEFAULT_DEADLINE = 60 * 20
 ee.Initialize(settings.EE_CREDENTIALS, 'http://maxus.mtv:12345/')
 
 
