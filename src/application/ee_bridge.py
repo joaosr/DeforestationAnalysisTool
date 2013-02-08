@@ -42,10 +42,6 @@ MODIS_TRANSFORM = [
     0, -MODIS_250_SCALE, 1112066.375
 ]
 
-# Initialize the EE API.
-ee.data.DEFAULT_DEADLINE = 60 * 20
-ee.Initialize(settings.EE_CREDENTIALS, 'http://maxus.mtv:12345/')
-
 
 class Stats(object):
     DEFORESTATION = CLS_EDITED_DEFORESTATION
