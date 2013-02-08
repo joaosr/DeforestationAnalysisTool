@@ -45,7 +45,7 @@ class ImageCollection(collection.Collection):
       # A manually created collection.
       args = {'type': 'ImageCollection',
               'images': [image.Image(x) for x in args]}
-    elif isinstance(args, ImageCollection):
+    elif isinstance(args, collection.Collection):
       args = copy.deepcopy(args._description)        # pylint: disable-msg=W0212
     else:
       raise ee_exception.EEException('Unrecognized constructor argument.')
