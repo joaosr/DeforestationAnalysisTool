@@ -36,11 +36,16 @@ LONG_SPAN_SIZE_MS = 1000 * 60 * 60 * 24 * 30 * 3
 
 # MODIS projection specification.
 MODIS_CRS = 'SR-ORG:6974'
+MODIS_WIDTH = 20015100
+MODIS_CELLS = 18
 MODIS_250_SCALE = 231.65635681152344
 MODIS_TRANSFORM = [
     MODIS_250_SCALE,  0, -8895720,
     0, -MODIS_250_SCALE, 1112066.375
 ]
+
+# The ID of the Fusion Table containing the selected MODIS days for each month.
+MODIS_INCLUSIONS_TABLE = 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc'
 
 
 class Stats(object):
@@ -413,6 +418,7 @@ class NDFI(object):
         })
 
     def _make_mosaic(self, period, long_span=False):
+        # Calculate the time span.
         if long_span:
           start_time = period['end'] - LONG_SPAN_SIZE_MS
           end_time = period['end']
@@ -422,7 +428,7 @@ class NDFI(object):
           end_year = time.gmtime(end_time / 1000).tm_year
           start = '%04d%02d' % (start_year, start_month)
           end = '%04d%02d' % (end_year, end_month)
-          filter = ee.Filter.And(
+          inclusions_filter = ee.Filter.And(
               ee.Filter.gte('compounddate', start),
               ee.Filter.lte('compounddate', end))
         else:
@@ -430,24 +436,84 @@ class NDFI(object):
           end_time = period['end']
           month = self._getMidMonth(start_time, end_time)
           year = self._getMidYear(start_time, end_time)
-          filter = ee.Filter.eq('compounddate', '%04d%02d' % (year, month))
+          inclusions_filter = ee.Filter.eq(
+              'compounddate', '%04d%02d' % (year, month))
 
-        yesterday = date.today() - timedelta(1)
-        micro_yesterday = long(time.mktime(yesterday.timetuple()) * 1000000)
-        modis_ga = ee.ImageCollection({
-            "id":"MODIS/MOD09GA",
-            "version": micro_yesterday
-        })
-        modis_gq = ee.ImageCollection({
-            "id":"MODIS/MOD09GQ", "version": micro_yesterday
-        })
-        table = ee.FeatureCollection('ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc')
-        table = table.filter(filter)
+        # Prepare source image collections.
+        modis_ga = ee.ImageCollection('MODIS/MOD09GA')
+        modis_gq = ee.ImageCollection('MODIS/MOD09GQ')
 
-        return ee.Image({
-            "creator": 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-            "args": [modis_ga, modis_gq, table, start_time, period['end']]
-        })
+        # Fetch the inclusions table rows.
+        inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
+        rows = inclusions.filter(inclusions_filter).getInfo()['features']
+        cells = [i['properties'] for i in rows]
+
+        # Prepare the list of selected images for each cell.
+        ga_images = collections.defaultdict(list)
+        gq_images = collections.defaultdict(list)
+        for cell in cells:
+            days = cell['day'].split(',')
+            tile = cell['cell']
+            for day in days:
+                args = (int(cell['year']), int(cell['month']), int(day))
+                ga_images[tile].append('MOD09GA_005_%04d_%02d_%02d' % args)
+                gq_images[tile].append('MOD09GQ_005_%04d_%02d_%02d' % args)
+
+        # Get filtered and joined collections for each cell.
+        subcollections = []
+        specs = zip(ga_images.keys(), ga_images.values(), gq_images.values())
+        for tile, selected_ga, selected_gq in specs:
+            ga = modis_ga.filterDate(start_time, end_time).filterMetadata(
+                'system:index', 'in_list', selected_ga)
+            gq = modis_gq.filterDate(start_time, end_time).filterMetadata(
+                'system:index', 'in_list', selected_gq)
+
+            joined = ga.innerJoin(
+                gq, 'equals', 'system:time_start', 'system:time_start')
+            combined = ee.ImageCollection(joined.map(
+                'Image.addBands', {'dstImg': 'primary', 'srcImg': 'secondary'}))
+
+            cell_bounds = _get_modis_tile(int(tile[1:3]), int(tile[4:6]))
+            clipped = combined.map(lambda img: \
+                img.clip(cell_bounds).addBands(
+                    img.metadata('system:time_start')))
+
+            subcollections.append(clipped)
+
+        # Merge subcollections to stitch our tapestry.
+        def merge(collections):
+            if len(collections) == 1:
+                return collections[0]
+            else:
+                mid = len(collections) / 2
+                return merge(collections[0:mid]).merge(merge(collections[mid:]))
+        merged = ee.ImageCollection(merge(subcollections))
+
+        # Mask invalid pixels in each image and composite what remains ordering
+        # by time.
+        def maskInvalid(img):
+            BAND_MAP = {
+              "num_observations_1km": "num_observations_1km",
+              "state_1km": "state_1km",
+              "sur_refl_b01": "sur_refl_b01_500m",
+              "sur_refl_b02": "sur_refl_b02_500m",
+              "sur_refl_b03": "sur_refl_b03_500m",
+              "sur_refl_b04": "sur_refl_b04_500m",
+              "sur_refl_b05": "sur_refl_b05_500m",
+              "sur_refl_b06": "sur_refl_b06_500m",
+              "sur_refl_b07": "sur_refl_b07_500m",
+              "sur_refl_b01_1": "sur_refl_b01_250m",
+              "sur_refl_b02_1": "sur_refl_b02_250m",
+              "num_observations": "num_observations_250m",
+              "system:time_start": "TIME",
+            }
+            valid = img.select('num_observations_1km').neq(0).And(
+                img.select('num_observations').neq(0)).And(
+                img.select('state_1km').right_shift(6).mod(4).neq(0)).And(
+                img.select('sur_refl_.*').reduce(ee.call('Reducer.min')).gt(0))
+            return img.mask(valid).select(BAND_MAP.keys(), BAND_MAP.values())
+        return merged.map(maskInvalid).qualityMosaic('TIME').slice(0, -1)
+
 
     def _SMA_image_command(self, period):
         return self._unmixed_mosaic(period).getMapId({
@@ -625,9 +691,28 @@ def _paint(current_asset, report_id, table, value):
 
 
 def _get_landsat_toa(start_time, end_time, version=-1):
-  collection = ee.ImageCollection({
-      'id': 'L7_L1T',
-      'version': version
-  })
-  collection = collection.filterDate(start_time, end_time)
-  return collection.map(lambda img: ee.call('LandsatTOA', img))
+    collection = ee.ImageCollection({
+        'id': 'L7_L1T',
+        'version': version
+    })
+    collection = collection.filterDate(start_time, end_time)
+    return collection.map(lambda img: ee.call('LandsatTOA', img))
+
+
+def _get_modis_tile(horizontal, vertical):
+    cell_size = MODIS_WIDTH / MODIS_CELLS
+    base_x = -MODIS_WIDTH
+    base_y = -MODIS_WIDTH / 2
+
+    min_x = base_x + horizontal * cell_size
+    max_x = base_x + (horizontal + 1) * cell_size - MODIS_250_SCALE
+    min_y = base_y + (MODIS_CELLS - vertical - 1) * cell_size
+    max_y = base_y + (MODIS_CELLS - vertical) * cell_size - MODIS_250_SCALE
+
+    rectangle = ee.Feature.Rectangle(min_x, min_y, max_x, max_y)
+    rectangle['crs'] = {
+        "type": "name",
+        "properties": { "name": MODIS_CRS }
+    }
+
+    return rectangle
