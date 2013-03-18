@@ -40,7 +40,7 @@ def default_maps():
     #if d: maps.append({'data' :d, 'info': 'ndfi difference'})
     d = ndfi.smaid()
     if d: maps.append({'data': d, 'info': 'SMA'})
-    d = ndfi.rgbid()
+    d = ndfi.rgb1id()
     if d: maps.append({'data': d, 'info': 'RGB'})
     d = ndfi.ndfi0id()
     if d: maps.append({'data': d, 'info': 'NDFI T0'})

@@ -1,4 +1,9 @@
-#encoding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+A set of EE API calls that computes deforestation statistics.
+"""
 
 import logging
 import settings
@@ -28,8 +33,10 @@ CLS_EDITED_DEFORESTATION = 7
 CLS_EDITED_DEGRADATION = 8
 CLS_EDITED_OLD_DEGRADATION = 9
 
-# A value that signifies invalid NDFI.
-INVALID_NDFI = 201
+
+# Values that signify maximum and invalid NDFI.
+MAX_NDFI = 200
+INVALID_NDFI = MAX_NDFI + 1
 
 # The length of a "long" time period in milliseconds.
 LONG_SPAN_SIZE_MS = 1000 * 60 * 60 * 24 * 30 * 3
@@ -44,45 +51,52 @@ MODIS_TRANSFORM = [
     0, -MODIS_250_SCALE, 1112066.375
 ]
 
+# Whether to assume that we're using the new API format that handles shared
+# subtrees but forbids custom JSON. Currently setting this to True will
+# cause performance issues and may be blocked by quota limits. This
+# sad state of affairs is gonna change real soon now.
+ASSUME_NEW_API = False
+
 # The ID of the Fusion Table containing the selected MODIS days for each month.
 MODIS_INCLUSIONS_TABLE = 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc'
+# The ID of the Fusion Table containing kriging parameters.
+KRIGING_PARAMS_TABLE = 'ft:17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 
 
 class Stats(object):
+    """A class for calculating deforestation/degradation area stats."""
     DEFORESTATION = CLS_EDITED_DEFORESTATION
     DEGRADATION = CLS_EDITED_DEGRADATION
 
-    def _get_historical_freeze(self, report_id, frozen_image):
-        remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
-                                      [0,1,2,3,4,5,6,1,1,9])
-        def_image = _paint(remapped, report_id, settings.FT_TABLE_ID, 7)
-        deg_image = _paint(def_image, report_id, settings.FT_TABLE_ID, 8)
-        return deg_image.select(['remapped'], ['class'])
+    def get_stats_for_polygon(self, reports, polygon):
+        """Computes deforestation area stats for a polygon on multiple images.
 
-    def _get_area(self, report_id, image_id, polygons):
-        freeze = self._get_historical_freeze(report_id, ee.Image(image_id))
-        return _get_area_histogram(
-            freeze, polygons, [Stats.DEFORESTATION, Stats.DEGRADATION])
+        Args:
+          reports: A list of reports, each report a tuple of a numeric
+                   report ID (used to filter the rows of the table
+                   specified by settings.FT_TABLE_ID) and a string image ID.
+          polygon: The coordinates of the polygon to use. Must be wound in a
+              counter-clockwise order. Example:
+              [[[-62,-11],[-62,-12],[-61,-12],[-61,-11]]]
 
-    def get_stats_for_polygon(self, assetids, polygon):
-        """ example polygon, must be CCW
-            #polygon = [[[-61.9,-11.799],[-61.9,-11.9],[-61.799,-11.9],[-61.799,-11.799],[-61.9,-11.799]]]
+        Returns:
+          A list of stats, one for each entry in reports, in the same order.
+          Each stats item includes:
+            total_area: total polygon area in square km.
+            def: total deforested area in square km.
+            deg: total degradation area in square km.
         """
         feature = ee.Feature(ee.Feature.Polygon(polygon), {'name': 'myPoly'})
         polygons = ee.FeatureCollection([ee.Feature(feature)])
 
-        # javascript way, lovely
-        if not hasattr(assetids, '__iter__'):
-            assetids = [assetids]
-
-        reports = []
-        for report_id, asset_id in assetids:
+        report_stats = []
+        for report_id, asset_id in reports:
             result = self._get_area(report_id, asset_id, polygons)
             if result is None: return None
-            reports.append(result[0])
+            report_stats.append(result[0])
 
         stats = []
-        for x in reports:
+        for x in report_stats:
             stats.append({
                 'total_area': x['total']['area'] * METER2_TO_KM2,
                 'def': x[str(Stats.DEFORESTATION)]['area'] * METER2_TO_KM2,
@@ -91,97 +105,207 @@ class Stats(object):
         return stats
 
     def get_stats(self, report_id, frozen_image, table_id):
+        """Computes deforestation area stats for a given report.
+
+        Args:
+          report_id: The report ID, an integer. This is used to filter the
+              rows of the table specified by settings.FT_TABLE_ID.
+          frozen_image: The ID of the baseline image.
+          table_id: The numeric ID of the Fusion Table containing the polygons
+              to analyse.
+
+        Returns:
+          A dictionaty from polygon ID (<table_id>_<name>) to its stats,
+          which include:
+            table: the ID of the input table.
+            id: the "name" column for this row in the table.
+            total_area: total polygon area in square km.
+            def: total deforested area in square km.
+            deg: total degradation area in square km.
+        """
         result = self._get_area(
             report_id, frozen_image, ee.FeatureCollection(int(table_id)))
         if result is None: return None
         stats = {}
-        for x in result:
-            name = x['name']
+        for row in result:
+            name = row['name']
             if isinstance(name, float): name = int(name)
             stats['%s_%s' % (table_id, name)] = {
                 'id': str(name),
                 'table': table_id,
-                'total_area': x['total']['area'] * METER2_TO_KM2,
-                'def': x[str(Stats.DEFORESTATION)]['area'] * METER2_TO_KM2,
-                'deg': x[str(Stats.DEGRADATION)]['area'] * METER2_TO_KM2,
+                'total_area': row['total']['area'] * METER2_TO_KM2,
+                'def': row[str(Stats.DEFORESTATION)]['area'] * METER2_TO_KM2,
+                'deg': row[str(Stats.DEGRADATION)]['area'] * METER2_TO_KM2,
             }
 
         return stats
 
+    def _get_historical_freeze(self, report_id, frozen_image):
+        """Paints deforestation onto an image.
+
+        Args:
+          report_id: The report ID, a number. Used to filter the
+              rows of the table specified by settings.FT_TABLE_ID.
+          frozen_image: A single-bane baseline ee.Image to paint onto.
+
+        Returns:
+          The input ee.Image with its band renamed to "class" if needed
+          and with deforestation and degradation painted.
+        """
+        # Remap CLS_EDITED_DEFORESTATION and CLS_EDITED_DEGRADATION to CLS_FOREST.
+        remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
+                                      [0,1,2,3,4,5,6,1,1,9])
+        def_image = _paint(remapped, settings.FT_TABLE_ID, report_id,
+                           Stats.DEFORESTATION)
+        deg_image = _paint(def_image, settings.FT_TABLE_ID, report_id,
+                           Stats.DEGRADATION)
+        return deg_image.select(['remapped'], ['class'])
+
+    def _get_area(self, report_id, image_id, polygons):
+        """Computes the deforestation and degradation for each polygon.
+
+        Args:
+          report_id: The report ID, a number. Used to filter the
+              rows of the table specified by settings.FT_TABLE_ID.
+          image_id: The string ID od a single-band image with class-valued
+              pixels.
+          polygons: An ee.FeatureCollection of polygons to analyse.
+
+        Returns:
+          A list of dictionaries, one for each polygon in the polygons
+          collection in the same order as they are returned from the collection.
+          Each dictionary has three entries keyed by "total",
+          Stats.DEFORESTATION and Stats.DEGRADATION, specifying the area in
+          square meters of each.
+        """
+        freeze = self._get_historical_freeze(report_id, ee.Image(image_id))
+        return _get_area_histogram(
+            freeze, polygons, [Stats.DEFORESTATION, Stats.DEGRADATION])
+
+
 
 class EELandsat(object):
-    def list(self, bounds, params={}):
+    """A helper for accessing Landsat 7 images."""
+
+    def list(self, bounds):
+        """Returns a list of IDs of Landsat 7 images intersecting a given area.
+
+        Args:
+          bounds: The bounding box to intersect, a comma-separated string.
+              E.g.: "110,60,120,70"
+        """
         bbox = ee.Feature.Rectangle(
             *[float(i.strip()) for i in bounds.split(',')])
-        images = ee.ImageCollection('L7_L1T').filterBounds(bbox).getInfo()
-        logging.info(images)
+        # NOTE: Can technically use L7_L1T, but then we'll get IDs without the
+        # "LANDSAT/" base, and that confuses some of the callers.
+        images = ee.ImageCollection('LANDSAT/L7_L1T').filterBounds(bbox).getInfo()
         if 'features' in images:
             return [x['id'] for x in images['features']]
         return []
 
     def mapid(self, start, end):
+        """Returns a Map ID for a Landsat 7 TOA mosaic for a given time period.
+
+        Args:
+          start: The start of the time period as a Unix timestamp.
+          end: The end of the time period as a Unix timestamp.
+        """
         MAP_IMAGE_BANDS = ['30','20','10']
         PREVIEW_GAIN = 500
-        collection = _get_landsat_toa(start, end)
-        return collection.mosaic().getMapId({
+        return _get_landsat_toa(start, end).mosaic().getMapId({
             'bands': ','.join(MAP_IMAGE_BANDS),
             'gain': PREVIEW_GAIN
         })
 
 
 class NDFI(object):
-    """NDFI info for a period of time."""
+    """A helper for computing NDFI status on MODIS image over a time period."""
 
     def __init__(self, last_period, work_period):
+        """Construct an NDFI helper for comparing to periods.
+
+        Args:
+          last_period: The old period, as a 2-tuple of Unix timestamps.
+          work_period: The new period, as a 2-tuple of Unix timestamps.
+        """
         self.last_period = dict(start=last_period[0], end=last_period[1])
         self.work_period = dict(start=work_period[0], end=work_period[1])
 
     def mapid2(self, asset_id):
+        """Returns a Map ID for a visualization of the NDFI difference between last_period and work_period."""
         return self._ndfi_delta(asset_id).getMapId({'format': 'png'})
 
-    def freeze_map(self, asset_id, table, report_id):
+    def rgb0id(self):
+        """Returns a Map ID for the RGB visualization of a MODIS mosaic for last_period."""
+        return self._RGB_image_command(self.last_period, True)
+
+    def rgb1id(self):
+        """Returns a Map ID for the RGB visualization of a MODIS mosaic for work_period."""
+        return self._RGB_image_command(self.work_period)
+
+    def ndfi0id(self):
+        """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for last_period."""
+        return self._NDFI_period_image_command(self.last_period, True)
+
+    def ndfi1id(self):
+        """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for work_period."""
+        return self._NDFI_period_image_command(self.work_period)
+
+    def smaid(self):
+        """Returns a Map ID for the NDFI SMA image for work_period."""
+        return self._SMA_image_command(self.work_period)
+
+    def baseline(self, asset_id):
+        """Returns a Map ID for the given classification asset, masked to only show CLS_BASELINE areas."""
+        classification = ee.Image(asset_id).select('classification')
+        return classification.mask(classification.eq(CLS_BASELINE)).getMapId()
+
+    def freeze_map(self, asset_id, table_id, report_id):
+        """Saves a new baseline image as an asset.
+
+        Args:
+          asset_id: The ID of the baseline PRODES image.
+          table_id: The numeric ID of the Fusion Table containing the report
+              polygons.
+          report_id: The report ID, an integer. This is used to filter the
+              rows of the specified table.
+
+        Returns:
+          A description of the saves image which includes an ID.
+        """
         asset = ee.Image(asset_id)
         frozen_image = _remap_prodes_classes(asset)[0]
+        # Remap CLS_EDITED_DEFORESTATION and CLS_EDITED_DEGRADATION to
+        # CLS_DEFORESTED and CLS_DEGRADED.
         remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
                                       [0,1,2,3,4,5,6,2,3,9])
-        def_image = _paint(remapped, int(report_id), table, 7)
-        deg_image = _paint(def_image, int(report_id), table, 8)
+        # Paint new areas.
+        def_image = _paint(remapped, table_id, int(report_id), CLS_EDITED_DEFORESTATION)
+        deg_image = _paint(def_image, table_id, int(report_id), CLS_EDITED_DEGRADATION)
         map_image = deg_image.select(['remapped'], ['classification'])
         # Make sure we keep the metadata.
         result = asset.addBands(map_image, ['classification'], True)
         return ee.data.createAsset(result.serialize(False))
 
-    def rgbid(self):
-        """Returns mapid to access NDFI RGB image."""
-        return self._RGB_image_command(self.work_period)
+    def rgb_stretch(self, polygon, sensor, bands, std_devs=2):
+        """Returns a Map ID for a stretched mosaic visualized as RGB.
 
-    def smaid(self):
-        """Returns mapid to access NDFI SMA image."""
-        return self._SMA_image_command(self.work_period)
+        Args:
+          polygon: The GeoJSON polygon describing the region that will be
+              visualized. The stats for this region will be used to calculate
+              the stretch ranges.
+          sensor: The type of mosaic, either "landsat" or "modis".
+          bands: The three band numbers to use. For sensor="modis", the valid
+              values are 1,2,3,4,5,6,7. For sensor="landsat", the valid values
+              are 10,20,30,40,50,61,62,70,80.
+          std_devs: The number of standard deviations from the mean to stretch.
+              Defaults to 2.
 
-    def ndfi0id(self):
-        """Returns mapid to access NDFI T0 image."""
-        return self._NDFI_period_image_command(self.last_period, 1)
-
-    def baseline(self, asset_id):
-        classification = ee.Image(asset_id).select('classification')
-        return classification.mask(classification.eq(4)).getMapId()
-
-    def rgb0id(self):
-        """Returns params to access NDFI RGB image for the last quarter."""
-        quarter_msec = 1000 * 60 * 60 * 24 * 90
-        last_start = self.last_period['start']
-        last_period = dict(start=last_start - quarter_msec,
-                           end=self.last_period['end'])
-        return self._RGB_image_command(last_period)
-
-    def ndfi1id(self):
-        """Returns mapid to access NDFI T1 image."""
-        return self._NDFI_period_image_command(self.work_period)
-
-    def rgb_stretch(self, polygon, sensor, bands):
-        NUM_SAMPLES = 999999
-        STD_DEVS = 2
+        Returns:
+          The Map ID for the stretched RGB image.
+        """
+        NUM_SAMPLES = 10 ** 6
+        RGB_BANDS = ['vis-red','vis-green', 'vis-blue']
 
         if sensor == 'modis':
             bands = ['sur_refl_b0%d' % i for i in bands]
@@ -214,21 +338,21 @@ class NDFI(object):
             stats_image = display_image = collection.mosaic()
         else:
             raise RuntimeError('Sensor %s neither modis nor landsat.' % sensor)
-        stats_image = stats_image.select(bands)
-        display_image = display_image.select(bands)
+        stats_image = stats_image.select(bands, RGB_BANDS)
+        display_image = display_image.select(bands, RGB_BANDS)
 
         # Calculate stats.
         bbox = ee.Feature.Rectangle(*self._get_polygon_bbox(polygon))
         stats = ee.data.getValue({
             'image': stats_image.stats(NUM_SAMPLES, bbox).serialize(False),
-            'fields': ','.join(bands)
+            'fields': ','.join(RGB_BANDS)
         })
         mins = []
         maxs = []
-        for band in bands:
+        for band in RGB_BANDS:
             band_stats = stats['properties'][band]['values']
-            min = band_stats['mean'] - STD_DEVS * band_stats['total_sd']
-            max = band_stats['mean'] + STD_DEVS * band_stats['total_sd']
+            min = band_stats['mean'] - std_devs * band_stats['total_sd']
+            max = band_stats['mean'] + std_devs * band_stats['total_sd']
             if min == max:
                 min -= 1
                 max += 1
@@ -237,13 +361,46 @@ class NDFI(object):
 
         # Get stretched image.
         return display_image.clip(polygon).getMapId({
-            'bands': ','.join(bands),
+            'bands': ','.join(RGB_BANDS),
             'min': ','.join(str(i) for i in mins),
             'max': ','.join(str(i) for i in maxs)
         })
 
     def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
-        """Returns the NDFI difference between two periods inside the specified polygons."""
+        """Calculates NDFI delta stats between two periods in a given polygon.
+
+        This method splits the supplied polygon using a grid specified by the
+        rows and columns parameters, then for each cell, computes the number
+        of valid pixels and the total NDFI of all those pixels.
+
+        WARNING: Until ASSUME_NEW_API is flipped, this is horribly, painfully
+        slow, and slows down linearly with the number of cells.
+
+        Args:
+          asset_id: The string ID of the baseline classification image. Should
+              have one band whose values are the CLS_* constants defined in
+              this file.
+          polygon: The GeoJSON polygon to analyse.
+          rows: The number of rows to divide the polygon into.
+          columns: The number of columns to divide the polygon into.
+
+        Returns:
+          The counts and sums of NDFI pixels for each cell in row-major order.
+          For backward-compatibility, returned in the awkward old EE format.
+          Example:
+          {
+            "properties": {
+              "ndfiSum": {
+                "type": "DataDictionary",
+                "values": {
+                  "count": [0, 0, 42, 1, 30, 12],
+                  "sum": [0, 0, 925, 3, 879, 170]
+                }
+              }
+            }
+          }
+        """
+
         # Get region bound.
         bbox = self._get_polygon_bbox(polygon)
         rect = ee.Feature.Rectangle(*bbox)
@@ -257,7 +414,7 @@ class NDFI(object):
         y_step = y_span / rows
 
         # Make a numbered grid image that will be used as a mask when selecting
-        # cells. We can't clip to geometry because that way some pixels will be
+        # cells. We can't clip to geometry because that way some pixels may be
         # included in multiple cells.
         lngLat = ee.Image.pixelLonLat().clip(rect)
         lng = lngLat.select(0)
@@ -269,33 +426,31 @@ class NDFI(object):
 
         # Get the NDFI data.
         diff = self._ndfi_delta(asset_id).select(0)
-        masked = diff.mask(diff.mask().And(diff.lt(INVALID_NDFI)))
+        masked = diff.mask(diff.mask().And(diff.lte(MAX_NDFI)))
 
-        # Compose the reduction query for each cell.
+        # Aggregate each cell.
         count_reducer = ee.call('Reducer.count')
         sum_reducer = ee.call('Reducer.sum')
-        def grid(img):
-            count_queries = []
-            sum_queries = []
-            for y in range(rows):
-                for x in range(cols):
-                    index = y * cols + x
-                    cell_img = img.mask(img.mask().And(index_image.eq(index)))
-                    count_queries.append(cell_img.reduceRegion(
-                        count_reducer, rect, None, MODIS_CRS, MODIS_TRANSFORM))
-                    sum_queries.append(cell_img.reduceRegion(
-                        sum_reducer, rect, None, MODIS_CRS, MODIS_TRANSFORM))
-            return [count_queries, sum_queries]
-        func = ee.lambda_(['img'], grid(ee.variable(ee.Image, 'img')))
-        final_query = ee.call(func, masked)
-
-        # Run the aggregations.
-        json = ee.serializer.toJSON(final_query, False)
-        result = ee.data.getValue({'json': json})
+        results = []
+        for y in range(rows):
+            for x in range(cols):
+                # Compose the reduction query for the cell.
+                index = y * cols + x
+                cell_img = masked.mask(masked.mask().And(index_image.eq(index)))
+                count_query = cell_img.reduceRegion(
+                    count_reducer, rect, None, MODIS_CRS, MODIS_TRANSFORM)
+                sum_query = cell_img.reduceRegion(
+                    sum_reducer, rect, None, MODIS_CRS, MODIS_TRANSFORM)
+                # Run the aggregations.
+                count = ee.data.getValue(
+                    {'json': ee.serializer.toJSON(count_query, False)})
+                sum = ee.data.getValue(
+                    {'json': ee.serializer.toJSON(sum_query, False)})
+                results.append([count, sum])
 
         # Repackages the results in a backward-compatible form:
-        counts = [int(i['ndfi']) for i in result[0]]
-        sums = [int(i['ndfi']) for i in result[1]]
+        counts = [int(i[0]['ndfi']) for i in results]
+        sums = [int(i[1]['ndfi']) for i in results]
         return {
             'properties': {
                 'ndfiSum': {
@@ -308,99 +463,26 @@ class NDFI(object):
             }
         }
 
-    def _ndfi_delta(self, asset_id):
-        # Constants.
-        MIN_FOREST_SIZE = 41
-        MIN_UNMASKED_SIZE = 21
-        ALREADY_DEFORESTED_NDFI = 100
-        CLASSIFICATION_OFFSET = 201
+    def _RGB_image_command(self, period, long_span=False):
+        """Returns a Map ID for the RGB visualization of a MODIS mosaic for a given period."""
+        return self._kriged_mosaic(period, long_span).getMapId({
+            'bands': 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
+            'gain': 0.1,
+            'bias': 0.0,
+            'gamma': 1.6
+        })
 
-        # Get base NDFIs.
-        work_month = self._getMidMonth(self.work_period['start'],
-                                       self.work_period['end'])
-        work_year = self._getMidYear(self.work_period['start'],
-                                     self.work_period['end'])
-        baseline = self._paint_deforestation(asset_id, work_month, work_year)
-        ndfi0 = self._NDFI_image(self.last_period, 1)
-        ndfi1 = self._NDFI_image(self.work_period)
-
-        # Basic difference.
-        diff = ndfi1.subtract(ndfi0)
-
-        # Initialize outcomes.
-        out_shifted_baseline = baseline.add(CLASSIFICATION_OFFSET)
-        out_shifted_deforestation = CLS_DEFORESTED + CLASSIFICATION_OFFSET
-        out_shifted_unclassified = CLS_UNCLASSIFIED + CLASSIFICATION_OFFSET
-        out_negated_diff = diff.multiply(-1)
-
-        # Start with the diff.
-        raw_result = out_negated_diff
-
-        # Mask out improved areas.
-        raw_result = raw_result.where(diff.gt(0), out_shifted_baseline)
-
-        # Mask out already deforested areas.
-        already_deforested = ndfi0.lt(ALREADY_DEFORESTED_NDFI)
-        raw_result = raw_result.where(already_deforested,
-                                      out_shifted_deforestation)
-
-        # Mask out pixels that are unknown or not in a large enough forest.
-        baseline_segment_size = baseline.connectedPixelCount(MIN_FOREST_SIZE)
-        considered = baseline.neq(CLS_BASELINE).And(
-            baseline.neq(CLS_UNCLASSIFIED)).And(
-            baseline.neq(CLS_OLD_DEFORESTATION)).And(
-            ndfi0.neq(INVALID_NDFI)).And(
-            ndfi1.neq(INVALID_NDFI)).And(
-            baseline_segment_size.gte(MIN_FOREST_SIZE))
-        raw_result = raw_result.where(considered.Not(), out_shifted_baseline)
-
-        # Unclassify previously unclassified pixels and small forests.
-        cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
-        mask_segment_size = cloud_mask.connectedPixelCount(MIN_UNMASKED_SIZE)
-        to_unclassify = baseline.eq(CLS_FOREST).And(
-            baseline_segment_size.gte(MIN_FOREST_SIZE)).And(
-            mask_segment_size.lt(MIN_UNMASKED_SIZE))
-        result = raw_result.where(to_unclassify, out_shifted_unclassified)
-
-        return result.byte().addBands(baseline)
-
-    def _paint_deforestation(self, asset_id, month, year):
-        date = '%04d' % year
-        # date = '%04d_%02d' % (year, month)
-        table = ee.FeatureCollection(int(settings.FT_TABLE_ID))
-        table = table.filterMetadata('type', 'equals', CLS_EDITED_DEFORESTATION)
-        table = table.filterMetadata('asset_id', 'contains', date)
-        return ee.Image(asset_id).paint(table, CLS_BASELINE)
-
-    def _NDFI_image(self, period, long_span=False):
-        base = self._unmixed_mosaic(period, long_span)
-
-        # Calculate NDFI.
-        clamped = base.max(0)
-        sum = clamped.expression('b("gv") + b("soil") + b("npv")')
-        gv_shade = clamped.select('gv').divide(sum)
-        npv_plus_soil = clamped.select('npv').add(clamped.select('soil'))
-        raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
-        ndfi = raw_ndfi.multiply(100).add(100).byte()
-        ndfi = ndfi.where(sum.eq(0), INVALID_NDFI)
-        return ndfi.select([0], ['ndfi'])
-
-    def _NDFI_visualize(self, period, long_span=False):
-        ndfi = self._NDFI_image(period, long_span)
-
-        # Visualize.
-        red = ndfi.interpolate([150, 185], [255, 0], 'clamp')
-        green = ndfi.interpolate([  0, 100, 125, 150, 185, 200, 201],
-                                 [255,   0, 255, 165, 140,  80,   0], 'clamp')
-        blue = ndfi.interpolate([100, 125], [255, 0], 'clamp')
-        vis = ee.Image.cat(red, green, blue).round().byte()
-        vis = vis.select([0, 1, 2], ['vis-red', 'vis-green', 'vis-blue'])
-
-        # Collect the bands.
-        return ee.Image.cat(ndfi, vis, base)
+    def _SMA_image_command(self, period):
+        """Returns a Map ID for the NDFI SMA image for a given period."""
+        return self._unmixed_mosaic(period).getMapId({
+            "bands": 'gv,soil,npv',
+            "gain": 256,
+            'bias': 0.0,
+            'gamma': 1.6
+        })
 
     def _NDFI_period_image_command(self, period, long_span=False):
-        """ get NDFI command to get map of NDFI for a period of time """
+        """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for a given period."""
         return self._NDFI_visualize(period, long_span).getMapId({
             "bands": 'vis-red,vis-green,vis-blue',
             "gain": 1,
@@ -408,16 +490,317 @@ class NDFI(object):
             "gamma": 1.6
         })
 
-    def _RGB_image_command(self, period):
-        """ commands for RGB image """
-        return self._kriged_mosaic(period).getMapId({
-            'bands': 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
-            'gain': 0.1,
-            'bias': 0.0,
-            'gamma': 1.6
+    def _ndfi_delta(self, asset_id):
+        """Computes a classification based on an difference in NDFI.
+
+        This method computes a delta between the NDFI of two periods, specified
+        by the object's last_period and work_period member variables, with
+        last_period extended backwards to LONG_SPAN_SIZE_MS in length.
+
+        The resulting delta is used to derive a new classification from a
+        specified baseline classification.
+
+        Args:
+          asset_id: The string ID of the baseline classification image. Should
+              have one band whose values are the CLS_* constants defined in
+              this file.
+
+        Returns:
+          An ee.Image with two bands:
+          0. ndfi: An unsigned byte value representing either the difference
+             between the NDFIs (if it's <= 200), or the value of the baseline
+             classification shifted up by 201 (MAX_NDFI + 1).
+          1. classification: the original baseline classification with
+             areas of CLS_EDITED_DEFORESTATION for the work period converted
+             to CLS_BASELINE.
+        """
+
+        # Constants.
+        MIN_FOREST_SIZE = 41
+        MIN_UNMASKED_SIZE = 21
+        ALREADY_DEFORESTED_NDFI = 100
+        CLASSIFICATION_OFFSET = MAX_NDFI + 1
+
+        # Get base NDFIs.
+        work_month = self._getMidMonth(self.work_period['start'],
+                                       self.work_period['end'])
+        work_year = self._getMidYear(self.work_period['start'],
+                                     self.work_period['end'])
+        baseline = self._paint_edited_deforestation(
+            asset_id, work_month, work_year)
+        ndfi0 = self._NDFI_image(self.last_period, 1)
+        ndfi1 = self._NDFI_image(self.work_period)
+
+        if ASSUME_NEW_API:
+            # Basic difference.
+            diff = ndfi1.subtract(ndfi0)
+
+            # Initialize outcomes.
+            out_shifted_baseline = baseline.add(CLASSIFICATION_OFFSET)
+            out_shifted_deforestation = CLS_DEFORESTED + CLASSIFICATION_OFFSET
+            out_shifted_unclassified = CLS_UNCLASSIFIED + CLASSIFICATION_OFFSET
+            out_negated_diff = diff.multiply(-1)
+
+            # Start with the diff.
+            raw_result = out_negated_diff
+
+            # Mask out improved areas.
+            raw_result = raw_result.where(diff.gt(0), out_shifted_baseline)
+
+            # Mask out already deforested areas.
+            already_deforested = ndfi0.lt(ALREADY_DEFORESTED_NDFI)
+            raw_result = raw_result.where(already_deforested,
+                                          out_shifted_deforestation)
+
+            # Mask out pixels that are unknown or not in a large enough forest.
+            baseline_segment_size = baseline.connectedPixelCount(MIN_FOREST_SIZE)
+            considered = baseline.neq(CLS_BASELINE).And(
+                baseline.neq(CLS_UNCLASSIFIED)).And(
+                baseline.neq(CLS_OLD_DEFORESTATION)).And(
+                ndfi0.neq(INVALID_NDFI)).And(
+                ndfi1.neq(INVALID_NDFI)).And(
+                baseline_segment_size.gte(MIN_FOREST_SIZE))
+            raw_result = raw_result.where(considered.Not(), out_shifted_baseline)
+
+            # Unclassify previously unclassified pixels and small forests.
+            cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
+            mask_segment_size = cloud_mask.connectedPixelCount(MIN_UNMASKED_SIZE)
+            to_unclassify = baseline.eq(CLS_FOREST).And(
+                baseline_segment_size.gte(MIN_FOREST_SIZE)).And(
+                mask_segment_size.lt(MIN_UNMASKED_SIZE))
+            result = raw_result.where(to_unclassify, out_shifted_unclassified)
+
+            return result.byte().addBands(baseline)
+        else:
+            # Basic difference.
+            diff = 'b(1) - b(0)'
+
+            # Initialize outcomes.
+            out_shifted_baseline = 'b(2) + %s' % CLASSIFICATION_OFFSET
+            out_shifted_deforestation = CLS_DEFORESTED + CLASSIFICATION_OFFSET
+            out_shifted_unclassified = CLS_UNCLASSIFIED + CLASSIFICATION_OFFSET
+            out_negated_diff = 'b(0) - b(1)'
+
+            # Start with the diff.
+            raw_result = out_negated_diff
+
+            # Mask out improved areas.
+            raw_result = 'where(%s, b(1) > b(0), %s)' % (
+                raw_result, out_shifted_baseline)
+
+            # Mask out already deforested areas.
+            raw_result = 'where(%s, b(0) < %s, %s)' % (
+                raw_result, ALREADY_DEFORESTED_NDFI, out_shifted_deforestation)
+
+            # Mask out pixels that are unknown or not in a large enough forest.
+            baseline_segment_size = 'connectedPixelCount(b(2))'
+            considered = ('b(2) != %s && ' +
+                          'b(2) != %s && ' +
+                          'b(2) != %s && ' +
+                          'b(0) != %s && ' +
+                          'b(1) != %s && ' +
+                          '%s >= %s') % (CLS_BASELINE,
+                                         CLS_UNCLASSIFIED,
+                                         CLS_OLD_DEFORESTATION,
+                                         INVALID_NDFI,
+                                         INVALID_NDFI,
+                                         baseline_segment_size,
+                                         MIN_FOREST_SIZE)
+            raw_result = 'where(%s, not(%s), %s)' % (
+                raw_result, considered, out_shifted_baseline)
+
+            # Unclassify previously unclassified pixels and small forests.
+            cloud_mask = 'b(1) != %s' % CLS_UNCLASSIFIED
+            mask_segment_size = 'connectedPixelCount(b(1) != %s)' % CLS_UNCLASSIFIED
+            to_unclassify = 'b(2) == %s && %s >= %s && %s < %s' % (
+                CLS_FOREST,
+                baseline_segment_size, MIN_FOREST_SIZE,
+                mask_segment_size, MIN_UNMASKED_SIZE)
+            result = 'where(%s, %s, %s)' % (
+                raw_result, to_unclassify, out_shifted_unclassified)
+
+            return ee.Image.cat(ndfi0, ndfi1, baseline).expression(result).byte().addBands(baseline)
+
+    def _paint_edited_deforestation(self, asset_id, month, year):
+        """Returns an image from an asset with edited deforestation painted on.
+
+        Selects all rows for the given year and month (NOTE: month currently
+        ignored) from the Fusion Table whose class is CLS_EDITED_DEFORESTATION
+        and paints them onto the image specified by asset_id with the value
+        CLS_BASELINE.
+
+        Args:
+          asset_id: The string ID of the baseline image. Should have one band.
+          month: The month number. CURRENTLY UNUSED.
+          year: The year number.
+
+        Returns:
+          An ee.Image with the same band name(s) as the specified asset.
+        """
+        date = '%04d' % year
+        # date = '%04d_%02d' % (year, month)
+        table = ee.FeatureCollection(int(settings.FT_TABLE_ID))
+        table = table.filterMetadata('type', 'equals', CLS_EDITED_DEFORESTATION)
+        table = table.filterMetadata('asset_id', 'contains', date)
+        return ee.Image(asset_id).paint(table, CLS_BASELINE)
+
+    def _NDFI_visualize(self, period, long_span=False):
+        """Returns an RGB visualization of an NDFI mosaic for a given period.
+
+        Args:
+          period: The mosaic period. See _make_mosaic() for details.
+          long_span: Whether to extend the period. See _make_mosaic() for details.
+
+        Returns:
+          An ee.Image with 3 byte bands, vis-red, vis-green, vis-blue.
+        """
+        ndfi = self._NDFI_image(period, long_span)
+        red = ndfi.interpolate([150, 185], [255, 0], 'clamp')
+        green = ndfi.interpolate([  0, 100, 125, 150, 185, 200, 201],
+                                 [255,   0, 255, 165, 140,  80,   0], 'clamp')
+        blue = ndfi.interpolate([100, 125], [255, 0], 'clamp')
+        rgb = ee.Image.cat(red, green, blue).round().byte()
+        return rgb.select([0, 1, 2], ['vis-red', 'vis-green', 'vis-blue'])
+
+    def _NDFI_image(self, period, long_span=False):
+        """Returns an NDFI mosaic based on MODIS for a given period.
+
+        Args:
+          period: The mosaic period. See _make_mosaic() for details.
+          long_span: Whether to extend the period. See _make_mosaic() for details.
+
+        Returns:
+          An ee.Image with a single integer band called "ndfi", ranging from
+          0 (no GV) to 200 (all GV), plus the special INVALID_NDFI value (201),
+          which indicates that the unmixed values were out of range.
+        """
+        base = self._unmixed_mosaic(period, long_span)
+        if ASSUME_NEW_API:
+            clamped = base.max(0)
+            sum = clamped.expression('b("gv") + b("soil") + b("npv")')
+            gv_shade = clamped.select('gv').divide(sum)
+            npv_plus_soil = clamped.select('npv').add(clamped.select('soil'))
+            raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
+            ndfi = raw_ndfi.multiply(100).add(100).byte()
+            ndfi = ndfi.where(sum.eq(0), INVALID_NDFI)
+        else:
+            sum_exp = '(b(0) + b(1) + b(2))'
+            gv_shade_exp = 'b(0) / %s' % sum_exp
+            npv_plus_soil_exp = '(b(1) + b(2))'
+            raw_ndfi_exp = 'normalizedDifference(addBands(%s, %s))' % (
+                gv_shade_exp, npv_plus_soil_exp)
+            ndfi_exp = 'byte(%s * 100 + 100)' % raw_ndfi_exp
+            ndfi = base.max(0).expression(
+                'where(%s, %s == 0, %s)' % (ndfi_exp, sum_exp, INVALID_NDFI))
+        return ndfi.select([0], ['ndfi'])
+
+
+    def _unmixed_mosaic(self, period, long_span=False):
+        """Returns a mosaic with GV, SOIL and NPV indices based on MODIS.
+
+        Args:
+          period: The mosaic period. See _make_mosaic() for details.
+          long_span: Whether to extend the period. See _make_mosaic() for details.
+
+        Returns:
+          An ee.Image with the following bands:
+          0. gv: float, valid in [0, 1] but may contain negative values.
+          1. soil: float, valid in [0, 1] but may contain negative values.
+          2. npv: float, valid in [0, 1] but may contain negative values.
+          3. gv_100: int, in [0, 100].
+          4. soil_100: int, in [0, 100].
+          5. npv_100: int, in [0, 100].
+
+          The last 3 bands are integer percentage versions of the first 3,
+          with any negative values clamped to 0.
+        """
+        BAND_FORMAT = 'sur_refl_b0%d'
+        BANDS = [3, 4, 1, 2, 6, 7]
+        ENDMEMBERS = [
+            [226.0,  710.0,  349.0, 5736.0, 2213.0,  520.0],  # GV
+            [838.0, 1576.0, 2527.0, 4305.0, 5885.0, 3760.0],  # Soil
+            [696.0, 1235.0, 1841.0, 2763.0, 4443.0, 4232.0]   # NPV
+        ]
+        OUTPUTS = ['gv', 'soil', 'npv']
+
+        base = self._kriged_mosaic(period, long_span)
+        unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
+        result = unmixed.expression('addBands(b(0,1,2), round(max(b(0,1,2), 0) * 100))')
+        return result.select(['.*'], OUTPUTS + [i + '_100' for i in OUTPUTS])
+
+    def _kriged_mosaic(self, period, long_span=False):
+        """Returns an upscaled MODIS mosaic for a given period.
+
+        See _make_mosaic() for details on how the mosaic images are selected.
+
+        Args:
+          period: The mosaic period. See _make_mosaic() for details.
+          long_span: Whether to extend the period. See _make_mosaic() for details.
+
+        Returns:
+          An ee.Image with the following bands:
+          0. sur_refl_b01_250m
+          1. sur_refl_b02_250m
+          2. sur_refl_b05_500m
+          3. sur_refl_b03_250m
+          4. sur_refl_b04_250m
+          5. sur_refl_b06_250m
+          6. sur_refl_b07_250m
+        """
+        work_month = self._getMidMonth(period['start'], period['end'])
+        work_year = self._getMidYear(period['start'], period['end'])
+        date = "%04d%02d" % (work_year, work_month)
+        krig_filter = ee.Filter.eq('Compounddate', int(date))
+        params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
+        mosaic = self._make_mosaic(period, long_span)
+        return ee.Image({
+            'creator': 'kriging/com.google.earthengine.examples.kriging.KrigedModisImage',
+            'args': [mosaic, params]
         })
 
     def _make_mosaic(self, period, long_span=False):
+        """Returns a mosaic of MODIS images for a given period.
+
+        This selects images from the MODIS GA and GQ collections, filtered to
+        the specified time range, based on an inclusions table.
+
+        The inclusions table lists the days to include in the mosaic for each
+        month, for each MODIS tile. Currently it is a Fusion Table specified
+        by MODIS_INCLUSIONS_TABLE, with a row for each (month, modis tile).
+        Each row has a geometry of the tile and a comma-separated list of day
+        numbers to include in the mosaic.
+
+        Rows that do not have a corresponding image in each collection are
+        skipped. If no features overlap an output pixel, we'll fall back on a
+        composite constructed from the week of images preceding the period end.
+
+        Args:
+          period: The mosaic period, as a dictionary with "start" and "end",
+              keys, both containing Unix timestamps.
+          long_span: Whether to use an extended period.
+              If False, the period is used as is and only the month at the
+              midpoint of the period range is used to select from the
+              inclusions table.
+              If True, the start of the specified period is ignored and a new
+              start is computed by extending the end of the period back by
+              LONG_SPAN_SIZE_MS milliseconds.
+
+        Returns:
+          An ee.Image with the following bands:
+          0. num_observations_1km
+          1. state_1km
+          2. sur_refl_b01_500m
+          3. sur_refl_b02_500m
+          4. sur_refl_b03_500m
+          5. sur_refl_b04_500m
+          6. sur_refl_b05_500m
+          7. sur_refl_b06_500m
+          8. sur_refl_b07_500m
+          9. sur_refl_b01_250m
+          10. sur_refl_b02_250m
+          11. num_observations_250m
+        """
+
         # Calculate the time span.
         if long_span:
           start_time = period['end'] - LONG_SPAN_SIZE_MS
@@ -440,119 +823,102 @@ class NDFI(object):
               'compounddate', '%04d%02d' % (year, month))
 
         # Prepare source image collections.
-        modis_ga = ee.ImageCollection('MODIS/MOD09GA')
-        modis_gq = ee.ImageCollection('MODIS/MOD09GQ')
+        modis_ga = ee.ImageCollection('MODIS/MOD09GA').filterDate(start_time, end_time)
+        modis_gq = ee.ImageCollection('MODIS/MOD09GQ').filterDate(start_time, end_time)
 
-        # Fetch the inclusions table rows.
+        # Prepare the inclusions table.
         inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
-        rows = inclusions.filter(inclusions_filter).getInfo()['features']
-        cells = [i['properties'] for i in rows]
+        inclusions = inclusions.filter(inclusions_filter)
 
-        # Prepare the list of selected images for each cell.
-        ga_images = collections.defaultdict(list)
-        gq_images = collections.defaultdict(list)
-        for cell in cells:
-            days = cell['day'].split(',')
-            tile = cell['cell']
-            for day in days:
-                args = (int(cell['year']), int(cell['month']), int(day))
-                ga_images[tile].append('MOD09GA_005_%04d_%02d_%02d' % args)
-                gq_images[tile].append('MOD09GQ_005_%04d_%02d_%02d' % args)
+        if ASSUME_NEW_API:
+            # Fetch the inclusions table rows.
+            rows = inclusions.getInfo()['features']
+            cells = [i['properties'] for i in rows]
 
-        # Get filtered and joined collections for each cell.
-        subcollections = []
-        specs = zip(ga_images.keys(), ga_images.values(), gq_images.values())
-        for tile, selected_ga, selected_gq in specs:
-            ga = modis_ga.filterDate(start_time, end_time).filterMetadata(
-                'system:index', 'in_list', selected_ga)
-            gq = modis_gq.filterDate(start_time, end_time).filterMetadata(
-                'system:index', 'in_list', selected_gq)
+            # Prepare the list of selected images for each cell.
+            ga_images = collections.defaultdict(list)
+            gq_images = collections.defaultdict(list)
+            for cell in cells:
+                days = cell['day'].split(',')
+                tile = cell['cell']
+                for day in days:
+                    args = (int(cell['year']), int(cell['month']), int(day))
+                    ga_images[tile].append('MOD09GA_005_%04d_%02d_%02d' % args)
+                    gq_images[tile].append('MOD09GQ_005_%04d_%02d_%02d' % args)
 
-            joined = ga.innerJoin(
-                gq, 'equals', 'system:time_start', 'system:time_start')
-            combined = ee.ImageCollection(joined.map(
-                'Image.addBands', {'dstImg': 'primary', 'srcImg': 'secondary'}))
+            # Get filtered and joined collections for each cell.
+            subcollections = []
+            specs = zip(ga_images.keys(), ga_images.values(), gq_images.values())
+            for tile, selected_ga, selected_gq in specs:
+                ga = modis_ga.filterMetadata(
+                    'system:index', 'in_list', selected_ga)
+                gq = modis_gq.filterMetadata(
+                    'system:index', 'in_list', selected_gq)
 
-            cell_bounds = _get_modis_tile(int(tile[1:3]), int(tile[4:6]))
-            clipped = combined.map(lambda img: \
-                img.clip(cell_bounds).addBands(
-                    img.metadata('system:time_start')))
+                joined = ga.innerJoin(
+                    gq, 'equals', 'system:time_start', 'system:time_start')
+                combined = ee.ImageCollection(joined.map(
+                    'Image.addBands', {'dstImg': 'primary', 'srcImg': 'secondary'}))
 
-            subcollections.append(clipped)
+                cell_bounds = _get_modis_tile(int(tile[1:3]), int(tile[4:6]))
+                clipped = combined.map(lambda img: \
+                    img.clip(cell_bounds).addBands(
+                        img.metadata('system:time_start')))
 
-        # Merge subcollections to stitch our tapestry.
-        def merge(collections):
-            if len(collections) == 1:
-                return collections[0]
-            else:
-                mid = len(collections) / 2
-                return merge(collections[0:mid]).merge(merge(collections[mid:]))
-        merged = ee.ImageCollection(merge(subcollections))
+                subcollections.append(clipped)
 
-        # Mask invalid pixels in each image and composite what remains ordering
-        # by time.
-        def maskInvalid(img):
-            BAND_MAP = {
-              "num_observations_1km": "num_observations_1km",
-              "state_1km": "state_1km",
-              "sur_refl_b01": "sur_refl_b01_500m",
-              "sur_refl_b02": "sur_refl_b02_500m",
-              "sur_refl_b03": "sur_refl_b03_500m",
-              "sur_refl_b04": "sur_refl_b04_500m",
-              "sur_refl_b05": "sur_refl_b05_500m",
-              "sur_refl_b06": "sur_refl_b06_500m",
-              "sur_refl_b07": "sur_refl_b07_500m",
-              "sur_refl_b01_1": "sur_refl_b01_250m",
-              "sur_refl_b02_1": "sur_refl_b02_250m",
-              "num_observations": "num_observations_250m",
-              "system:time_start": "TIME",
-            }
-            valid = img.select('num_observations_1km').neq(0).And(
-                img.select('num_observations').neq(0)).And(
-                img.select('state_1km').right_shift(6).mod(4).neq(0)).And(
-                img.select('sur_refl_.*').reduce(ee.call('Reducer.min')).gt(0))
-            return img.mask(valid).select(BAND_MAP.keys(), BAND_MAP.values())
-        return merged.map(maskInvalid).qualityMosaic('TIME').slice(0, -1)
+            # Merge subcollections to stitch our tapestry.
+            def merge(collections):
+                if len(collections) == 1:
+                    return collections[0]
+                else:
+                    mid = len(collections) / 2
+                    return merge(collections[0:mid]).merge(merge(collections[mid:]))
+            merged = ee.ImageCollection(merge(subcollections))
 
+            # Mask invalid pixels in each image and composite what remains ordering
+            # by time.
+            BAND_MAP = [
+              "num_observations_1km", "num_observations_1km",
+              "state_1km", "state_1km",
+              "sur_refl_b01", "sur_refl_b01_500m",
+              "sur_refl_b02", "sur_refl_b02_500m",
+              "sur_refl_b03", "sur_refl_b03_500m",
+              "sur_refl_b04", "sur_refl_b04_500m",
+              "sur_refl_b05", "sur_refl_b05_500m",
+              "sur_refl_b06", "sur_refl_b06_500m",
+              "sur_refl_b07", "sur_refl_b07_500m",
+              "sur_refl_b01_1", "sur_refl_b01_250m",
+              "sur_refl_b02_1", "sur_refl_b02_250m",
+              "num_observations", "num_observations_250m",
+              "system:time_start", "TIME",
+            ]
+            BAND_SRCS = BAND_MAP[::2]
+            BAND_DSTS = BAND_MAP[1::2]
+            def maskInvalid(img):
+                valid = img.select('num_observations_1km').neq(0).And(
+                    img.select('num_observations').neq(0)).And(
+                    img.select('state_1km').right_shift(6).mod(4).neq(0)).And(
+                    img.select('sur_refl_.*').reduce(ee.call('Reducer.min')).gt(0))
+                return img.mask(valid).select(BAND_SRCS, BAND_DSTS)
+            return merged.map(maskInvalid).qualityMosaic('TIME').select(BAND_DSTS[:-1])
+        else:
+            return ee.Image({
+              'creator': 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
+              'args': [modis_ga, modis_gq, inclusions, start_time, end_time]
+            })
 
-    def _SMA_image_command(self, period):
-        return self._unmixed_mosaic(period).getMapId({
-            "bands": 'gv,soil,npv',
-            "gain": 256,
-            'bias': 0.0,
-            'gamma': 1.6
-        })
-
-    def _unmixed_mosaic(self, period, long_span=False):
-        BAND_FORMAT = 'sur_refl_b0%d'
-        BANDS = [3, 4, 1, 2, 6, 7]
-        ENDMEMBERS = [
-            [226.0,  710.0,  349.0, 5736.0, 2213.0,  520.0],  # GV
-            [838.0, 1576.0, 2527.0, 4305.0, 5885.0, 3760.0],  # Soil
-            [696.0, 1235.0, 1841.0, 2763.0, 4443.0, 4232.0]   # NPV
-        ]
-        OUTPUTS = ['gv', 'soil', 'npv']
-
-        base = self._kriged_mosaic(period, long_span)
-        unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
-        percents = unmixed.max(0).multiply(100).round()
-        result = unmixed.addBands(percents)
-        return result.select([0, 1, 2, 3, 4, 5],
-                             OUTPUTS + [i + '_100' for i in OUTPUTS])
-
-    def _kriged_mosaic(self, period, long_span=False):
-        work_month = self._getMidMonth(period['start'], period['end'])
-        work_year = self._getMidYear(period['start'], period['end'])
-        date = "%04d%02d" % (work_year, work_month)
-        krig_filter = ee.Filter.eq('Compounddate', int(date))
-        params = ee.FeatureCollection(
-            'ft:17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo').filter(krig_filter)
-        return ee.Image({
-            "creator": "kriging/com.google.earthengine.examples.kriging.KrigedModisImage",
-            "args": [self._make_mosaic(period, long_span), params]
-        })
 
     def _get_polygon_bbox(self, polygon):
+        """Returns the bounding box of a polygon.
+
+        Args:
+          polygon: A GeoJSON polygon.
+
+        Returns:
+          A 4-tuple describing a bounding box in the format:
+          (min_lng, min_lat, max_lng, max_lat)
+        """
         coordinates = sum(polygon['coordinates'], [])
         lngs = [x[0] for x in coordinates]
         lats = [x[1] for x in coordinates]
@@ -563,15 +929,60 @@ class NDFI(object):
         return (min_lng, min_lat, max_lng, max_lat)
 
     def _getMidMonth(self, start, end):
+        """Returns the month part of the midpoint of two Unix timestamps."""
         middle_seconds = int((end + start) / 2000)
         return time.gmtime(middle_seconds).tm_mon
 
     def _getMidYear(self, start, end):
+        """Returns the year part of the midpoint of two Unix timestamps."""
         middle_seconds = int((end + start) / 2000)
         return time.gmtime(middle_seconds).tm_year
 
 
 def get_prodes_stats(assetids, table_id):
+    """Computes the area of each class in each polygon in each PRODES image.
+
+    Args:
+      assetids: A list of PRODES image IDs.
+      table_id: The ID of a Fusion Table of polygons to analyse.
+
+    Returns:
+      A description of the area of each (image, polygon, class) tuple. For
+      backward-compatibility, returned in the awkward old EE format. Example:
+      {
+        "data": {
+          "properties": {
+            "classHistogram": [
+              <image entry 1>,
+              <image entry 2>,
+              ...
+            ]
+          }
+        }
+      }
+
+      Where each <image entry> looks like:
+      {
+        "type": "DataDictionary",
+         "values": {
+           <polygon entry>,
+           <polygon entry>,
+           ...
+         }
+       }
+
+      Where each <polygon entry> looks like:
+      {
+        "type": "DataDictionary",
+        "values": {
+          "<class value>": <area of that class in square meters>,
+          "<class value>": <area of that class in square meters>,
+          ...
+        }
+      }
+
+      Where each <class value> is a number.
+    """
     results = []
     for assetid in assetids:
         prodes_image, classes = _remap_prodes_classes(ee.Image(assetid))
@@ -594,7 +1005,11 @@ def get_prodes_stats(assetids, table_id):
     return {'data': {'properties': {'classHistogram': results}}}
 
 
-def get_thumbnail(landsat_image_id):
+def get_thumbnail(image_id):
+    """Returns a thumbnail ID for a given image ID.
+
+    Uses the bands called "30", "20" and "10", which the image must contains.
+    """
     return ee.data.getThumbId({
         'image': ee.Image(landsat_image_id).serialize(False),
         'bands': '30,20,10'
@@ -602,26 +1017,60 @@ def get_thumbnail(landsat_image_id):
 
 
 def _get_area_histogram(image, polygons, classes, scale=120):
-    area = ee.Image.pixelArea()
-    sum_reducer = ee.call('Reducer.sum')
+    """Computes the area of class in each polygon.
 
-    def calculateArea(feature):
-        geometry = feature.geometry()
-        total = area.mask(image.mask())
-        total_area = total.reduceRegion(
-            sum_reducer, geometry, scale, bestEffort=True)
-        properties = {'total': total_area}
+    Args:
+      image: The single-band image with class-valued pixels.
+      polygons: An ee.FeatureCollection of polygons to analyse.
+      classes: The integer class values to compute area for.
 
-        for class_value in classes:
-            masked = area.mask(image.eq(class_value))
-            class_area = masked.reduceRegion(
+    Returns:
+      A list of dictionaries, one for each polygon in the polygons table in
+      the same order as they are returned from the collection. Each dictionary
+      includes a "name" property from the original polygon row, a "total"
+      property with the total polygon area in square meters and an entry for
+      each class, the key being the class value and the value being the area
+      of that class in square meters.
+    """
+    if ASSUME_NEW_API:
+        area = ee.Image.pixelArea()
+        sum_reducer = ee.call('Reducer.sum')
+
+        def calculateArea(feature):
+            geometry = feature.geometry()
+            total = area.mask(image.mask())
+            total_area = total.reduceRegion(
                 sum_reducer, geometry, scale, bestEffort=True)
-            properties[str(class_value)] = class_area
+            properties = {'total': total_area}
 
-        return ee.call('SetProperties', feature, properties)
+            for class_value in classes:
+                masked = area.mask(image.eq(class_value))
+                class_area = masked.reduceRegion(
+                    sum_reducer, geometry, scale, bestEffort=True)
+                properties[str(class_value)] = class_area
 
-    result = polygons.map(calculateArea).getInfo()
-    return [i['properties'] for i in result['features']]
+            return ee.call('SetProperties', feature, properties)
+
+        result = polygons.map(calculateArea).getInfo()
+        return [i['properties'] for i in result['features']]
+    else:
+        stats_image = ee.Image({
+            'creator': 'SAD/com.google.earthengine.examples.sad.GetStats',
+            'args': [image, polygons, 'name']
+        })
+        stats = ee.data.getValue({
+            'image': stats_image.serialize(False),
+            'fields': 'classHistogram'
+        })['properties']['classHistogram']['values']
+
+        result = []
+        for name, value in stats.iteritems():
+            row = {'name': name}
+            for cls in classes:
+              row[cls] = value['values'].get(str(cls), 0)
+            result.append(row)
+
+        return result
 
 
 def _remap_prodes_classes(img):
@@ -631,6 +1080,13 @@ def _remap_prodes_classes(img):
     the band, or if that's not available, the image. The class names are
     checked against some simple regular expressions to map to the class values
     used by this application.
+
+    Args:
+      img: The single-band PRODES ee.Image.
+
+    Returns:
+      A 2-tuple, the first item being the remapped ee.Image with a "class" band
+      and the second the set of class values in the output.
     """
     RE_FOREST = re.compile(r'^floresta$')
     RE_BASELINE = re.compile(r'^(baseline|d[12]\d{3}.*)$')
@@ -647,8 +1103,8 @@ def _remap_prodes_classes(img):
     band_metadata = img.getInfo()['bands'][0].get('properties', {})
     image_metadata = img.getInfo()['properties']
     class_names = band_metadata.get(
-        'classes_from', image_metadata.get('class_names'))
-    class_names = band_metadata.get(
+        'class_names', image_metadata.get('class_names'))
+    classes_from = band_metadata.get(
         'class_indexes', image_metadata.get('class_indexes'))
     classes_to = []
 
@@ -683,14 +1139,34 @@ def _remap_prodes_classes(img):
     return (final, set(classes_to))
 
 
-def _paint(current_asset, report_id, table, value):
-    fc = ee.FeatureCollection(int(table))
+def _paint(image, table_id, report_id, cls):
+    """Paints a region from a Fusion Table onto an image.
+
+    Args:
+      image: The ee.Image to paint on.
+      table_id: The numeric Fusion Table ID containing the regions.
+      report_id: The numeric report ID. Only region rows with the report_id
+          column matching this number will be included.
+      cls: A numeric class value.The painted pixels will have this value.
+          Only region rows with the type column matching this number will
+          be included.
+
+    Returns:
+      An ee.Image with the regions painted.
+    """
+    fc = ee.FeatureCollection(int(table_id))
     fc = fc.filterMetadata('report_id', 'equals', int(report_id))
-    fc = fc.filterMetadata('type', 'equals', value)
-    return current_asset.paint(fc, value)
+    fc = fc.filterMetadata('type', 'equals', cls)
+    return image.paint(fc, cls)
 
 
 def _get_landsat_toa(start_time, end_time, version=-1):
+    """Returns a Landsat 7 TOA ee.ImageCollection for a given time period.
+
+    Args:
+      start: The start of the time period as a Unix timestamp.
+      end: The end of the time period as a Unix timestamp.
+    """
     collection = ee.ImageCollection({
         'id': 'L7_L1T',
         'version': version
@@ -700,6 +1176,15 @@ def _get_landsat_toa(start_time, end_time, version=-1):
 
 
 def _get_modis_tile(horizontal, vertical):
+    """Returns a GeoJSON geometry for a given MODIS tile.
+
+    Args:
+      horizontal: The horizontal cell number.
+      vertical: The vertical cell number.
+
+    Returns:
+      A GeoJSON geometry for the selected cell.
+    """
     cell_size = MODIS_WIDTH / MODIS_CELLS
     base_x = -MODIS_WIDTH
     base_y = -MODIS_WIDTH / 2
