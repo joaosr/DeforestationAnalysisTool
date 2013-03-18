@@ -8,6 +8,10 @@ Primary App Engine app handler
 import logging
 import sys, os
 
+# Workaround for httplib2 bug.
+# http://code.google.com/p/googleappengine/issues/detail?id=5064
+sys.modules['ssl'] = None
+
 package_dir = "packages"
 sys.path.insert(0, package_dir)
 

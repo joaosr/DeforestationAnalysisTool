@@ -1,12 +1,16 @@
 application: sad-ee
 version: v01 
-runtime: python
+runtime: python27
 api_version: 1
+threadsafe: no
+
+libraries:
+- name: pycrypto
+  version: "2.3"
 
 default_expiration: "5d"
 
 builtins:
-- datastore_admin: on
 - remote_api: on
 - deferred: on
 
