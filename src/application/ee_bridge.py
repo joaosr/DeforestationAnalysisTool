@@ -528,7 +528,7 @@ class NDFI(object):
                                      self.work_period['end'])
         baseline = self._paint_edited_deforestation(
             asset_id, work_month, work_year)
-        ndfi0 = self._NDFI_image(self.last_period, 1)
+        ndfi0 = self._NDFI_image(self.last_period, True)
         ndfi1 = self._NDFI_image(self.work_period)
 
         if ASSUME_NEW_API:
@@ -992,11 +992,11 @@ def get_prodes_stats(assetids, table_id):
         for raw_stat in raw_stats:
             values = {}
             for class_value in range(max(classes) + 1):
-                class_value = str(class_value)
+                class_label = str(class_value)
                 if class_value in raw_stat:
-                    values[class_value] = raw_stat[class_value]['area']
+                    values[class_label] = raw_stat[class_value]
                 else:
-                    values[class_value] = 0.0
+                    values[class_label] = 0.0
             stats[str(int(raw_stat['name']))] = {
                 'values': values,
                 'type': 'DataDictionary'
@@ -1100,8 +1100,9 @@ def _remap_prodes_classes(img):
     RE_EDITED_OLD_DEGRADATION = re.compile(r'^desmat antigo editado$')
 
     # Try band metadata first. If not available, use image metadata.
-    band_metadata = img.getInfo()['bands'][0].get('properties', {})
-    image_metadata = img.getInfo()['properties']
+    info = img.getInfo()
+    band_metadata = info['bands'][0].get('properties', {})
+    image_metadata = info['properties']
     class_names = band_metadata.get(
         'class_names', image_metadata.get('class_names'))
     classes_from = band_metadata.get(

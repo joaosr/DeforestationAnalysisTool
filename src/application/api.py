@@ -142,5 +142,5 @@ def testing():
     #return str(ndfi.mapid2())
     #return str(ndfi.freeze_map(1089491, r.key().id()))
     """
-    return jsonify(get_prodes_stats(["PRODES_2009", "PRODES_IMAZON_2011a"], 2676501))
+    return jsonify(get_prodes_stats(["PRODES_2009", "PRODES_IMAZON_2011a"], 1505198))
 
