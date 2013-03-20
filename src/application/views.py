@@ -4,11 +4,23 @@ import logging
 import os
 import simplejson as json
 from shutil import copyfile
+import sys
 
 from google.appengine.api import urlfetch
 from google.appengine.api import users
 
-from flask import render_template, flash, url_for, redirect, abort, request, make_response
+sys.modules['ssl'] = None
+
+try:
+  from flask import render_template, flash, url_for, redirect, abort, request, make_response
+except:
+  # nose tests require zipped packages to be manually loaded
+  import zipimport
+  gflags = zipimport.zipimporter('packages/gflags.zip').load_module('gflags') 
+  jinja2 = zipimport.zipimporter('packages/jinja2.zip').load_module('jinja2')  
+  flask = zipimport.zipimporter('packages/flask.zip').load_module('flask')
+  wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
+
 from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
