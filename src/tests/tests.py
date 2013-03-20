@@ -43,7 +43,7 @@ class CellTest(unittest.TestCase):
         self.cell.put()
 
     def test_parent_id(self):
-        self.assertEquals('1_1_1', self.cell.parent_id)
+        self.assertEquals('1_2_2', self.cell.parent_id)
 
 class NotesApiTest(unittest.TestCase, GoogleAuthMixin):
     def setUp(self):
