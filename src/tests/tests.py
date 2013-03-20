@@ -175,20 +175,23 @@ class CellApi(unittest.TestCase, GoogleAuthMixin):
         rv = self.app.get('/api/v0/report/' + str(self.r.key()) + '/cell')
         self.assertEquals(200, rv.status_code)
         js = json.loads(rv.data)
-        self.assertEquals(100, len(js))
+        num_cells = 5*5  # a 5 x 5 grid
+        self.assertEquals(num_cells, len(js))
 
     def test_cell_0_0_0(self):
         rv = self.app.get('/api/v0/report/' + str(self.r.key()) + '/cell/0_0_0/children')
         self.assertEquals(200, rv.status_code)
         js = json.loads(rv.data)
-        self.assertEquals(100, len(js))
+        num_cells = 5*5  # a 5 x 5 grid
+        self.assertEquals(num_cells, len(js))
 
     def test_cell_1_0_0(self):
         Cell(x=0, y=0, z=2, report=self.r, ndfi_high=1.0, ndfi_low=0.0).put()
         rv = self.app.get('/api/v0/report/' + str(self.r.key())+'/cell/1_0_0/children')
         self.assertEquals(200, rv.status_code)
         js = json.loads(rv.data)
-        self.assertEquals(100, len(js))
+        num_cells = 5*5  # a 5 x 5 grid
+        self.assertEquals(num_cells, len(js))
         self.assertEquals(2, js[0]['z'])
         cell = [x for x in js if x['z'] == 2 and x['x'] == 0 and x['y'] == 0][0]
         self.assertAlmostEquals(0, cell['ndfi_low'])
