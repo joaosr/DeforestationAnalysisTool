@@ -199,7 +199,14 @@ class CellApi(unittest.TestCase, GoogleAuthMixin):
 
     def test_update_cell_2_0_1(self):
         rv = self.app.put('/api/v0/report/' + str(self.r.key())+'/cell/2_1_3',
-            data='{"ndfi_low": 0.0, "ndfi_high": 1.0, "done": false}'
+            data='''{
+                "ndfi_low": 0.0, "ndfi_high": 1.0, "done": false, 
+                "compare_view": "", 
+                "map_one_layer_status": "",
+                "map_two_layer_status": "",
+                "map_three_layer_status": "",
+                "map_four_layer_status": ""
+              }'''
         )
         self.assertEquals(200, rv.status_code)
         js = json.loads(rv.data)
