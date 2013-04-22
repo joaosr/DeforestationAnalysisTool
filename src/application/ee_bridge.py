@@ -753,10 +753,7 @@ class NDFI(object):
         krig_filter = ee.Filter.eq('Compounddate', int(date))
         params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
         mosaic = self._make_mosaic(period, long_span)
-        return ee.apply('SAD.KrigeModis', {
-            'image': mosaic,
-            'parameters': params
-        })
+        return ee.call('SAD.KrigeModis', mosaic, params)
 
     def _make_mosaic(self, period, long_span=False):
         """Returns a mosaic of MODIS images for a given period.
@@ -903,9 +900,12 @@ class NDFI(object):
                 return img.mask(valid).select(BAND_SRCS, BAND_DSTS)
             return merged.map(maskInvalid).qualityMosaic('TIME').select(BAND_DSTS[:-1])
         else:
-            return ee.Image({
-              'algorithm': 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-              'arg0': [modis_ga, modis_gq, inclusions, start_time, end_time]
+            return ee.apply('SAD/com.google.earthengine.examples.sad.MakeMosaic', {
+              'arg1': modis_ga,
+              'arg2': modis_gq,
+              'arg3': inclusions,
+              'arg4': start_time,
+              'arg5': end_time
             })
 
 
@@ -1054,9 +1054,10 @@ def _get_area_histogram(image, polygons, classes, scale=120):
         result = polygons.map(calculateArea).getInfo()
         return [i['properties'] for i in result['features']]
     else:
-        stats_image = ee.Image({
-            'creator': 'SAD/com.google.earthengine.examples.sad.GetStats',
-            'args': [image, polygons, 'name']
+        stats_image = ee.apply('SAD/com.google.earthengine.examples.sad.GetStats', {
+            'arg1': image,
+            'arg2': polygons,
+            'arg3': 'name'
         })
         stats = ee.data.getValue({
             'image': stats_image.serialize(False),
