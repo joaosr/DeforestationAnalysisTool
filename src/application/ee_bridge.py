@@ -271,20 +271,9 @@ class NDFI(object):
               rows of the specified table.
 
         Returns:
-          A description of the saves image which includes an ID.
+          A description of the saved image which includes an ID.
         """
-        asset = ee.Image(asset_id)
-        frozen_image = _remap_prodes_classes(asset)[0]
-        # Remap CLS_EDITED_DEFORESTATION and CLS_EDITED_DEGRADATION to
-        # CLS_DEFORESTED and CLS_DEGRADED.
-        remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
-                                      [0,1,2,3,4,5,6,2,3,9])
-        # Paint new areas.
-        def_image = _paint(remapped, table_id, int(report_id), CLS_EDITED_DEFORESTATION)
-        deg_image = _paint(def_image, table_id, int(report_id), CLS_EDITED_DEGRADATION)
-        map_image = deg_image.select(['remapped'], ['classification'])
-        # Make sure we keep the metadata.
-        result = asset.addBands(map_image, ['classification'], True)
+        result = self._make_map_to_freeze(asset_id, table_id, report_id)
         return ee.data.createAsset(result.serialize(False))
 
     def rgb_stretch(self, polygon, sensor, bands, std_devs=2):
@@ -462,6 +451,32 @@ class NDFI(object):
                 }
             }
         }
+
+    def _make_map_to_freeze(self, asset_id, table_id, report_id):
+        """Returns a description of a new baseline image to be saved.
+
+        Args:
+          asset_id: The ID of the baseline PRODES image.
+          table_id: The numeric ID of the Fusion Table containing the report
+              polygons.
+          report_id: The report ID, an integer. This is used to filter the
+              rows of the specified table.
+
+        Returns:
+          A description of the image to save. The image is not yet saved.
+        """
+        asset = ee.Image(asset_id)
+        frozen_image = _remap_prodes_classes(asset)[0]
+        # Remap CLS_EDITED_DEFORESTATION and CLS_EDITED_DEGRADATION to
+        # CLS_DEFORESTED and CLS_DEGRADED.
+        remapped = frozen_image.remap([0,1,2,3,4,5,6,7,8,9],
+                                      [0,1,2,3,4,5,6,2,3,9])
+        # Paint new areas.
+        def_image = _paint(remapped, table_id, int(report_id), CLS_EDITED_DEFORESTATION)
+        deg_image = _paint(def_image, table_id, int(report_id), CLS_EDITED_DEGRADATION)
+        map_image = deg_image.select(['remapped'], ['classification'])
+        # Make sure we keep the metadata.
+        return asset.addBands(map_image, ['classification'], True)
 
     def _RGB_image_command(self, period, long_span=False):
         """Returns a Map ID for the RGB visualization of a MODIS mosaic for a given period."""
