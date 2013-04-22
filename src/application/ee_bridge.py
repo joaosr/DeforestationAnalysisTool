@@ -753,9 +753,9 @@ class NDFI(object):
         krig_filter = ee.Filter.eq('Compounddate', int(date))
         params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
         mosaic = self._make_mosaic(period, long_span)
-        return ee.Image({
-            'creator': 'kriging/com.google.earthengine.examples.kriging.KrigedModisImage',
-            'args': [mosaic, params]
+        return ee.apply('SAD.KrigeModis', {
+            'image': mosaic,
+            'parameters': params
         })
 
     def _make_mosaic(self, period, long_span=False):
@@ -904,8 +904,8 @@ class NDFI(object):
             return merged.map(maskInvalid).qualityMosaic('TIME').select(BAND_DSTS[:-1])
         else:
             return ee.Image({
-              'creator': 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-              'args': [modis_ga, modis_gq, inclusions, start_time, end_time]
+              'algorithm': 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
+              'arg0': [modis_ga, modis_gq, inclusions, start_time, end_time]
             })
 
 
