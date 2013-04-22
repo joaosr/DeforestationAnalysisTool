@@ -8,7 +8,7 @@ The frontend and the application architecture has been developed by Vizzuality. 
 for Google Earth Engine has been provided by David Thau. 
 
 The tool runs on Google App Engine (GAE) and uses Google Earth Engine (GEE) and Fusion Tables (FT) APIs.
-You may beed certain API keys to run the application - contact thau@google.com for details.
+You may need certain API keys to run the application - contact thau@google.com for details.
 
 How to run the application
 --------------------------
