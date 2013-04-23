@@ -82,7 +82,7 @@ class Stats(object):
         Returns:
           A list of stats, one for each entry in reports, in the same order.
           Each stats item includes:
-            total_area: total polygon area in square km.
+            total_area: total classified polygon area in square km.
             def: total deforested area in square km.
             deg: total degradation area in square km.
         """
@@ -98,9 +98,9 @@ class Stats(object):
         stats = []
         for x in report_stats:
             stats.append({
-                'total_area': x['total']['area'] * METER2_TO_KM2,
-                'def': x[str(Stats.DEFORESTATION)]['area'] * METER2_TO_KM2,
-                'deg': x[str(Stats.DEGRADATION)]['area'] * METER2_TO_KM2,
+                'total_area': x['total'] * METER2_TO_KM2,
+                'def': x[str(Stats.DEFORESTATION)] * METER2_TO_KM2,
+                'deg': x[str(Stats.DEGRADATION)] * METER2_TO_KM2,
             })
         return stats
 
@@ -119,7 +119,7 @@ class Stats(object):
           which include:
             table: the ID of the input table.
             id: the "name" column for this row in the table.
-            total_area: total polygon area in square km.
+            total_area: total classified polygon area in square km.
             def: total deforested area in square km.
             deg: total degradation area in square km.
         """
@@ -133,9 +133,9 @@ class Stats(object):
             stats['%s_%s' % (table_id, name)] = {
                 'id': str(name),
                 'table': table_id,
-                'total_area': row['total']['area'] * METER2_TO_KM2,
-                'def': row[str(Stats.DEFORESTATION)]['area'] * METER2_TO_KM2,
-                'deg': row[str(Stats.DEGRADATION)]['area'] * METER2_TO_KM2,
+                'total_area': row['total'] * METER2_TO_KM2,
+                'def': row[str(Stats.DEFORESTATION)] * METER2_TO_KM2,
+                'deg': row[str(Stats.DEGRADATION)] * METER2_TO_KM2,
             }
 
         return stats
@@ -1018,8 +1018,8 @@ def get_prodes_stats(assetids, table_id):
             values = {}
             for class_value in range(max(classes) + 1):
                 class_label = str(class_value)
-                if class_value in raw_stat:
-                    values[class_label] = raw_stat[class_value]
+                if class_label in raw_stat:
+                    values[class_label] = raw_stat[class_label]
                 else:
                     values[class_label] = 0.0
             stats[str(int(raw_stat['name']))] = {
@@ -1061,9 +1061,9 @@ def _get_area_histogram(image, polygons, classes, scale=120):
       A list of dictionaries, one for each polygon in the polygons table in
       the same order as they are returned from the collection. Each dictionary
       includes a "name" property from the original polygon row, a "total"
-      property with the total polygon area in square meters and an entry for
-      each class, the key being the class value and the value being the area
-      of that class in square meters.
+      property with the total classified polygon area in square meters and an
+      entry for each class, the key being the class value and the value being
+      the area of that class in square meters.
     """
     if ASSUME_NEW_API:
         area = ee.Image.pixelArea()
@@ -1085,8 +1085,15 @@ def _get_area_histogram(image, polygons, classes, scale=120):
 
             return ee.call('Feature.setProperties', feature, properties)
 
-        result = polygons.map(calculate_area).getInfo()
-        return [i['properties'] for i in result['features']]
+        raw_results = polygons.map(calculate_area).getInfo()
+        results = []
+        for raw_result in raw_results['features']:
+          properties = raw_result['properties']
+          for key, value in properties.iteritems():
+            if isinstance(value, dict) and 'area' in value:
+              properties[key] = value['area']
+          results.append(properties)
+        return results
     else:
         stats_image = ee.apply('SAD/com.google.earthengine.examples.sad.GetStats', {
             'arg1': image,
@@ -1100,9 +1107,10 @@ def _get_area_histogram(image, polygons, classes, scale=120):
 
         result = []
         for name, value in stats.iteritems():
-            row = {'name': name}
-            for cls in classes:
-              row[cls] = value['values'].get(str(cls), 0)
+            row = {'name': name, 'total': sum(value['values'].values())}
+            for class_number in classes:
+              class_label = str(class_number)
+              row[class_label] = value['values'].get(class_label, 0)
             result.append(row)
 
         return result
