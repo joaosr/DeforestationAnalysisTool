@@ -926,7 +926,8 @@ class NDFI(object):
                 return img.mask(valid).select(BAND_SRCS, BAND_DSTS)
             return merged.map(maskInvalid).qualityMosaic('TIME').select(BAND_DSTS[:-1])
         else:
-            return ee.apply('SAD/com.google.earthengine.examples.sad.MakeMosaic', {
+            return ee.Image({
+              'algorithm': 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
               'arg1': modis_ga,
               'arg2': modis_gq,
               'arg3': inclusions,
@@ -1095,7 +1096,8 @@ def _get_area_histogram(image, polygons, classes, scale=120):
           results.append(properties)
         return results
     else:
-        stats_image = ee.apply('SAD/com.google.earthengine.examples.sad.GetStats', {
+        stats_image = ee.Image({
+            'algorithm': 'SAD/com.google.earthengine.examples.sad.GetStats',
             'arg1': image,
             'arg2': polygons,
             'arg3': 'name'
