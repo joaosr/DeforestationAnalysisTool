@@ -1031,20 +1031,18 @@ def get_prodes_stats(assetids, table_id):
     return {'data': {'properties': {'classHistogram': results}}}
 
 
-def get_thumbnail(landsat_image_id):
+def get_modis_thumbnail(image_id, cell, bands='sur_refl_b01,sur_refl_b04,sur_refl_b03', gain=0.1):
     """Returns a thumbnail ID for a given image ID.
-
-    Uses the bands called "30", "20" and "10", which the image must contains.
-
-    Args:
-      landsat_image_id: The asset ID of a Landsat image to thumbnail.
-
-    Returns:
-      A dictionary containing "thumbid" and "token".
     """
+    region = ee.Feature(_get_modis_tile(12,10)).bounds(500.0)
+    reprojected = ee.data.getValue({'json': region.serialize()})['geometry']['coordinates']
+    logging.info(reprojected)
+    logging.info(_get_modis_tile(12,10))
     return ee.data.getThumbId({
-        'image': ee.Image(landsat_image_id).serialize(False),
-        'bands': '30,20,10'
+        'image': ee.Image(image_id).serialize(False),
+        'bands': bands,
+        'region': reprojected,
+        'gain': gain
     })
 
 

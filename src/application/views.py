@@ -25,7 +25,7 @@ from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
 from forms import ExampleForm
-from application.ee_bridge import NDFI, EELandsat, get_thumbnail
+from application.ee_bridge import NDFI, EELandsat, get_modis_thumbnail
 
 from app import app
 
@@ -182,9 +182,12 @@ def warmup():
 
 @app.route('/picker')
 def picker():
-    scene = request.args.get('scene','')
+    cell = request.args.get('cell','')
+    scene = 'MOD09GA/MOD09GA_005_2010_01_01'
+    bands = 'sur_refl_b01,sur_refl_b04,sur_refl_b03'
+    gain = 0.1
     if scene:
-       result = get_thumbnail(scene)
+       result = get_modis_thumbnail(scene, cell, bands, gain)
     else:
        result = {'thumbid': '', 'token': ''}
     return render_template('picker.html', **result)
