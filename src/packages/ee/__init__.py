@@ -19,6 +19,7 @@ import algorithms
 # pylint: disable-msg=C6202,g-multiple-import
 from algorithms import variable, lambda_
 from collection import Collection
+from computedobject import ComputedObject
 from featurecollection import FeatureCollection
 from feature import Feature
 from filter import Filter

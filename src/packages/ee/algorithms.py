@@ -8,10 +8,13 @@
 # javascript version's naming.
 # pylint: disable-msg=C6003,C6409
 
+import json
 import keyword
 import numbers
+import re
 import textwrap
 
+import computedobject
 import data
 import ee_exception
 import feature
@@ -214,6 +217,8 @@ def _makeMapFunction(name, signature, is_instance, opt_bound_args=None):
     named = dict(opt_bound_args)
     named.update(namedArgsIn)
     parameters = _applySignature(s, *argsIn, **named)
+    # We convert to JSON and back so we can pop off the top-level algorithm.
+    parameters = json.loads(parameters.serialize())
     if 'algorithm' in parameters:
       parameters.pop('algorithm')
 
@@ -312,14 +317,14 @@ def _makeDoc(signature, opt_bound_args=None):
 
 
 def _isSubtype(firstType, secondType):
-  """Checks whether a type is a supertype of another.
+  """Checks whether a type is a subtype of another.
 
   Args:
       firstType: The first type name.
       secondType: The second type name.
 
   Returns:
-      Whether firstType is a supertype of secondType.
+      Whether secondType is a subtype of firstType.
   """
   if firstType == secondType:
     return True
@@ -348,6 +353,9 @@ def _promote(klass, arg):
       The argument promoted if the class is recognized, otherwise the
       original argument.
   """
+  if klass:
+    klass = re.sub('<.*', '', klass)
+
   if klass == 'Image':
     return image.Image(arg)
   elif klass == 'ImageCollection':
@@ -371,7 +379,7 @@ def _promote(klass, arg):
         'value': arg
     }
   else:
-    return arg
+    return computedobject.ComputedObject(arg)
 
 
 def variable(cls, name):                       # pylint: disable-msg=C6409,W0622

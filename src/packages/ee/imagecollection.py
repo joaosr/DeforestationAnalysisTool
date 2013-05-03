@@ -66,28 +66,6 @@ class ImageCollection(collection.Collection):
     """
     return self.mosaic().getMapId(vis_params)
 
-  def mosaic(self):
-    """Wrap this collection in a SimpleMosaic function."""
-    return image.Image({'creator': 'SimpleMosaic', 'args': [self]})
-
-  def combine(self, other):
-    """Combine two ImageCollections by ID, merging bands.
-
-    The collection contains one image for each image in this collection
-    merged with the bands from any matching images in the other collection.
-
-    Args:
-       other: The second collection.
-
-    Returns:
-       The combined collection.
-    """
-    return ImageCollection({
-        'algorithm': 'CombineCollectionBands',
-        'primary': self,
-        'secondary': other
-        })
-
   def map(self,
           algorithm,
           opt_dynamicArgs=None,
