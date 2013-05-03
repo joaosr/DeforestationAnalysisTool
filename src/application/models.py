@@ -155,7 +155,7 @@ class Report(db.Model):
                                    datetime.fromtimestamp(r1[1]/1000).isoformat(),
                                    self.start.isoformat())
 
-SPLITS =5 
+SPLITS = 5 
 class Cell(db.Model):
 
     z = db.IntegerProperty(required=True)
@@ -457,7 +457,7 @@ class Area(db.Model):
         cl.sql("update  %s set geo = '%s', type = '%s' where rowid = '%s'" % (table_id, geo_kml, self.fusion_tables_type(), self.fusion_tables_id))
 
     def create_fusion_tables(self):
-        logging.info("saving to fusion tables %s" % self.key())
+        logging.info("saving to fusion tables report %s" % self.key())
         cl = self._get_ft_client()
         table_id = cl.table_id(settings.FT_TABLE)
         geo_kml = path_to_kml(json.loads(self.geo))
