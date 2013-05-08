@@ -101,7 +101,7 @@ var NDFILayer = Backbone.View.extend({
 
 
         // get pixel color
-        var pixel_pos = (point.y*c.width + point.x) * 4;
+        var pixel_pos = (Math.floor(point.y)*c.width + Math.floor(point.x)) * 4;
         var color = [];
         color[0] = image_data.data[pixel_pos + 0];
         color[1] = image_data.data[pixel_pos + 1];
@@ -115,7 +115,7 @@ var NDFILayer = Backbone.View.extend({
         }
 
 
-        var poly = contour(image_data.data, c.width, c.height, point.x, point.y);
+        var poly = contour(image_data.data, c.width, c.height, Math.floor(point.x), Math.floor(point.y));
 
         var inners = inner_polygons(image_data.data,
                  c.width, c.height, poly, color);
