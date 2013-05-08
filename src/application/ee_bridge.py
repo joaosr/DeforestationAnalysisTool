@@ -926,14 +926,9 @@ class NDFI(object):
                 return img.mask(valid).select(BAND_SRCS, BAND_DSTS)
             return merged.map(maskInvalid).qualityMosaic('TIME').select(BAND_DSTS[:-1])
         else:
-            return ee.Image({
-              'algorithm': 'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-              'arg1': modis_ga,
-              'arg2': modis_gq,
-              'arg3': inclusions,
-              'arg4': start_time,
-              'arg5': end_time
-            })
+            return ee.call(
+              'SAD/com.google.earthengine.examples.sad.MakeMosaic',
+              modis_ga, modis_gq, inclusions, start_time, end_time)
 
     def _get_polygon_bbox(self, polygon):
         """Returns the bounding box of a polygon.
@@ -1096,12 +1091,9 @@ def _get_area_histogram(image, polygons, classes, scale=120):
           results.append(properties)
         return results
     else:
-        stats_image = ee.Image({
-            'algorithm': 'SAD/com.google.earthengine.examples.sad.GetStats',
-            'arg1': image,
-            'arg2': polygons,
-            'arg3': 'name'
-        })
+        stats_image = ee.call(
+            'SAD/com.google.earthengine.examples.sad.GetStats',
+            image, polygons, 'name')
         stats = ee.data.getValue({
             'image': stats_image.serialize(False),
             'fields': 'classHistogram'
@@ -1217,10 +1209,8 @@ def _get_landsat_toa(start_time, end_time, version=-1):
     Returns:
       An ee.ImageCollection of Landsat TOA images.
     """
-    collection = ee.ImageCollection({
-        'id': 'L7_L1T',
-        'version': version
-    })
+    # Load a specific version of an image collection.
+    collection = ee.call('ImageCollection.load', 'L7_L1T', version)
     collection = collection.filterDate(start_time, end_time)
     return collection.map(lambda img: ee.call('LandsatTOA', img))
 
