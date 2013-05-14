@@ -1062,10 +1062,7 @@ def _get_modis_tile(horizontal, vertical):
     min_y = base_y + (MODIS_CELLS - vertical - 1) * cell_size
     max_y = base_y + (MODIS_CELLS - vertical) * cell_size - MODIS_250_SCALE
 
-    rectangle = ee.Feature.Rectangle(min_x, min_y, max_x, max_y)
-    rectangle['crs'] = {
-        'type': 'name',
-        'properties': {'name': MODIS_CRS}
-    }
+    rectangle = ee.Geometry(
+        ee.Geometry.Rectangle(min_x, min_y, max_x, max_y), MODIS_CRS)
 
     return rectangle
