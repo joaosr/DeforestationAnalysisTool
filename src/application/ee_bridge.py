@@ -1028,13 +1028,21 @@ def get_prodes_stats(assetids, table_id):
 
 def get_modis_thumbnail(image_id, cell, bands='sur_refl_b01,sur_refl_b04,sur_refl_b03', gain=0.1):
     """Returns a thumbnail ID for a given image ID.
+
+    Args:
+      image_id: The asset ID of the image to thumbnail.
+      cell: MODIS cell coordinates as a (horizontal, vertical) tuple.
+      bands: The bands of the image to render as a comma-separated string.
+      gain: The visualization gain to apply to the image.
+
+    Returns:
+      A dictionary containing "thumbid" and "token".
     """
-    region = ee.Feature(_get_modis_tile(12,10)).bounds(500.0)
-    reprojected = ee.data.getValue({'json': region.serialize()})['geometry']['coordinates']
-    logging.info(reprojected)
-    logging.info(_get_modis_tile(12,10))
+    MAX_ERROR_METERS = 500.0
+    region = ee.Feature(_get_modis_tile(*cell)).bounds(MAX_ERROR_METERS)
+    reprojected = region.getInfo()['geometry']['coordinates']
     return ee.data.getThumbId({
-        'image': ee.Image(image_id).serialize(False),
+        'image': ee.Image(image_id).serialize(),
         'bands': bands,
         'region': reprojected,
         'gain': gain
