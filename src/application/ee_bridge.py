@@ -51,12 +51,6 @@ MODIS_TRANSFORM = [
     0, -MODIS_250_SCALE, 1112066.375
 ]
 
-# Whether to assume that we're using the new API format that handles shared
-# subtrees but forbids custom JSON. Currently setting this to True will
-# cause performance issues and may be blocked by quota limits. This
-# sad state of affairs is gonna change real soon now.
-ASSUME_NEW_API = False
-
 # The ID of the Fusion Table containing the selected MODIS days for each month.
 MODIS_INCLUSIONS_TABLE = 'ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc'
 # The ID of the Fusion Table containing kriging parameters.
@@ -370,9 +364,6 @@ class NDFI(object):
         rows and cols parameters, then for each cell, computes the number of
         valid pixels and the total NDFI of all those pixels.
 
-        WARNING: Until ASSUME_NEW_API is flipped, this is horribly, painfully
-        slow, and slows down linearly with the number of cells.
-
         Args:
           asset_id: The string ID of the baseline classification image. Should
               have one band whose values are the CLS_* constants defined in
@@ -554,95 +545,45 @@ class NDFI(object):
         ndfi0 = self._NDFI_image(self.last_period, True)
         ndfi1 = self._NDFI_image(self.work_period)
 
-        if ASSUME_NEW_API:
-            # Basic difference.
-            diff = ndfi1.subtract(ndfi0)
+        # Basic difference.
+        diff = ndfi1.subtract(ndfi0)
 
-            # Initialize outcomes.
-            out_shifted_baseline = baseline.add(CLASSIFICATION_OFFSET)
-            out_shifted_deforestation = CLS_DEFORESTED + CLASSIFICATION_OFFSET
-            out_shifted_unclassified = CLS_UNCLASSIFIED + CLASSIFICATION_OFFSET
-            out_negated_diff = diff.multiply(-1)
+        # Initialize outcomes.
+        out_shifted_baseline = baseline.add(CLASSIFICATION_OFFSET)
+        out_shifted_deforestation = CLS_DEFORESTED + CLASSIFICATION_OFFSET
+        out_shifted_unclassified = CLS_UNCLASSIFIED + CLASSIFICATION_OFFSET
+        out_negated_diff = diff.multiply(-1)
 
-            # Start with the diff.
-            raw_result = out_negated_diff
+        # Start with the diff.
+        raw_result = out_negated_diff
 
-            # Mask out improved areas.
-            raw_result = raw_result.where(diff.gt(0), out_shifted_baseline)
+        # Mask out improved areas.
+        raw_result = raw_result.where(diff.gt(0), out_shifted_baseline)
 
-            # Mask out already deforested areas.
-            already_deforested = ndfi0.lt(ALREADY_DEFORESTED_NDFI)
-            raw_result = raw_result.where(already_deforested,
-                                          out_shifted_deforestation)
+        # Mask out already deforested areas.
+        already_deforested = ndfi0.lt(ALREADY_DEFORESTED_NDFI)
+        raw_result = raw_result.where(already_deforested,
+                                      out_shifted_deforestation)
 
-            # Mask out pixels that are unknown or not in a large enough forest.
-            baseline_segment_size = baseline.connectedPixelCount(MIN_FOREST_SIZE)
-            considered = baseline.neq(CLS_BASELINE).And(
-                baseline.neq(CLS_UNCLASSIFIED)).And(
-                baseline.neq(CLS_OLD_DEFORESTATION)).And(
-                ndfi0.neq(INVALID_NDFI)).And(
-                ndfi1.neq(INVALID_NDFI)).And(
-                baseline_segment_size.gte(MIN_FOREST_SIZE))
-            raw_result = raw_result.where(considered.Not(), out_shifted_baseline)
+        # Mask out pixels that are unknown or not in a large enough forest.
+        baseline_segment_size = baseline.connectedPixelCount(MIN_FOREST_SIZE)
+        considered = baseline.neq(CLS_BASELINE).And(
+            baseline.neq(CLS_UNCLASSIFIED)).And(
+            baseline.neq(CLS_OLD_DEFORESTATION)).And(
+            ndfi0.neq(INVALID_NDFI)).And(
+            ndfi1.neq(INVALID_NDFI)).And(
+            baseline_segment_size.gte(MIN_FOREST_SIZE))
+        raw_result = raw_result.where(considered.Not(), out_shifted_baseline)
 
-            # Unclassify previously unclassified pixels and small forests.
-            cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
-            mask_segment_size = cloud_mask.connectedPixelCount(MIN_UNMASKED_SIZE)
-            to_unclassify = baseline.eq(CLS_FOREST).And(
-                baseline_segment_size.gte(MIN_FOREST_SIZE)).And(
-                mask_segment_size.lt(MIN_UNMASKED_SIZE))
-            result = raw_result.where(to_unclassify, out_shifted_unclassified)
+        # Unclassify previously unclassified pixels and small forests.
+        cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
+        mask_segment_size = cloud_mask.connectedPixelCount(MIN_UNMASKED_SIZE)
+        to_unclassify = baseline.eq(CLS_FOREST).And(
+            baseline_segment_size.gte(MIN_FOREST_SIZE)).And(
+            mask_segment_size.lt(MIN_UNMASKED_SIZE))
+        result = raw_result.where(to_unclassify, out_shifted_unclassified)
 
-            return result.byte().addBands(baseline)
-        else:
-            # Basic difference.
-            diff = 'b(1) - b(0)'
-
-            # Initialize outcomes.
-            out_shifted_baseline = 'b(2) + %s' % CLASSIFICATION_OFFSET
-            out_shifted_deforestation = CLS_DEFORESTED + CLASSIFICATION_OFFSET
-            out_shifted_unclassified = CLS_UNCLASSIFIED + CLASSIFICATION_OFFSET
-            out_negated_diff = 'b(0) - b(1)'
-
-            # Start with the diff.
-            raw_result = out_negated_diff
-
-            # Mask out improved areas.
-            raw_result = 'where(%s, b(1) > b(0), %s)' % (
-                raw_result, out_shifted_baseline)
-
-            # Mask out already deforested areas.
-            raw_result = 'where(%s, b(0) < %s, %s)' % (
-                raw_result, ALREADY_DEFORESTED_NDFI, out_shifted_deforestation)
-
-            # Mask out pixels that are unknown or not in a large enough forest.
-            baseline_segment_size = 'connectedPixelCount(b(2))'
-            considered = ('b(2) != %s && '
-                          'b(2) != %s && '
-                          'b(2) != %s && '
-                          'b(0) != %s && '
-                          'b(1) != %s && '
-                          '%s >= %s') % (CLS_BASELINE,
-                                         CLS_UNCLASSIFIED,
-                                         CLS_OLD_DEFORESTATION,
-                                         INVALID_NDFI,
-                                         INVALID_NDFI,
-                                         baseline_segment_size,
-                                         MIN_FOREST_SIZE)
-            raw_result = 'where(%s, not(%s), %s)' % (
-                raw_result, considered, out_shifted_baseline)
-
-            # Unclassify previously unclassified pixels and small forests.
-            cloud_mask = 'b(1) != %s' % CLS_UNCLASSIFIED
-            mask_segment_size = 'connectedPixelCount(b(1) != %s)' % CLS_UNCLASSIFIED
-            to_unclassify = 'b(2) == %s && %s >= %s && %s < %s' % (
-                CLS_FOREST,
-                baseline_segment_size, MIN_FOREST_SIZE,
-                mask_segment_size, MIN_UNMASKED_SIZE)
-            result = 'where(%s, %s, %s)' % (
-                raw_result, to_unclassify, out_shifted_unclassified)
-
-            return ee.Image.cat(ndfi0, ndfi1, baseline).expression(result).byte().addBands(baseline)
+        return result.byte().addBands(baseline)
 
     def _paint_edited_deforestation(self, asset_id, month, year):  # pylint: disable-msg=unused-argument
         """Returns an image from an asset with edited deforestation painted on.
@@ -698,23 +639,13 @@ class NDFI(object):
           which indicates that the unmixed values were out of range.
         """
         base = self._unmixed_mosaic(period, long_span)
-        if ASSUME_NEW_API:
-            clamped = base.max(0)
-            summed = clamped.expression('b("gv") + b("soil") + b("npv")')
-            gv_shade = clamped.select('gv').divide(summed)
-            npv_plus_soil = clamped.select('npv').add(clamped.select('soil'))
-            raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
-            ndfi = raw_ndfi.multiply(100).add(100).byte()
-            ndfi = ndfi.where(summed.eq(0), INVALID_NDFI)
-        else:
-            sum_exp = '(b(0) + b(1) + b(2))'
-            gv_shade_exp = 'b(0) / %s' % sum_exp
-            npv_plus_soil_exp = '(b(1) + b(2))'
-            raw_ndfi_exp = 'normalizedDifference(addBands(%s, %s))' % (
-                gv_shade_exp, npv_plus_soil_exp)
-            ndfi_exp = 'byte(%s * 100 + 100)' % raw_ndfi_exp
-            ndfi = base.max(0).expression(
-                'where(%s, %s == 0, %s)' % (ndfi_exp, sum_exp, INVALID_NDFI))
+        clamped = base.max(0)
+        summed = clamped.expression('b("gv") + b("soil") + b("npv")')
+        gv_shade = clamped.select('gv').divide(summed)
+        npv_plus_soil = clamped.select('npv').add(clamped.select('soil'))
+        raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
+        ndfi = raw_ndfi.multiply(100).add(100).byte()
+        ndfi = ndfi.where(summed.eq(0), INVALID_NDFI)
         return ndfi.select([0], ['ndfi'])
 
     def _unmixed_mosaic(self, period, long_span=False):
@@ -849,86 +780,9 @@ class NDFI(object):
         inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
         inclusions = inclusions.filter(inclusions_filter)
 
-        if ASSUME_NEW_API:
-            # Fetch the inclusions table rows.
-            rows = inclusions.getInfo()['features']
-            cells = [i['properties'] for i in rows]
-
-            # Prepare the list of selected images for each cell.
-            ga_images = collections.defaultdict(list)
-            gq_images = collections.defaultdict(list)
-            for cell in cells:
-                days = cell['day'].split(',')
-                tile = cell['cell']
-                for day in days:
-                    args = (int(cell['year']), int(cell['month']), int(day))
-                    ga_images[tile].append('MOD09GA_005_%04d_%02d_%02d' % args)
-                    gq_images[tile].append('MOD09GQ_005_%04d_%02d_%02d' % args)
-
-            # Get filtered and joined collections for each cell.
-            subcollections = []
-            specs = zip(ga_images.keys(), ga_images.values(), gq_images.values())
-            for tile, selected_ga, selected_gq in specs:
-                ga = modis_ga.filterMetadata(
-                    'system:index', 'in_list', selected_ga)
-                gq = modis_gq.filterMetadata(
-                    'system:index', 'in_list', selected_gq)
-
-                joined = ga.innerJoin(
-                    gq, 'equals', 'system:time_start', 'system:time_start')
-                combined = ee.ImageCollection(joined.map(
-                    'Image.addBands', {'dstImg': 'primary', 'srcImg': 'secondary'}))
-
-                cell_bounds = _get_modis_tile(int(tile[1:3]), int(tile[4:6]))
-
-                def clip_and_add_time_band(img):
-                  return img.clip(cell_bounds).addBands(
-                      img.metadata('system:time_start'))
-
-                clipped = combined.map(clip_and_add_time_band)
-
-                subcollections.append(clipped)
-
-            # Merge subcollections to stitch our tapestry.
-            def merge(image_collections):
-                if len(image_collections) == 1:
-                    return image_collections[0]
-                else:
-                    mid = len(image_collections) / 2
-                    return merge(image_collections[0:mid]).merge(
-                        merge(image_collections[mid:]))
-            merged = ee.ImageCollection(merge(subcollections))
-
-            # Mask invalid pixels in each image and composite what remains ordering
-            # by time.
-            BAND_MAP = [
-              'num_observations_1km', 'num_observations_1km',
-              'state_1km', 'state_1km',
-              'sur_refl_b01', 'sur_refl_b01_500m',
-              'sur_refl_b02', 'sur_refl_b02_500m',
-              'sur_refl_b03', 'sur_refl_b03_500m',
-              'sur_refl_b04', 'sur_refl_b04_500m',
-              'sur_refl_b05', 'sur_refl_b05_500m',
-              'sur_refl_b06', 'sur_refl_b06_500m',
-              'sur_refl_b07', 'sur_refl_b07_500m',
-              'sur_refl_b01_1', 'sur_refl_b01_250m',
-              'sur_refl_b02_1', 'sur_refl_b02_250m',
-              'num_observations', 'num_observations_250m',
-              'system:time_start', 'TIME',
-            ]
-            BAND_SRCS = BAND_MAP[::2]
-            BAND_DSTS = BAND_MAP[1::2]
-            def maskInvalid(img):
-                valid = img.select('num_observations_1km').neq(0).And(
-                    img.select('num_observations').neq(0)).And(
-                    img.select('state_1km').right_shift(6).mod(4).neq(0)).And(
-                    img.select('sur_refl_.*').reduce(ee.call('Reducer.min')).gt(0))
-                return img.mask(valid).select(BAND_SRCS, BAND_DSTS)
-            return merged.map(maskInvalid).qualityMosaic('TIME').select(BAND_DSTS[:-1])
-        else:
-            return ee.call(
-              'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-              modis_ga, modis_gq, inclusions, start_time, end_time)
+        return ee.call(
+          'SAD/com.google.earthengine.examples.sad.MakeMosaic',
+          modis_ga, modis_gq, inclusions, start_time, end_time)
 
     def _get_polygon_bbox(self, polygon):
         """Returns the bounding box of a polygon.
@@ -1049,15 +903,13 @@ def get_modis_thumbnail(image_id, cell, bands='sur_refl_b01,sur_refl_b04,sur_ref
     })
 
 
-def _get_area_histogram(image, polygons, classes, scale=120):
+def _get_area_histogram(image, polygons, classes):
     """Computes the area of class in each polygon.
 
     Args:
       image: The single-band image with class-valued pixels.
       polygons: An ee.FeatureCollection of polygons to analyse.
       classes: The integer class values to compute area for.
-      scale: The pixel scale in meters of the area calculation. Only used if
-          ASSUME_NEW_API is true.
 
     Returns:
       A list of dictionaries, one for each polygon in the polygons table in
@@ -1067,53 +919,23 @@ def _get_area_histogram(image, polygons, classes, scale=120):
       entry for each class, the key being the class value and the value being
       the area of that class in square meters.
     """
-    if ASSUME_NEW_API:
-        area = ee.Image.pixelArea()
-        sum_reducer = ee.call('Reducer.sum')
+    stats_image = ee.call(
+        'SAD/com.google.earthengine.examples.sad.GetStats',
+        image, polygons, 'name')
+    stats = ee.data.getValue({
+        'image': stats_image.serialize(False),
+        'fields': 'classHistogram'
+    })['properties']['classHistogram']['values']
 
-        def calculate_area(feature):
-            """Attaches the area of a given class within a feature as a property."""
-            geometry = feature.geometry()
-            total = area.mask(image.mask())
-            total_area = total.reduceRegion(
-                sum_reducer, geometry, scale, bestEffort=True)
-            properties = {'total': total_area}
+    result = []
+    for name, value in stats.iteritems():
+        row = {'name': name, 'total': sum(value['values'].values())}
+        for class_number in classes:
+          class_label = str(class_number)
+          row[class_label] = value['values'].get(class_label, 0)
+        result.append(row)
 
-            for class_value in classes:
-                masked = area.mask(image.eq(class_value))
-                class_area = masked.reduceRegion(
-                    sum_reducer, geometry, scale, bestEffort=True)
-                properties[str(class_value)] = class_area
-
-            return ee.call('Feature.setProperties', feature, properties)
-
-        raw_results = polygons.map(calculate_area).getInfo()
-        results = []
-        for raw_result in raw_results['features']:
-          properties = raw_result['properties']
-          for key, value in properties.iteritems():
-            if isinstance(value, dict) and 'area' in value:
-              properties[key] = value['area']
-          results.append(properties)
-        return results
-    else:
-        stats_image = ee.call(
-            'SAD/com.google.earthengine.examples.sad.GetStats',
-            image, polygons, 'name')
-        stats = ee.data.getValue({
-            'image': stats_image.serialize(False),
-            'fields': 'classHistogram'
-        })['properties']['classHistogram']['values']
-
-        result = []
-        for name, value in stats.iteritems():
-            row = {'name': name, 'total': sum(value['values'].values())}
-            for class_number in classes:
-              class_label = str(class_number)
-              row[class_label] = value['values'].get(class_label, 0)
-            result.append(row)
-
-        return result
+    return result
 
 
 def _remap_prodes_classes(img):
