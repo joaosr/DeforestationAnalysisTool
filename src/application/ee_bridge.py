@@ -211,10 +211,10 @@ class EELandsat(object):
         """
         MAP_IMAGE_BANDS = ['30', '20', '10']
         PREVIEW_GAIN = 500
-        return _get_landsat_toa(start, end).mosaic().getMapId({
+        return _get_raw_mapid(_get_landsat_toa(start, end).mosaic().getMapId({
             'bands': ','.join(MAP_IMAGE_BANDS),
             'gain': PREVIEW_GAIN
-        })
+        }))
 
 
 class NDFI(object):
@@ -232,7 +232,8 @@ class NDFI(object):
 
     def mapid2(self, asset_id):
         """Returns a Map ID for a visualization of the NDFI difference between last_period and work_period."""
-        return self._ndfi_delta(asset_id).getMapId({'format': 'png'})
+        return _get_raw_mapid(
+            self._ndfi_delta(asset_id).getMapId({'format': 'png'}))
 
     def rgb0id(self):
         """Returns a Map ID for the RGB visualization of a MODIS mosaic for last_period."""
@@ -257,7 +258,8 @@ class NDFI(object):
     def baseline(self, asset_id):
         """Returns a Map ID for the given classification asset, masked to only show CLS_BASELINE areas."""
         classification = ee.Image(asset_id).select('classification')
-        return classification.mask(classification.eq(CLS_BASELINE)).getMapId()
+        return _get_raw_mapid(
+            classification.mask(classification.eq(CLS_BASELINE)).getMapId())
 
     def freeze_map(self, asset_id, table_id, report_id):
         """Saves a new baseline image as an asset.
@@ -351,11 +353,11 @@ class NDFI(object):
             maxs.append(max_value)
 
         # Get stretched image.
-        return display_image.clip(polygon).getMapId({
+        return _get_raw_mapid(display_image.clip(polygon).getMapId({
             'bands': ','.join(RGB_BANDS),
             'min': ','.join(str(i) for i in mins),
             'max': ','.join(str(i) for i in maxs)
-        })
+        }))
 
     def ndfi_change_value(self, asset_id, polygon, rows=5, cols=5):
         """Calculates NDFI delta stats between two periods in a given polygon.
@@ -479,30 +481,30 @@ class NDFI(object):
 
     def _RGB_image_command(self, period, long_span=False):
         """Returns a Map ID for the RGB visualization of a MODIS mosaic for a given period."""
-        return self._kriged_mosaic(period, long_span).getMapId({
+        return _get_raw_mapid(self._kriged_mosaic(period, long_span).getMapId({
             'bands': 'sur_refl_b01,sur_refl_b04,sur_refl_b03',
             'gain': 0.1,
             'bias': 0.0,
             'gamma': 1.6
-        })
+        }))
 
     def _SMA_image_command(self, period):
         """Returns a Map ID for the NDFI SMA image for a given period."""
-        return self._unmixed_mosaic(period).getMapId({
+        return _get_raw_mapid(self._unmixed_mosaic(period).getMapId({
             'bands': 'gv,soil,npv',
             'gain': 256,
             'bias': 0.0,
             'gamma': 1.6
-        })
+        }))
 
     def _NDFI_period_image_command(self, period, long_span=False):
         """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for a given period."""
-        return self._NDFI_visualize(period, long_span).getMapId({
+        return _get_raw_mapid(self._NDFI_visualize(period, long_span).getMapId({
             'bands': 'vis-red,vis-green,vis-blue',
             'gain': 1,
             'bias': 0.0,
             'gamma': 1.6
-        })
+        }))
 
     def _ndfi_delta(self, asset_id):
         """Computes a classification based on an difference in NDFI.
@@ -1066,3 +1068,11 @@ def _get_modis_tile(horizontal, vertical):
         ee.Geometry.Rectangle(min_x, min_y, max_x, max_y), MODIS_CRS)
 
     return rectangle
+
+
+def _get_raw_mapid(mapid):
+    """Strips any fields other than "mapid" and "token" from a MapId object."""
+    return {
+        'token': mapid['token'],
+        'mapid': mapid['mapid']
+    }
