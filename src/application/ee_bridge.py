@@ -931,7 +931,9 @@ def _get_area_histogram(image, polygons, classes):
 
     result = []
     for name, value in stats.iteritems():
-        row = {'name': name, 'total': sum(value['values'].values())}
+        # The values are sorted to get a deterministic order, as this affects
+        # the result due to floating point errors.
+        row = {'name': name, 'total': sum(sorted(value['values'].values()))}
         for class_number in classes:
           class_label = str(class_number)
           row[class_label] = value['values'].get(class_label, 0)
