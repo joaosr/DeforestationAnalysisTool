@@ -39,7 +39,7 @@ MAX_NDFI = 200
 INVALID_NDFI = MAX_NDFI + 1
 
 # The length of a "long" time period in milliseconds.
-LONG_SPAN_SIZE_MS = 1000 * 60 * 60 * 24 * 30 * 6
+LONG_SPAN_SIZE_MS = 1000 * 60 * 60 * 24 * 30 * 9
 
 # MODIS projection specification.
 MODIS_CRS = 'SR-ORG:6974'
