@@ -8,7 +8,8 @@
 src/static/maps
 src/application/secret_keys.py
 pip-log.txt
-
+*pem
+*p12
 src/application/pip-log.txt
 src/deploy_info.txt
 src/packages/flask/
