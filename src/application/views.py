@@ -1,5 +1,6 @@
 # encoding: utf-8
 
+import datetime
 import logging
 import os
 import simplejson as json
@@ -42,7 +43,7 @@ def default_maps():
     landsat = EELandsat()
     ndfi = NDFI(past_month_range(r.start), r.range())
 
-    d = landsat.mapid(timestamp(r.start), datetime.now())
+    d = landsat.mapid(timestamp(r.start), datetime.datetime.now())
     maps.append({'data' :d, 'info': 'LANDSAT/L7_L1T'})
     """
     d = landsat.mapid(*past_month_range(r.start))
