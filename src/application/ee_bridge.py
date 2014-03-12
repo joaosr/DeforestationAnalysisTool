@@ -32,6 +32,7 @@ CLS_OLD_DEFORESTATION = 6
 CLS_EDITED_DEFORESTATION = 7
 CLS_EDITED_DEGRADATION = 8
 CLS_EDITED_OLD_DEGRADATION = 9
+CLASSES_COUNT = 10
 
 
 # Values that signify maximum and invalid NDFI.
@@ -921,22 +922,25 @@ def _get_area_histogram(image, polygons, classes):
       entry for each class, the key being the class value and the value being
       the area of that class in square meters.
     """
-    stats_image = ee.call(
-        'SAD/com.google.earthengine.examples.sad.GetStats',
-        image, polygons, 'name')
-    stats = ee.data.getValue({
-        'image': stats_image.serialize(False),
-        'fields': 'classHistogram'
-    })['properties']['classHistogram']['values']
+    area_image = ee.Image.pixelArea()
+    classes_image = ee.Image().select([])
+    for class_number in range(CLASSES_COUNT):
+      masked = area_image.mask(image.select('class').eq(class_number))
+      renamed = masked.select([0], ['cls-' + str(class_number)])
+      classes_image = classes_image.addBands(renamed)
+    reducer = ee.Reducer.sum().forEachBand(classes_image)
+    proj = image.projection().getInfo()
+    stats_query = classes_image.reduceRegions(
+        polygons, reducer, None, proj['crs'], proj['transform'])
+    stats = stats_query.getInfo()['features']
 
     result = []
-    for name, value in stats.iteritems():
-        # The values are sorted to get a deterministic order, as this affects
-        # the result due to floating point errors.
-        row = {'name': name, 'total': sum(sorted(value['values'].values()))}
+    for feature in stats:
+        properties = feature['properties']
+        values = [properties['cls-' + str(i)] for i in range(CLASSES_COUNT)]
+        row = {'name': properties['name'], 'total': sum(values)}
         for class_number in classes:
-          class_label = str(class_number)
-          row[class_label] = value['values'].get(class_label, 0)
+          row[str(class_number)] = values[class_number]
         result.append(row)
 
     return result
