@@ -1048,7 +1048,7 @@ def _get_landsat_toa(start_time, end_time, version=-1):
     # Load a specific version of an image collection.
     collection = ee.ImageCollection.load('L7_L1T', version)
     collection = collection.filterDate(start_time, end_time)
-    return collection.map(lambda img: ee.Algorithms.LandsatTOA(img))
+    return collection.map(ee.Algorithms.LandsatTOA)
 
 
 def _get_modis_tile(horizontal, vertical):
