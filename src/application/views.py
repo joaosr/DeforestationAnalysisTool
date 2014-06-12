@@ -44,11 +44,7 @@ def default_maps():
     ndfi = NDFI(past_month_range(r.start), r.range())
 
     d = landsat.mapid(timestamp(r.start), datetime.datetime.now())
-    maps.append({'data' :d, 'info': 'LANDSAT/L7_L1T'})
-    """
-    d = landsat.mapid(*past_month_range(r.start))
-    maps.append({'data' :d, 'info': 'LANDSAT/L7_L1T-old'})
-    """
+    maps.append({'data' :d, 'info': 'LANDSAT/LE7_L1T'})
     #d = ndfi.mapid2()
     #if d: maps.append({'data' :d, 'info': 'ndfi difference'})
     d = ndfi.smaid()

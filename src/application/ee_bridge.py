@@ -193,9 +193,9 @@ class EELandsat(object):
         """
         bbox = ee.Feature.Rectangle(
             *[float(i.strip()) for i in bounds.split(',')])
-        # NOTE: Can technically use L7_L1T, but then we'll get IDs without the
+        # NOTE: Can technically use LE7_L1T, but then we'll get IDs without the
         # "LANDSAT/" base, and that confuses some of the callers.
-        images = ee.ImageCollection('LANDSAT/L7_L1T').filterBounds(bbox).getInfo()
+        images = ee.ImageCollection('LANDSAT/LE7_L1T').filterBounds(bbox).getInfo()
         if 'features' in images:
             return [x['id'] for x in images['features']]
         return []
@@ -210,7 +210,7 @@ class EELandsat(object):
         Returns:
           A dictionary containing "mapid" and "token".
         """
-        MAP_IMAGE_BANDS = ['30', '20', '10']
+        MAP_IMAGE_BANDS = ['B3', 'B2', 'B1']
         PREVIEW_GAIN = 500
         return _get_raw_mapid(_get_landsat_toa(start, end).mosaic().getMapId({
             'bands': ','.join(MAP_IMAGE_BANDS),
@@ -288,7 +288,7 @@ class NDFI(object):
           sensor: The type of mosaic, either "landsat" or "modis".
           bands: The three band numbers to use. For sensor="modis", the valid
               values are 1,2,3,4,5,6,7. For sensor="landsat", the valid values
-              are 10,20,30,40,50,61,62,70,80.
+              are B1, B2, B3, B4, B5, B6_VCID_1, B6_VCID_2, B7, B8
           std_devs: The number of standard deviations from the mean to stretch.
               Defaults to 2.
 
@@ -1046,7 +1046,7 @@ def _get_landsat_toa(start_time, end_time, version=-1):
       An ee.ImageCollection of Landsat TOA images.
     """
     # Load a specific version of an image collection.
-    collection = ee.ImageCollection.load('L7_L1T', version)
+    collection = ee.ImageCollection.load('LE7_L1T', version)
     collection = collection.filterDate(start_time, end_time)
     return collection.map(ee.Algorithms.LandsatTOA)
 
