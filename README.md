@@ -23,7 +23,7 @@ and Snow Leopard, but it shouldn't be complicated to make it run in other Unix-l
    * Go to terminal and write: `mate /Applications/GoogleAppEngineLauncher.app/Contents/Resources/GoogleAppEngine-default.bundle/Contents/Resources/google_appengine/dev_appserver.py`
    * Modify the first line to say: `#!/usr/bin/python2.7`
 3. Checkout the project from GitHub.
-   * In the terminal go to the folder where you want to install the code: `cd /Users/ruth/workspace/`
+   * In the terminal go to the folder where you want to install the code: `cd /Users/me/workspace/`
    * Run `git clone git://github.com/Vizzuality/DeforestationAnalysisTool.git`
 4. Copy and modify `secret_keys.py.example`.
    * run `cp src/application/secret_keys.py.example src/application/secret_keys.py`
