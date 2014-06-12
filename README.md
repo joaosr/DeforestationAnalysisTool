@@ -4,8 +4,8 @@ Imazon-Sad application
 This is a highly specialized application to track deforestation on the Amazonas. More specifically,
 it is a tool to do validation of deforestation detected by algorithms using satellite imagery.
 The algorithm and the methodology has been developed by Imazon (TODO: links to scientific papers).
-The frontend and the application architecture has been developed by Vizzuality. The backend support
-for Google Earth Engine has been provided by David Thau. 
+The frontend and the application architecture has been developed by Vizzuality and updated by Google. 
+The backend support for Google Earth Engine has been provided by David Thau. 
 
 The tool runs on Google App Engine (GAE) and uses Google Earth Engine (GEE) and Fusion Tables (FT) APIs.
 You may need certain API keys to run the application - contact thau@google.com for details.
@@ -19,9 +19,9 @@ and Snow Leopard, but it shouldn't be complicated to make it run in other Unix-l
 
 1. Install the [App Engine Python SDK](http://code.google.com/intl/en/appengine/downloads.html#Google_App_Engine_SDK_for_Python)
    * Run it and let it make symbolic links (you will be asked to enter your root password)
-2. Modify appengine to use Python 2.5.
+2. Modify appengine to use Python 2.7.
    * Go to terminal and write: `mate /Applications/GoogleAppEngineLauncher.app/Contents/Resources/GoogleAppEngine-default.bundle/Contents/Resources/google_appengine/dev_appserver.py`
-   * Modify the first line to say: `#!/usr/bin/python2.5`
+   * Modify the first line to say: `#!/usr/bin/python2.7`
 3. Checkout the project from GitHub.
    * In the terminal go to the folder where you want to install the code: `cd /Users/ruth/workspace/`
    * Run `git clone git://github.com/Vizzuality/DeforestationAnalysisTool.git`
