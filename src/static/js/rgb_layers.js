@@ -30,30 +30,30 @@ var RGB_layers =  [
         description: 'F color infrared RGB214'
     },
     {
-        r: 30,
-        g: 20,
-        b: 10,
+        r: 3,
+        g: 2,
+        b: 1,
         sensor: 'landsat',
         description: 'Landsat Stretch RGB321'
     },
     {
-        r: 50,
-        g: 40,
-        b: 30,
+        r: 5,
+        g: 4,
+        b: 3,
         sensor: 'landsat',
         description: 'Landsat Stretch RGB543'
     },
     {
-        r: 40,
-        g: 30,
-        b: 20,
+        r: 4,
+        g: 3,
+        b: 2,
         sensor: 'landsat',
         description: 'Landsat Stretch RGB432'
     },
     {
-        r: 10,
-        g: 20,
-        b: 10,
+        r: 1,
+        g: 2,
+        b: 1,
         sensor: 'landsat',
         description: 'Landsat Stretch RGB121'
     }

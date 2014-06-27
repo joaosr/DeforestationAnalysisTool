@@ -323,7 +323,7 @@ class NDFI(object):
                  'sur_refl_b07'])
             display_image = self._kriged_mosaic(self.work_period)
         elif sensor == 'landsat':
-            bands = ['%d' % i for i in bands]
+            bands = ['B%d' % i for i in bands]
             yesterday = datetime.date.today() - datetime.timedelta(1)
             collection = _get_landsat_toa(
                 self.work_period['start'] - 3 * 30 * 24 * 60 * 60 * 1000,
