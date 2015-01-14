@@ -8,10 +8,11 @@
 import apifunction
 import computedobject
 import ee_exception
+import element
 import geometry
 
 
-class Feature(computedobject.ComputedObject):
+class Feature(element.Element):
   """An object representing EE Features."""
 
   _initialized = False
@@ -54,12 +55,19 @@ class Feature(computedobject.ComputedObject):
       })
     elif isinstance(geom, computedobject.ComputedObject):
       # A custom object to reinterpret as a Feature.
-      super(Feature, self).__init__(geom.func, geom.args)
+      super(Feature, self).__init__(geom.func, geom.args, geom.varName)
     elif isinstance(geom, dict) and geom.get('type') == 'Feature':
+      properties = geom.get('properties', {})
+      if 'id' in geom:
+        if 'system:index' in properties:
+          raise ee_exception.EEException(
+              'Can\'t specify both "id" and "system:index".')
+        properties = properties.copy()
+        properties['system:index'] = geom['id']
       # Try to convert a GeoJSON Feature.
       super(Feature, self).__init__(feature_constructor, {
           'geometry': geometry.Geometry(geom.get('geometry', None)),
-          'metadata': geom.get('properties', None)
+          'metadata': properties
       })
     else:
       # Try to convert the geometry arg to a Geometry, in the hopes of it
@@ -137,29 +145,6 @@ class Feature(computedobject.ComputedObject):
   def MultiPolygon(*args, **kwargs):
     """Create a GeoJSON MultiPolygon."""
     return geometry.Geometry.MultiPolygon(*args, **kwargs)
-
-  def set(self, properties):
-    """Overrides one or more metadata properties of a Feature.
-
-    Args:
-      properties: The property values to override.
-
-    Returns:
-      The feature with the specified properties overridden.
-    """
-    # NOTE: This is virtually identical to Image.set() and relies on its test.
-    if not isinstance(properties, (dict, computedobject.ComputedObject)):
-      raise ee_exception.EEException('Feature.set() requires a dictionary.')
-
-    # Try to be smart about interpreting the argument.
-    if (isinstance(properties, dict) and
-        properties.keys() == ['properties'] and
-        isinstance(properties['properties'], dict)):
-      # Looks like a call with keyword parameters. Extract them.
-      properties = properties['properties']
-    # Manually cast the result to an feature.
-    return Feature(
-        apifunction.ApiFunction.call_('Feature.set', self, properties))
 
   @staticmethod
   def name():

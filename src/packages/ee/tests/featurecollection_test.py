@@ -46,6 +46,11 @@ class FeatureCollectionTestCase(apitestcase.ApiTestCase):
     self.assertEquals(ee.ApiFunction.lookup('Collection'), from_geometries.func)
     self.assertEquals({'features': [feature]}, from_geometries.args)
 
+    # Test a computed list object.
+    l = ee.List([feature]).slice(0)
+    from_list = ee.FeatureCollection(l)
+    self.assertEquals({'features': l}, from_list.args)
+
     from_computed_object = ee.FeatureCollection(
         ee.ComputedObject(None, {'x': 'y'}))
     self.assertEquals({'x': 'y'}, from_computed_object.args)
@@ -58,6 +63,33 @@ class FeatureCollectionTestCase(apitestcase.ApiTestCase):
 
     self.assertEquals('fakeMapId', mapid['mapid'])
     self.assertEquals(manual, mapid['image'])
+
+  def testDownload(self):
+    """Verifies that Download ID and URL generation."""
+    csv_url = ee.FeatureCollection(7).getDownloadUrl('csv')
+
+    self.assertEquals('/table', self.last_table_call['url'])
+    self.assertEquals(
+        {
+            'table': ee.FeatureCollection(7).serialize(),
+            'json_format': 'v2',
+            'format': 'CSV'
+        },
+        self.last_table_call['data'])
+    self.assertEquals('/api/table?docid=5&token=6', csv_url)
+
+    everything_url = ee.FeatureCollection(8).getDownloadUrl(
+        'json', 'bar, baz', 'qux')
+    self.assertEquals(
+        {
+            'table': ee.FeatureCollection(8).serialize(),
+            'json_format': 'v2',
+            'format': 'JSON',
+            'selectors': 'bar, baz',
+            'filename': 'qux'
+        },
+        self.last_table_call['data'])
+    self.assertEquals('/api/table?docid=5&token=6', everything_url)
 
 
 if __name__ == '__main__':

@@ -36,8 +36,8 @@ class EETestCase(apitestcase.ApiTestCase):
     self.assertEquals(ee.ApiFunction._api, {})
     self.assertTrue(ee.Image._initialized)
 
-    # Verify that parameterless ee.Initialize() does not override custom URLs.
-    ee.Initialize()
+    # Verify that ee.Initialize(None) does not override custom URLs.
+    ee.Initialize(None)
     self.assertTrue(ee.data._initialized)
     self.assertEquals(ee.data._api_base_url, 'foo/api')
 
@@ -69,7 +69,7 @@ class EETestCase(apitestcase.ApiTestCase):
         raise Exception('Unexpected API call to %s with %s' % (path, params))
     ee.data.send_ = MockSend
 
-    ee.Initialize()
+    ee.Initialize(None)
     image1 = ee.Image(1)
     image2 = ee.Image(2)
     expected = ee.Image(ee.ComputedObject(
@@ -173,7 +173,7 @@ class EETestCase(apitestcase.ApiTestCase):
         }
     ee.data.send_ = MockSend
 
-    ee.Initialize()
+    ee.Initialize(None)
 
     # Verify that the expected classes got generated.
     self.assertTrue(hasattr(ee, 'Array'))
@@ -209,19 +209,116 @@ class EETestCase(apitestcase.ApiTestCase):
     except ee.EEException as e:
       self.assertTrue('Unknown algorithm: Reducer.moo' in str(e))
 
+  def testDynamicConstructor(self):
+    # Test the behavior of the dynamic class constructor.
+
+    # Use a custom set of known functions for classes Foo and Bar.
+    # Foo Foo(arg1, [arg2])
+    # Bar Foo.makeBar()
+    # Bar Foo.takeBar(Bar bar)
+    # Baz Foo.baz()
+    def MockSend(path, unused_params, unused_method=None, unused_raw=None):
+      if path == '/algorithms':
+        return {
+            'Foo': {
+                'returns': 'Foo',
+                'args': [
+                    {'name': 'arg1', 'type': 'Object'},
+                    {'name': 'arg2', 'type': 'Object', 'optional': True}
+                ]
+            },
+            'Foo.makeBar': {
+                'returns': 'Bar',
+                'args': [{'name': 'foo', 'type': 'Foo'}]
+            },
+            'Foo.takeBar': {
+                'returns': 'Bar',
+                'args': [
+                    {'name': 'foo', 'type': 'Foo'},
+                    {'name': 'bar', 'type': 'Bar'}
+                ]
+            },
+            'Bar.baz': {
+                'returns': 'Baz',
+                'args': [{'name': 'bar', 'type': 'Bar'}]
+            }
+        }
+
+    ee.data.send_ = MockSend
+    ee.Initialize(None)
+
+    # Try to cast something that's already of the right class.
+    x = ee.Foo('argument')
+    self.assertEquals(ee.Foo(x), x)
+
+    # Tests for dynamic classes, where there is a constructor.
+    #
+    # If there's more than 1 arg, call the constructor.
+    x = ee.Foo('a')
+    y = ee.Foo(x, 'b')
+    ctor = ee.ApiFunction.lookup('Foo')
+    self.assertEquals(y.func, ctor)
+    self.assertEquals(y.args, {'arg1': x, 'arg2': 'b'})
+
+    # Can't cast a primitive; call the constructor.
+    self.assertEquals(ctor, ee.Foo(1).func)
+
+    # A computed object, but not this class; call the constructor.
+    self.assertEquals(ctor, ee.Foo(ee.List([1, 2, 3])).func)
+
+    # Tests for dynamic classes, where there isn't a constructor.
+    #
+    # Foo.makeBar and Foo.takeBar should have caused Bar to be generated.
+    self.assertTrue(hasattr(ee, 'Bar'))
+
+    # Make sure we can create a Bar.
+    bar = ee.Foo(1).makeBar()
+    self.assertTrue(isinstance(bar, ee.Bar))
+
+    # Now cast something else to a Bar and verify it was just a cast.
+    cast = ee.Bar(ee.Foo(1))
+    self.assertTrue(isinstance(cast, ee.Bar))
+    self.assertEquals(ctor, cast.func)
+
+    # We shouldn't be able to cast with more than 1 arg.
+    try:
+      ee.Bar(x, 'foo')
+      self.fail('Expected an exception.')
+    except ee.EEException as e:
+      self.assertTrue('Too many arguments for ee.Bar' in str(e))
+
+    # We shouldn't be able to cast a primitive.
+    try:
+      ee.Bar(1)
+      self.fail('Expected an exception.')
+    except ee.EEException as e:
+      self.assertTrue('Must be a ComputedObject' in str(e))
+
+  def testDynamicConstructorCasting(self):
+    """Test the behavior of casting with dynamic classes."""
+    self.InitializeApi()
+    result = ee.Geometry.Rectangle(1, 1, 2, 2).bounds(0, 'EPSG:4326')
+    expected = (ee.Geometry.Polygon([[1, 2], [1, 1], [2, 1], [2, 2]])
+                .bounds(ee.ErrorMargin(0), ee.Projection('EPSG:4326')))
+    self.assertEquals(expected, result)
+
   def testPromotion(self):
     """Verifies object promotion rules."""
     self.InitializeApi()
 
-    # Features and Images are both already EEObjects.
-    self.assertTrue(isinstance(ee._Promote(ee.Feature(None), 'EEObject'),
+    # Features and Images are both already Elements.
+    self.assertTrue(isinstance(ee._Promote(ee.Feature(None), 'Element'),
                                ee.Feature))
-    self.assertTrue(isinstance(ee._Promote(ee.Image(0), 'EEObject'), ee.Image))
+    self.assertTrue(isinstance(ee._Promote(ee.Image(0), 'Element'), ee.Image))
 
-    # When asked to promote an untyped object to an EEObject, we
-    # currently assume that means Feature.
+    # Promote an untyped object to an Element.
     untyped = ee.ComputedObject('foo', {})
-    self.assertTrue(isinstance(ee._Promote(untyped, 'EEObject'), ee.Feature))
+    self.assertTrue(isinstance(ee._Promote(untyped, 'Element'), ee.Element))
+
+    # Promote an untyped variable to an Element.
+    untyped = ee.ComputedObject(None, None, 'foo')
+    self.assertTrue(isinstance(ee._Promote(untyped, 'Element'), ee.Element))
+    self.assertEquals('foo', ee._Promote(untyped, 'Element').varName)
 
   def testUnboundMethods(self):
     """Verifies unbound method attachment to ee.Algorithms."""

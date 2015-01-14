@@ -5,10 +5,11 @@
 # Using lowercase function naming to match the JavaScript names.
 # pylint: disable=g-bad-name
 
-import ee_exception
 import json
-import httplib2
 import urllib
+
+import ee_exception
+import httplib2
 
 
 # OAuth2 credentials object.  This may be set by ee.Initialize().
@@ -289,6 +290,37 @@ def makeDownloadUrl(downloadId):
       _tile_base_url, downloadId['docid'], downloadId['token'])
 
 
+def getTableDownloadId(params):
+  """Get a Download ID.
+
+  Args:
+    params: An object containing table download options with the following
+      possible values:
+        format - The download format, CSV or JSON.
+        selectors - Comma separated string of selectors that can be used to
+            determine which attributes will be downloaded.
+        filename - The name of the file that will be downloaded.
+
+  Returns:
+    A dict containing a docid and token.
+  """
+  params['json_format'] = 'v2'
+  return send_('/table', params)
+
+
+def makeTableDownloadUrl(downloadId):
+  """Create a table download URL from a docid and token.
+
+  Args:
+    downloadId: A table download id and token.
+
+  Returns:
+    A Url from which the download can be obtained.
+  """
+  return '%s/api/table?docid=%s&token=%s' % (
+      _tile_base_url, downloadId['docid'], downloadId['token'])
+
+
 def getAlgorithms():
   """Get the list of algorithms.
 
@@ -337,6 +369,17 @@ def newTaskId(count=1):
   return send_('/newtaskid', args)
 
 
+def getTaskList():
+  """Retrieves a list of the user's tasks.
+
+  Returns:
+    A list of task status dictionaries, one for each task submitted to EE by
+    the current user. These include currently running tasks as well as recently
+    canceled or failed tasks.
+  """
+  return send_('/tasklist', {}, 'GET')['tasks']
+
+
 def getTaskStatus(taskId):
   """Retrieve status of one or more long-running tasks.
 
@@ -350,12 +393,17 @@ def getTaskStatus(taskId):
       state (string) State of the task, one of READY, RUNNING, COMPLETED,
         FAILED, CANCELLED; or UNKNOWN if the task with the specified ID
         doesn't exist.
-     error_message (string) For a FAILED task, a description of the error.
+      error_message (string) For a FAILED task, a description of the error.
   """
   if isinstance(taskId, basestring):
     taskId = [taskId]
   args = {'q': ','.join(taskId)}
   return send_('/taskstatus', args, 'GET')
+
+
+def cancelTask(taskId):
+  """Cancels a batch task."""
+  send_('/updatetask', {'id': taskId, 'action': 'CANCEL'})
 
 
 def prepareValue(taskId, params):
@@ -382,8 +430,8 @@ def startProcessing(taskId, params):
     taskId: ID for the task (obtained using newTaskId).
     params: The object that describes the processing task; only fields
       that are common for all processing types are documented below.
-        type (string) Either 'export_image' or 'render'.
-        imageJson (string) JSON description of the image.
+        type (string) Either 'EXPORT_IMAGE' or 'EXPORT_FEATURES'.
+        json (string) JSON description of the image.
 
   Returns:
     A dict with optional notes about the created task.
@@ -429,7 +477,8 @@ def send_(path, params, opt_method='POST', opt_raw=False):
     raise ee_exception.EEException('Unexpected request method: ' + opt_method)
 
   try:
-    response, content = http.request(url, opt_method, payload, headers)
+    response, content = http.request(url, method=opt_method, body=payload,
+                                     headers=headers)
   except httplib2.HttpLib2Error, e:
     raise ee_exception.EEException(
         'Unexpected HTTP error: %s' % e.message)
