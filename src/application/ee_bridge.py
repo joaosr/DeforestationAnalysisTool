@@ -17,7 +17,7 @@ import time
 
 import ee
 import settings
-
+import logging
 # A multiplier to convert square meters to square kilometers.
 METER2_TO_KM2 = 1.0/(1000*1000)
 
@@ -41,6 +41,7 @@ INVALID_NDFI = MAX_NDFI + 1
 
 # The length of a "long" time period in milliseconds.
 LONG_SPAN_SIZE_MS = 1000 * 60 * 60 * 24 * 30 * 9
+
 
 # MODIS projection specification.
 MODIS_CRS = 'SR-ORG:6974'
@@ -217,9 +218,20 @@ class EELandsat(object):
             'gain': PREVIEW_GAIN
         }))
 
+    def mapid_landsat_oito(self, start, end):
+        MAP_IMAGE_BANDS = ['B4', 'B3', 'B2']
+        PREVIEW_GAIN = 500
+        return _get_raw_mapid(_get_landsat_oito(start, end).mosaic().getMapId({
+            'bands': ','.join(MAP_IMAGE_BANDS),
+            'gain': PREVIEW_GAIN
+        }))
 
 class NDFI(object):
     """A helper for computing NDFI status on MODIS image over a time period."""
+    MODIS_NAME = 'MODIS'
+    LANDSAT5_NAME = 'LANDSAT5'
+    LANDSAT7_NAME = 'LANDSAT7'
+    LANDSAT8_NAME = 'LANDSAT8'
 
     def __init__(self, last_period, work_period):
         """Construct an NDFI helper for comparing to periods.
@@ -231,10 +243,12 @@ class NDFI(object):
         self.last_period = dict(start=last_period[0], end=last_period[1])
         self.work_period = dict(start=work_period[0], end=work_period[1])
 
-    def mapid2(self, asset_id):
+    def mapid2(self, asset_id, sensor):
         """Returns a Map ID for a visualization of the NDFI difference between last_period and work_period."""
         return _get_raw_mapid(
-            self._ndfi_delta(asset_id).getMapId({'format': 'png'}))
+		#self._ndfi_change(asset_id, sensor).getMapId({'format': 'png'}))
+            self._ndfi_delta(asset_id, sensor).getMapId({'format': 'png'}))
+
 
     def rgb0id(self):
         """Returns a Map ID for the RGB visualization of a MODIS mosaic for last_period."""
@@ -244,13 +258,14 @@ class NDFI(object):
         """Returns a Map ID for the RGB visualization of a MODIS mosaic for work_period."""
         return self._RGB_image_command(self.work_period)
 
-    def ndfi0id(self):
+    def ndfi0id(self, sensor):
         """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for last_period."""
-        return self._NDFI_period_image_command(self.last_period, True)
+        ndfi = self._NDFI_period_image_command(self.last_period, sensor,True)
+        return ndfi
 
-    def ndfi1id(self):
+    def ndfi1id(self, sensor):
         """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for work_period."""
-        return self._NDFI_period_image_command(self.work_period)
+        return self._NDFI_period_image_command(self.work_period, sensor)
 
     def smaid(self):
         """Returns a Map ID for the NDFI SMA image for work_period."""
@@ -416,7 +431,7 @@ class NDFI(object):
         index_image = lat.multiply(cols).add(lng)
 
         # Get the NDFI data.
-        diff = self._ndfi_delta(asset_id).select(0)
+        diff = self._delta(asset_id).select(0)
         masked = diff.mask(diff.mask().And(diff.lte(MAX_NDFI)))
 
         # Aggregate each cell.
@@ -498,16 +513,57 @@ class NDFI(object):
             'gamma': 1.6
         }))
 
-    def _NDFI_period_image_command(self, period, long_span=False):
+    def _NDFI_period_image_command(self, period, sensor, long_span=False):
         """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for a given period."""
-        return _get_raw_mapid(self._NDFI_visualize(period, long_span).getMapId({
+        return _get_raw_mapid(self._NDFI_visualize(period, sensor, long_span).getMapId({
             'bands': 'vis-red,vis-green,vis-blue',
             'gain': 1,
             'bias': 0.0,
             'gamma': 1.6
         }))
 
-    def _ndfi_delta(self, asset_id):
+    # Joao code
+    def _ndfi_change(self, asset_id, sensor):
+        # Constants.
+        CLASSIFICATION_OFFSET = MAX_NDFI + 1
+
+	DEFORESTATION_THRES_MAX = -20
+	DEGRADATION_THRES_MAX = -5
+        # Get base NDFIs.
+        work_month = self._getMidMonth(self.work_period['start'],
+                                       self.work_period['end'])
+        work_year = self._getMidYear(self.work_period['start'],
+                                     self.work_period['end'])
+        baseline = self._paint_edited_deforestation(
+            asset_id, work_month, work_year)
+
+       # Get ndfi images to make the difference.
+        ndfi0 = self._NDFI_image(self.last_period, sensor, True)
+        ndfi1 = self._NDFI_image(self.work_period, sensor)
+
+        # Basic difference.
+        diff = ndfi1.subtract(ndfi0)
+
+        raw_result = diff#.multiply(0)
+
+	# Classification rules
+        deforest = diff.lte(DEFORESTATION_THRES_MAX)
+	degradat = diff.lte(DEGRADATION_THRES_MAX).And(deforest.neq(1))
+	forest   = diff.gt(DEGRADATION_THRES_MAX)
+
+	raw_result = raw_result.where(deforest.eq(1), CLASSIFICATION_OFFSET + CLS_DEFORESTED)
+	raw_result = raw_result.where(degradat.eq(1), CLASSIFICATION_OFFSET + CLS_DEGRADED)
+	#raw_result = raw_result.where(forest.eq(1), CLASSIFICATION_OFFSET + CLS_FOREST)
+	#raw_result = baseline.where(out_shifted_baseline, CLS_BASELINE)
+
+        # Unclassify previously unclassified pixels and small forests.
+	#cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
+	#raw_result = raw_result.where(1, CLS_CLOUD)
+	result = raw_result
+
+        return result.byte().addBands(baseline)
+
+    def _ndfi_delta(self, asset_id, sensor):
         """Computes a classification based on an difference in NDFI.
 
         This method computes a delta between the NDFI of two periods, specified
@@ -545,8 +601,10 @@ class NDFI(object):
                                      self.work_period['end'])
         baseline = self._paint_edited_deforestation(
             asset_id, work_month, work_year)
-        ndfi0 = self._NDFI_image(self.last_period, True)
-        ndfi1 = self._NDFI_image(self.work_period)
+
+       # Get ndfi images to make the difference.
+        ndfi0 = self._NDFI_image(self.last_period, sensor, True)
+        ndfi1 = self._NDFI_image(self.work_period, sensor)
 
         # Basic difference.
         diff = ndfi1.subtract(ndfi0)
@@ -611,7 +669,7 @@ class NDFI(object):
         table = table.filterMetadata('asset_id', 'contains', date)
         return ee.Image(asset_id).paint(table, CLS_BASELINE)
 
-    def _NDFI_visualize(self, period, long_span=False):
+    def _NDFI_visualize(self, period, sensor, long_span=False):
         """Returns an RGB visualization of an NDFI mosaic for a given period.
 
         Args:
@@ -621,15 +679,18 @@ class NDFI(object):
         Returns:
           An ee.Image with 3 byte bands, vis-red, vis-green, vis-blue.
         """
-        ndfi = self._NDFI_image(period, long_span)
+        ndfi = self._NDFI_image(period, sensor,long_span)
+
         red = ndfi.interpolate([150, 185], [255, 0], 'clamp')
         green = ndfi.interpolate([  0, 100, 125, 150, 185, 200, 201],
                                  [255,   0, 255, 165, 140,  80,   0], 'clamp')
         blue = ndfi.interpolate([100, 125], [255, 0], 'clamp')
+
         rgb = ee.Image.cat(red, green, blue).round().byte()
+
         return rgb.select([0, 1, 2], ['vis-red', 'vis-green', 'vis-blue'])
 
-    def _NDFI_image(self, period, long_span=False):
+    def _NDFI_image(self, period, sensor='modis',long_span=False):
         """Returns an NDFI mosaic based on MODIS for a given period.
 
         Args:
@@ -641,14 +702,42 @@ class NDFI(object):
           0 (no GV) to 200 (all GV), plus the special INVALID_NDFI value (201),
           which indicates that the unmixed values were out of range.
         """
-        base = self._unmixed_mosaic(period, long_span)
+        base = 0
+        clamped_expression = ''
+        gv = ''
+        npv = ''
+        soil = ''
+
+        if sensor == 'landsat5':
+            base = self._unmixed_landsat_L5(period)
+            clamped_expression = 'b(0) + b(1) + b(2) + b(3)'
+            gv = 0
+            npv = 1
+            soil = 2
+        elif sensor == 'landsat7':
+            base = self._unmixed_landsat_L7(period)
+            clamped_expression = 'b(0) + b(1) + b(2) + b(3)'
+            gv = 0
+            npv = 1
+            soil = 2
+        else:
+            base = self._unmixed_mosaic(period, long_span)
+            clamped_expression = 'b("gv") + b("soil") + b("npv")'
+            gv = 'gv'
+            npv = 'npv'
+            soil = 'soil'
+
         clamped = base.max(0)
-        summed = clamped.expression('b("gv") + b("soil") + b("npv")')
-        gv_shade = clamped.select('gv').divide(summed)
-        npv_plus_soil = clamped.select('npv').add(clamped.select('soil'))
+
+        summed = clamped.expression(clamped_expression)
+        gv_shade = clamped.select(gv).divide(summed)
+        npv_plus_soil = clamped.select(npv).add(clamped.select(soil))
+
         raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
+
         ndfi = raw_ndfi.multiply(100).add(100).byte()
         ndfi = ndfi.where(summed.eq(0), INVALID_NDFI)
+
         return ndfi.select([0], ['ndfi'])
 
     def _unmixed_mosaic(self, period, long_span=False):
@@ -683,6 +772,60 @@ class NDFI(object):
         unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
         result = unmixed.expression('addBands(b(0,1,2), round(max(b(0,1,2), 0) * 100))')
         return result.select(['.*'], OUTPUTS + [i + '_100' for i in OUTPUTS])
+
+    def _unmixed_landsat_L5(self, period):
+        ENDMEMBERS = [
+                      [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
+                      [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
+                      [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], #SOIL
+                      [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
+                    ]
+
+        periodo = '' #['2001-01-01', '2001-02-01']
+        if period['start'] == 1409529600000:
+            logging.info("Start: "+str(period['start']))
+            periodo = ['2011-05-01', '2011-06-01']
+        else:
+            logging.info("End: "+str(period['end']))
+            periodo = ['2011-06-01', '2011-07-01']
+
+        #collection = ee.ImageCollection('L5_L1T_SR').filterMetadata('WRS_PATH', 'equals', 227).filterMetadata('WRS_ROW', 'equals', 65).filterMetadata('CLOUD_COVER', 'less_than', 30).filterDate(periodo[0], periodo[1])
+        bounder = ee.Geometry.Rectangle(-74.0, -18.0, -44, 5.0)
+
+        collection = ee.ImageCollection('L5_L1T_SR').filterDate(periodo[0], periodo[1]).filterBounds(bounder)
+
+        image = collection.mosaic()
+
+        unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
+
+        return unmixed
+
+    def _unmixed_landsat_L7(self, period):
+        ENDMEMBERS = [
+                      [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
+                      [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
+                      [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], #SOIL
+                      [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
+                    ]
+
+        periodo = '' #['2001-01-01', '2001-02-01']
+        if period['start'] == 1409529600000:
+            logging.info("Start: "+str(period['start']))
+            periodo = ['2011-05-01', '2011-06-01']
+        else:
+            logging.info("End: "+str(period['end']))
+            periodo = ['2011-06-01', '2011-07-01']
+
+        #collection = ee.ImageCollection('L5_L1T_SR').filterMetadata('WRS_PATH', 'equals', 227).filterMetadata('WRS_ROW', 'equals', 65).filterMetadata('CLOUD_COVER', 'less_than', 30).filterDate(periodo[0], periodo[1])
+        bounder = ee.Geometry.Rectangle(-74.0, -18.0, -44, 5.0)
+
+        collection = ee.ImageCollection('L7_L1T_SR').filterDate(periodo[0], periodo[1]).filterBounds(bounder)
+
+        image = collection.mosaic()
+
+        unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
+
+        return unmixed
 
     def _kriged_mosaic(self, period, long_span=False):
         """Returns an upscaled MODIS mosaic for a given period.
@@ -783,9 +926,13 @@ class NDFI(object):
         inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
         inclusions = inclusions.filter(inclusions_filter)
 
-        return ee.call(
+        object1 = ee.call(
           'SAD/com.google.earthengine.examples.sad.MakeMosaic',
           modis_ga, modis_gq, inclusions, start_time, end_time)
+
+        #logging.info("Make MOsaic: "+str(object1))
+
+        return object1
 
     def _get_polygon_bbox(self, polygon):
         """Returns the bounding box of a polygon.
@@ -882,8 +1029,56 @@ def get_prodes_stats(assetids, table_id):
         results.append({'values': stats, 'type': 'DataDictionary'})
     return {'data': {'properties': {'classHistogram': results}}}
 
+def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b04,sur_refl_b03', gain=[2.0,2.0,2.0]):
+    thumbs=[]
+    tokens=[]
+    dates=[]
+    result_final = []
+    nextYear = year
+    nextMonth = str(int(month) + 1).zfill(2)
 
-def get_modis_thumbnail(image_id, cell, bands='sur_refl_b01,sur_refl_b04,sur_refl_b03', gain=0.1):
+    if month == 12:
+        nextYear = str(int(year) + 1)
+        nextMonth = '01'
+
+    collection = ee.ImageCollection('MOD09GA').filterDate(year+'-'+month+'-01', nextYear+'-'+nextMonth+'-01')
+    images = collection.getInfo().get('features')
+
+    MAX_ERROR_METERS = 500.0
+    #tile = _get_modis_tile(*cell)
+    p = re.compile('\d+')
+    p = p.findall(tile)
+    logging.info(tile)
+    tile = _get_modis_tile(int(p[0]), int(p[1]))
+    feature = ee.Feature(tile)
+    region = feature.bounds(MAX_ERROR_METERS)
+    reprojected = ee.data.getValue({'json': region.serialize()})['geometry']['coordinates']
+
+    for i in range(len(images)):
+        result = ee.data.getThumbId({
+           'image': ee.Image(images[i].get('id')).serialize(False),
+           'bands': bands,
+           'region': reprojected,
+           'gain': gain
+        })
+
+        imageId = images[i].get('id')
+        imageIdSplit = imageId.split('_')
+        date = imageIdSplit[4]+'-'+imageIdSplit[3]+'-'+imageIdSplit[2]
+
+        thumbs.append(result['thumbid'])
+        tokens.append(result['token'])
+        dates.append(date)
+        result_final.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date})
+
+    return result_final
+
+
+
+
+
+
+def get_modis_thumbnail(image_id, cell, bands='sur_refl_b05,sur_refl_b04,sur_refl_b03', gain=[2.0,2.0,2.0]):
     """Returns a thumbnail ID for a given image ID.
 
     Args:
@@ -892,14 +1087,21 @@ def get_modis_thumbnail(image_id, cell, bands='sur_refl_b01,sur_refl_b04,sur_ref
       bands: The bands of the image to render as a comma-separated string.
       gain: The visualization gain to apply to the image.
 
-    Returns:
+        Returns:
       A dictionary containing "thumbid" and "token".
     """
     MAX_ERROR_METERS = 500.0
-    region = ee.Feature(_get_modis_tile(*cell)).bounds(MAX_ERROR_METERS)
-    reprojected = region.getInfo()['geometry']['coordinates']
+    #tile = _get_modis_tile(*cell)
+    logging.info(cell)
+    tile = _get_modis_tile(int(cell[1:3]), int(cell[4:6]))
+    feature = ee.Feature(tile)
+    region = feature.bounds(MAX_ERROR_METERS)
+    reprojected = ee.data.getValue({'json': region.serialize()})['geometry']['coordinates']
+    # logging.info(type(region))
+    #reprojected = region.getInfo()['geometry']['coordinates']
+    #reprojected = [[-69.20956906378983,0.47249172764026187], [-58.06121657561447,0.47249172764026187], [-58.06121657561447,10.471033459067291],[-69.20956906378983,10.471033459067291], [-69.20956906378983,0.47249172764026187]]
     return ee.data.getThumbId({
-        'image': ee.Image(image_id).serialize(),
+        'image': ee.Image(image_id).serialize(False),
         'bands': bands,
         'region': reprojected,
         'gain': gain
@@ -1050,6 +1252,12 @@ def _get_landsat_toa(start_time, end_time, version=-1):
     collection = collection.filterDate(start_time, end_time)
     return collection.map(ee.Algorithms.LandsatTOA)
 
+def _get_landsat_oito(start_time, end_time, version=-1):
+    collection = ee.ImageCollection.load('LC8_L1T', version)
+    collection = collection.filterDate(start_time, end_time)
+    return collection.map(ee.Algorithms.LandsatTOA)
+
+import logging
 
 def _get_modis_tile(horizontal, vertical):
     """Returns a GeoJSON geometry for a given MODIS tile.
@@ -1064,11 +1272,12 @@ def _get_modis_tile(horizontal, vertical):
     cell_size = MODIS_WIDTH / MODIS_CELLS
     base_x = -MODIS_WIDTH
     base_y = -MODIS_WIDTH / 2
-
     min_x = base_x + horizontal * cell_size
     max_x = base_x + (horizontal + 1) * cell_size - MODIS_250_SCALE
     min_y = base_y + (MODIS_CELLS - vertical - 1) * cell_size
     max_y = base_y + (MODIS_CELLS - vertical) * cell_size - MODIS_250_SCALE
+
+    logging.info(str(min_x)+", "+str(min_y)+", "+str(max_x)+", "+str(max_y))
 
     rectangle = ee.Geometry(
         ee.Geometry.Rectangle(min_x, min_y, max_x, max_y), MODIS_CRS)

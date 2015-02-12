@@ -4,7 +4,7 @@ import os
 from flask import Flask, render_template
 
 
-template_folder = os.path.join(os.path.dirname(__file__), '..', 'content', 'templates') 
+template_folder = os.path.join(os.path.dirname(__file__), '..', 'content', 'templates')
 app = Flask('application', template_folder=template_folder)
 app.config.from_object('application.settings')
 

@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import time
 import os
 import simplejson as json
 from shutil import copyfile
@@ -13,53 +14,76 @@ from google.appengine.api import users
 sys.modules['ssl'] = None
 
 try:
-  from flask import render_template, flash, url_for, redirect, abort, request, make_response
+  from flask import render_template,  redirect, abort, request, make_response, jsonify
 except:
-  # nose tests require zipped packages to be manually loaded
+  # nose tests require zipped packages to be manually loadedi
   import zipimport
-  gflags = zipimport.zipimporter('packages/gflags.zip').load_module('gflags') 
-  jinja2 = zipimport.zipimporter('packages/jinja2.zip').load_module('jinja2')  
+  gflags = zipimport.zipimporter('packages/gflags.zip').load_module('gflags')
+  jinja2 = zipimport.zipimporter('packages/jinja2.zip').load_module('jinja2')
   flask = zipimport.zipimporter('packages/flask.zip').load_module('flask')
   wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
 
 from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
-from forms import ExampleForm
-from application.ee_bridge import NDFI, EELandsat, get_modis_thumbnail
+#from forms import ExampleForm
+from application.ee_bridge import NDFI, EELandsat,  get_modis_thumbnails_list
 
 from app import app
 
-from models import Report, User, Error
+from models import Report, User, Error, ImagePickerFT
 from google.appengine.api import memcache
-from google.appengine.ext.db import Key
+#from google.appengine.ext.db import Key
 
 from application import settings
 
 def default_maps():
     maps = []
-    r = Report.current() 
+    r = Report.current()
     logging.info("report " + unicode(r))
     landsat = EELandsat()
     ndfi = NDFI(past_month_range(r.start), r.range())
 
+    logging.info('Past_month_range: '+str(past_month_range(r.start))+', Range: '+str(r.range)+', Timestamp: '+str(timestamp(r.start))+', Datetime: '+str(datetime.datetime.now()) )
+
     d = landsat.mapid(timestamp(r.start), datetime.datetime.now())
     maps.append({'data' :d, 'info': 'LANDSAT/LE7_L1T'})
-    #d = ndfi.mapid2()
-    #if d: maps.append({'data' :d, 'info': 'ndfi difference'})
+
+    d = landsat.mapid_landsat_oito(timestamp(r.start), datetime.datetime.now())
+    maps.append({'data':d, 'info': 'LANDSAT/LC8_L1T'})
+
+    assetid = r.previous().as_dict().get('assetid')
+    logging.info("Assetid :"+str(assetid))
+
     d = ndfi.smaid()
     if d: maps.append({'data': d, 'info': 'SMA'})
     d = ndfi.rgb1id()
     if d: maps.append({'data': d, 'info': 'RGB'})
-    d = ndfi.ndfi0id()
+    d = ndfi.ndfi0id('modis')
     if d: maps.append({'data': d, 'info': 'NDFI T0'})
-    d = ndfi.ndfi1id()
+    d = ndfi.ndfi1id('modis')
     if d: maps.append({'data' :d, 'info': 'NDFI T1'})
+    d = ndfi.ndfi0id('landsat5')
+    logging.info('Image ID: '+str(d))
+    if d: maps.append({'data': d, 'info': 'NDFI T0 (LANDSAT5)'})
+    d = ndfi.ndfi1id('landsat5')
+    logging.info('Image ID: '+str(d))
+    if d: maps.append({'data': d, 'info': 'NDFI T1 (LANDSAT5)'})
+    d = ndfi.ndfi0id('landsat7')
+    logging.info('Image ID: '+str(d))
+    if d: maps.append({'data': d, 'info': 'NDFI T0 (LANDSAT7)'})
+    d = ndfi.ndfi1id('landsat7')
+    logging.info('Image ID: '+str(d))
+    if d: maps.append({'data': d, 'info': 'NDFI T1 (LANDSAT7)'})
+
     d = ndfi.baseline(r.base_map())
     if d: maps.append({'data' :d, 'info': 'Baseline'})
     d = ndfi.rgb0id()
     if d: maps.append({'data': d, 'info': 'Previous RGB'})
     return maps
+
+
+
 
 def get_or_create_user():
     user = users.get_current_user()
@@ -72,7 +96,7 @@ def get_or_create_user():
 @app.route('/')
 def start():
     return redirect('/analysis')
-    
+
 @app.route('/analysis')
 @login_required
 def home(cell_path=None):
@@ -85,6 +109,8 @@ def home(cell_path=None):
 
     # send only the active report
     reports = json.dumps([Report.current().as_dict()])
+    logging.info("Reports: "+str(reports))
+    logging.info("Maps: "+str(maps))
     u = get_or_create_user()
     if not u:
         abort(403)
@@ -176,9 +202,91 @@ def warmup():
 
     """
     return ''
+import re
+import urllib2
+import urllib
+FT_TABLE_DOWNSCALLING = '17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 
-@app.route('/picker')
-def picker():
+@app.route('/range_report', methods=['POST', 'GET'])
+def range_report():
+    range_picker = request.form.get('range_picker')
+    date_start = range_picker.split(' - ')[0]
+    date_end   = range_picker.split(' - ')[1]
+    try:
+        Report.add_report(date_start, date_end)
+    except:
+        return jsonify({'result': 'error'})
+
+    return jsonify({'result': 'sucess'})
+
+@app.route('/tiles_sensor/<sensor>/', methods=['POST', 'GET'])
+def tiles_sensor(sensor=None):
+    tile_array = []
+    if request.method == 'POST':
+        return jsonify({'result': 'post method'})
+    else:
+        if sensor == 'modis':
+           tile_array = [
+                         { 'name': 'h11v08', 'value': 'h11v08'},
+                         { 'name': 'h12v08', 'value': 'h12v08'},
+                         { 'name': 'h10v09', 'value': 'h10v09'},
+                         { 'name': 'h11v09', 'value': 'h11v09'},
+                         { 'name': 'h12v09', 'value': 'h12v09'},
+                         { 'name': 'h13v09', 'value': 'h13v09'},
+                         { 'name': 'h11v10', 'value': 'h11v10'},
+                         { 'name': 'h12v10', 'value': 'h12v10'},
+                         { 'name': 'h13v10', 'value': 'h13v10'}
+                        ]
+
+    return jsonify({'result': tile_array})
+
+import ee
+
+@app.route('/downscalling', methods=['POST', 'GET'])
+@app.route('/downscalling/<tile>/')
+def downscalling(tile=None):
+    result = []
+
+    if request.method == 'POST':
+       range3 = request.form.get('range3')
+       range4 = request.form.get('range4')
+       range6 = request.form.get('range6')
+       range7 = request.form.get('range7')
+
+       sill3 = request.form.get('sill3')
+       sill4 = request.form.get('sill4')
+       sill6 = request.form.get('sill6')
+       sill7 = request.form.get('sill7')
+
+       nugget3 = request.form.get('nugget3')
+       nugget4 = request.form.get('nugget4')
+       nugget6 = request.form.get('nugget6')
+       nugget7 = request.form.get('nugget7')
+    else:
+        if tile:
+            filter_fc = ee.Filter.eq('Cell', tile.upper())
+            fc        = ee.FeatureCollection('ft:17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo').filter(filter_fc)
+            logging.info("==================  Aqui ================")
+            logging.info(fc.getInfo())
+            for feature in fc.getInfo().get('features'):
+                result.append({'Band':  feature.get('properties').get('Band'),
+                            'Sill':  feature.get('properties').get('Sill'),
+                            'Range': feature.get('properties').get('Range'),
+                            'Nugget': feature.get('properties').get('Nugget')
+                            })
+                logging.info(feature);
+
+            return jsonify({'result': result})
+
+    return jsonify({'result': 'success'});
+
+
+
+
+@app.route('/picker', methods=['POST', 'GET'])
+@app.route('/picker/<tile>/')
+def picker(tile=None):
+    """
     cell = request.args.get('cell','')
     scene = 'MOD09GA/MOD09GA_005_2010_01_01'
     bands = 'sur_refl_b01,sur_refl_b04,sur_refl_b03'
@@ -188,3 +296,81 @@ def picker():
     else:
        result = {'thumbid': '', 'token': ''}
     return render_template('picker.html', **result)
+    """
+
+    if request.method == 'POST':
+       logging.info(request.form.getlist('thumb'))
+
+       cell   = request.form.get('tile')
+       p      = re.compile('\d+')
+       p      = p.findall(cell)
+       cell   = 'h' + p[0] + 'v' + p[1]
+
+       thumbs = request.form.getlist('thumb')
+       days   = []
+       day, month, year = ['', '', '']
+
+       for thumb in thumbs:
+           day, month, year = thumb.split('-')
+           days.append(day)
+
+       day          = ','.join(days)
+       compounddate = year + month
+
+       logging.info('Cell: '+cell+', Year: '+year+', Month: '+month+', Day: '+day+', Compounddate: '+compounddate)
+       imagePickerFT = ImagePickerFT(cell=cell, year=year, month=month, day=day, compounddate=compounddate)
+       imagePickerFT.select_fusion_tables_row()
+
+
+       #logging.info("hello" + str(request.form.keys()))
+       #logging.info("json"  + str(json.dumps(request.form.keys())))
+
+       reports = Report.current().as_dict()
+       date = time.gmtime(reports['start'] / 1000)
+
+       #rowid = ""
+       cell = request.args.get('cell','')
+       logging.info("cell: " + str(cell))
+
+       selected_days = request.form.keys()
+       #logging.info("days: " + str(selected_days))
+       selected_days.sort()
+       #logging.info("days: " + str(selected_days))
+       selected_days = selected_days[:-1]
+       #logging.info("days: " + str(selected_days))
+       day = ""
+       for selected_day in selected_days:
+          day += selected_day[14:].lstrip('0') + ","
+          logging.info("day: " + str(day))
+       #logging.info("days: " + str(day))
+       day = day[:-1]
+       #logging.info("day: " + str(day))
+
+       year = time.strftime("%Y", date)
+       logging.info("year: " + str(year))
+       month = int(time.strftime("%m", date))
+       #logging.info("month: " + str(month))
+       #Location = ""
+       compounddate = str(year) + str(month).zfill(2)
+       #logging.info("compounddate: " + str(compounddate))
+       #added_on = ""
+
+       #return request.form['check-2013-01-01']
+       return request.data
+
+    else:
+       #cell = request.args.get('cell', '')
+       reports = Report.current().as_dict()
+       date = time.gmtime(reports['start'] / 1000)
+       year = time.strftime("%Y", date)
+       month = time.strftime("%m", date)
+
+       if tile:
+          bands = 'sur_refl_b01,sur_refl_b04,sur_refl_b03'
+          gain = 0.1
+          results = get_modis_thumbnails_list(year, month, tile, bands, gain)
+          return jsonify({'result': results})
+       else:
+          return jsonify({'result': []})
+          #result = {'thumbid': '', 'token': ''}
+          #return render_template('picker.html', result=result)

@@ -14,7 +14,7 @@ class Resource(object):
     def get(self, id): self._not_implemented()
     def delete(self, id): self._not_implemented()
     def update(self, id): self._not_implemented()
-    
+
     def _not_implemented(self):
         abort(501)
 
@@ -50,7 +50,7 @@ class Resource(object):
         app.add_url_rule(name, view_func=_view, methods=("GET","POST"))
         app.add_url_rule(name + "/<id>", view_func=_view, methods=("GET", "PUT", "DELETE"))
 
-    
+
 
 if __name__ == '__main__':
 
@@ -66,14 +66,14 @@ if __name__ == '__main__':
 
         def _as_json(self, o):
             return Response(json.dumps(o), mimetype='application/json')
-            
+
         def get(self, id):
             return self._as_json(res[int(id)])
 
         def create(self):
             o = dict(request.form.iteritems())
             new_id =len(res.keys()) + 1
-            res[new_id] = o 
+            res[new_id] = o
             return self._as_json(new_id)
 
         def list(self):
@@ -91,12 +91,12 @@ if __name__ == '__main__':
     Test.add_urls(app, '/test')
     app.run(debug=True)
 
-    # you can test with curl 
+    # you can test with curl
     # curl -d "name=new_name" http://localhost:5000/test
     # curl http://localhost:5000/test
     # curl http://localhost:5000/test/2
     # curl -X delete http://localhost:5000/test/2
     # curl -X put -d "name=updated_name" http://localhost:5000/test/1
-    
+
 
 

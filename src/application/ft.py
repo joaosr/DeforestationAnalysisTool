@@ -32,6 +32,7 @@ class FT(object):
         r = self.client.query("show tables")
         if r:
             tables = [tuple(reversed(x.split(','))) for x in filter(None, r.split('\n'))][1:]
+            logging.info(tables)
             FT.table_cache = dict(tables)
             return tables
         else:

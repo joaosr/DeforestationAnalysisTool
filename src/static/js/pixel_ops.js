@@ -259,7 +259,7 @@ function inner_polygons(image_data, width, height, polygon, color) {
 
     // is inside wrapper poly but not inside inner polygons
     function inside_poly(point) {
-        return isPointInPoly(polygon, point) 
+        return isPointInPoly(polygon, point)
     }
 
     mark_polygon(polygon);

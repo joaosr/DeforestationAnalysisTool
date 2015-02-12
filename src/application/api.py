@@ -37,7 +37,9 @@ CellAPI.add_custom_url(app, '/api/v0/report/<report_id>/cell/<id>/landsat', 'lan
 CellAPI.add_custom_url(app, '/api/v0/report/<report_id>/cell/<id>/rgb/<r>/<g>/<b>/sensor/<sensor>', 'rgb_mapid')
 #CellAPI.add_custom_url(app, '/api/v0/report/<report_id>/cell/<id>/rgb/<r>/<g>/<b>/sensor', 'sensor')
 
-NDFIMapApi.add_urls(app, '/api/v0/report/<report_id>/map')
+#NDFIMapApi.add_urls(app, '/api/v0/report/<report_id>/map')
+NDFIMapApi.add_urls(app, '/api/v0/report/<report_id>/<sensor>/map')
+
 PolygonAPI.add_urls(app, '/api/v0/report/<report_id>/cell/<cell_pos>/polygon')
 NoteAPI.add_urls(app, '/api/v0/report/<report_id>/cell/<cell_pos>/note')
 UserAPI.add_urls(app, '/api/v0/user')
@@ -59,12 +61,12 @@ def stats(table, zone=None, format="csv"):
     except ValueError:
         logging.error("bad format for report id")
         abort(400)
-    
+
     this_report = ReportType.factory(format)
     this_report.init(zone)
     this_report.write_header()
 
-    logging.info("table id is %s ", table) 
+    logging.info("table id is %s ", table)
     logging.info("and we see %s ", FustionTablesNames.all().filter('table_id =', table).fetch(1))
     logging.info("and zone %s ", zone)
     logging.info("and format %s ", format)
@@ -74,7 +76,7 @@ def stats(table, zone=None, format="csv"):
         if not r:
             logging.error("report not found")
             abort(404)
-        
+
         stats = this_report.get_stats(r, table)
 
         for s in stats:

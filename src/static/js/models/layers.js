@@ -14,7 +14,7 @@ var LayerModel = Backbone.Model.extend({
         }
         if(this.get('enabled') === true) {
             this.set_enabled(true);
-        } 
+        }
     },
 
     set_enabled: function(b) {
@@ -103,8 +103,16 @@ var LayerCollection = Backbone.Collection.extend({
         model: LayerModel,
 
         initialize: function()  {
-        },
 
+        },
+        update_time_range: function(start, end){
+            this.each(function(m){
+                if(m.get('type') === 'xyz'){
+                  m.set('date_start', start);
+                  m.set('date_end', end);
+                }
+            });
+        },
         get_by_name: function(name) {
             var lay;
             this.each(function(m) {

@@ -94,14 +94,91 @@ var RangeSlider = Backbone.View.extend({
     }
 });
 
+var ImagePicker = Toolbar.extend({
+    el: $("#image_picker"),
+    events: {
+        'focusout #picker_form': 'visibility_change',
+        'click #picker_select' : 'visibility_change'
+    },
+    initialize: function(){
+        _.bindAll(this, 'visibility_change');
+        this.thumbsView = new ThumbsView();
+        this.visibility = false;
+    },
+    visibility_change: function(){
+        if(this.visibility){
+          $("#picker_form").hide();
+          $(this.el).css("background", "");
+          this.visibility = false;
+        }else{
+          $(this.el).css("background", 'url("static/img/bkg_image_picker_over.png") no-repeat -1px 0');
+          $("#picker_form").show();
+          this.visibility = true;
+        }
+    }
+});
+var DownScalling = Toolbar.extend({
+    el: $("#downscalling"),
+    events: {
+        'focusout scalling_form': 'visibility_change',
+        'click #scalling_select': 'visibility_change'
+    },
+    initialize: function(){
+        _.bindAll(this, 'visibility_change', 'hide_form');
+
+        var parameters = new Parameters();
+        this.downScalling = new SelectParameters({collection: parameters});
+        this.visibility = false;
+    },
+    hide_form: function(){
+        $("#scalling_form").hide();
+        $(this.el).css("background", "");
+        this.visibility = false;
+    },
+    visibility_change: function(){
+        if(this.visibility){
+            this.hide_form();
+        }
+        else{
+          $("#scalling_form").show();
+          $(this.el).css("background", 'url("static/img/bkg_downscalling_over.png") no-repeat 4px 0');
+          this.visibility = true;
+        }
+    }
+
+});
+
 var ReportToolbar = Toolbar.extend({
-
     el: $("#range_select"),
-
     initialize: function() {
+       _.bindAll(this, 'update_range_date', 'render');
        this.report = this.options.report;
-       this.$("#report-date").html(this.report.escape('str'));
-       this.$("#report-date-end").html(this.report.escape('str_end'));
+       //this.$("#report-date").html(this.report.escape('str'));
+       //this.$("#report-date-end").html(this.report.escape('str_end'));
+       var start = this.report.escape('str');
+       this.start_date = moment(new Date(start)).format("DD-MM-YYYY");
+       var end = this.report.escape('str_end');
+       this.end_date = moment(new Date(end)).format("DD-MM-YYYY");
+
+       this.$("#range_picker").attr("value", this.start_date+' - '+this.end_date).html();
+       this.visibility_picker_range = false;
+
+
+       //this.$("ul li#range_picker").dateRangePicker();
+       this.$("#range_picker").dateRangePicker({
+            format: 'DD-MM-YYYY',
+            separator: ' - ',
+            showShortcuts: false}).bind('datepicker-change', this.update_range_date);
+    },
+
+    update_range_date: function(evt, obj){
+        var dates = obj.value.split(" - ");
+        console.log(dates[0]+' - '+dates[1]);
+        this.start_date = dates[0];
+        this.end_date = dates[1];
+    },
+    render: function(){
+        return this;
     }
 
 });
@@ -220,7 +297,7 @@ var Overview = Backbone.View.extend({
         this.report_changed();
         this.el.fadeIn();
     },
-    
+
 
     set_note_count: function(c) {
         this.$('.notes').html( c + " NOTE" + (c==1?'':'S'));
@@ -312,12 +389,12 @@ var Overview = Backbone.View.extend({
     close_report: function(e) {
         this.trigger('close_report');
         e.preventDefault();
-    }, 
+    },
 
     cancel_done: function(e) {
         this.$("#done_confirmation_dialog").fadeOut(0.2);
         e.preventDefault();
-    }, 
+    },
 
     cell_done: function(e) {
         this.$("#done_confirmation_dialog").fadeOut(0.2);

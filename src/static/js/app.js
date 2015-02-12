@@ -143,10 +143,10 @@ $(function() {
             this.selection_toolbar = new ReportToolbar({report:this.active_report});
             this.polygon_tools = new PolygonToolbar();
             this.overview = new Overview({report: this.active_report});
+            this.imagePicker = new ImagePicker();
+            this.downscalling = new DownScalling();
 
-
-            this.ndfi_layer = new NDFILayer({mapview: this.map, report: this.active_report});
-    
+            this.ndfi_layer = new NDFILayer({mapview: this.map, report: this.active_report, available_layers: this.available_layers});
 
             this.polygon_tools.ndfi_range.bind('change', this.ndfi_layer.apply_filter);
             // don't change cell model every slider movement, only when the it stops
@@ -160,6 +160,7 @@ $(function() {
             this.user.bind('change:current_cells', this.overview.change_user_cells);
             this.overview.change_user_cells(this.user, this.user.get('current_cells'));
             this.polygon_tools.bind('visibility_change', this.ndfi_layer.class_visibility);
+
 
             this.ndfi_layer.bind('map_error', function() {
                 show_error("Not enough data available to generate map for this report. After the latest report is generated, map images can take some time to appear.");
@@ -202,9 +203,9 @@ $(function() {
               this.map.adjustSize();
               this.compare_layout = this.$("#compare_layout_2").show();
               this.compare_maps = [];
-              this.compare_maps.push(this.get_map("#map_half"));              
+              this.compare_maps.push(this.get_map("#map_half"));
         },
-        
+
         status_layer_map_save: function(number){
         	var cell = this.gridstack.current_cell;
         	if(number === 'one') {
@@ -216,7 +217,7 @@ $(function() {
             	cell.set({'map_two_layer_status':this.status_layer_map(map2)});
             	cell.save();
             } else if(number === 'four'){
-            	cell.set({'map_one_layer_status':this.status_layer_map(this.map)}); 
+            	cell.set({'map_one_layer_status':this.status_layer_map(this.map)});
             	var map2 = this.compare_maps[0];
             	cell.set({'map_two_layer_status':this.status_layer_map(map2)});
             	map2 = this.compare_maps[1];
@@ -226,61 +227,10 @@ $(function() {
             	cell.save();
             }
         },
-        
-        get_status_layer_map: function(number){        	       	
+
+        get_status_layer_map: function(number){
         	if(number === 'one') {
-        		var cell = this.gridstack.current_cell; 
-        		var layers = cell.get('map_one_layer_status');        		
-        		while(layers!='*'){
-    				var layer = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
-    				layers = layers.slice(layers.indexOf(",")+1);
-    				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
-    				layers = layers.slice(layers.indexOf(",")+1);
-    				var lay = this.map.layers.get_by_name(layer);
-    				if(lay) {
-				    	if(flag==='true'){
-				    		lay.set_enabled(true);
-				    	}else{
-				    		lay.set_enabled(false);
-				    	}	
-				    }
-        		}        		
-        	}else  if(number === 'two') {   
-        		var cell = this.gridstack.current_cell; 
-        		var layers = cell.get('map_one_layer_status');        		
-        		while(layers!='*'){
-    				var layer = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
-    				layers = layers.slice(layers.indexOf(",")+1);
-    				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
-    				layers = layers.slice(layers.indexOf(",")+1);
-    				var lay = this.map.layers.get_by_name(layer);
-				    if(lay) {
-				    	if(flag==='true'){
-				    		lay.set_enabled(true);
-				    	}else{
-				    		lay.set_enabled(false);
-				    	}	
-				    }
-        		}        		
-        		layers = "";
-        		layers = cell.get('map_two_layer_status');
-        		var map2 = this.compare_maps[0];
-        		while(layers!='*'){
-    				var layer = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
-    				layers = layers.slice(layers.indexOf(",")+1);
-    				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
-    				layers = layers.slice(layers.indexOf(",")+1);
-    				var lay = map2.layers.get_by_name(layer);
-    				if(lay) {
-				    	if(flag==='true'){
-				    		lay.set_enabled(true);
-				    	}else{
-				    		lay.set_enabled(false);
-				    	}	
-				    }
-        		}            	
-        	} else if(number === 'four'){
-        		var cell = this.gridstack.current_cell; 
+        		var cell = this.gridstack.current_cell;
         		var layers = cell.get('map_one_layer_status');
         		while(layers!='*'){
     				var layer = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
@@ -293,7 +243,24 @@ $(function() {
 				    		lay.set_enabled(true);
 				    	}else{
 				    		lay.set_enabled(false);
-				    	}	
+				    	}
+				    }
+        		}
+        	}else  if(number === 'two') {
+        		var cell = this.gridstack.current_cell;
+        		var layers = cell.get('map_one_layer_status');
+        		while(layers!='*'){
+    				var layer = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
+    				layers = layers.slice(layers.indexOf(",")+1);
+    				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
+    				layers = layers.slice(layers.indexOf(",")+1);
+    				var lay = this.map.layers.get_by_name(layer);
+				    if(lay) {
+				    	if(flag==='true'){
+				    		lay.set_enabled(true);
+				    	}else{
+				    		lay.set_enabled(false);
+				    	}
 				    }
         		}
         		layers = "";
@@ -310,7 +277,41 @@ $(function() {
 				    		lay.set_enabled(true);
 				    	}else{
 				    		lay.set_enabled(false);
-				    	}	
+				    	}
+				    }
+        		}
+        	} else if(number === 'four'){
+        		var cell = this.gridstack.current_cell;
+        		var layers = cell.get('map_one_layer_status');
+        		while(layers!='*'){
+    				var layer = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
+    				layers = layers.slice(layers.indexOf(",")+1);
+    				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
+    				layers = layers.slice(layers.indexOf(",")+1);
+    				var lay = this.map.layers.get_by_name(layer);
+    				if(lay) {
+				    	if(flag==='true'){
+				    		lay.set_enabled(true);
+				    	}else{
+				    		lay.set_enabled(false);
+				    	}
+				    }
+        		}
+        		layers = "";
+        		layers = cell.get('map_two_layer_status');
+        		var map2 = this.compare_maps[0];
+        		while(layers!='*'){
+    				var layer = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
+    				layers = layers.slice(layers.indexOf(",")+1);
+    				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
+    				layers = layers.slice(layers.indexOf(",")+1);
+    				var lay = map2.layers.get_by_name(layer);
+    				if(lay) {
+				    	if(flag==='true'){
+				    		lay.set_enabled(true);
+				    	}else{
+				    		lay.set_enabled(false);
+				    	}
 				    }
         		}
         		layers = "";
@@ -327,9 +328,9 @@ $(function() {
 				    		lay.set_enabled(true);
 				    	}else{
 				    		lay.set_enabled(false);
-				    	}	
+				    	}
 				    }
-        		} 
+        		}
         		layers = "";
         		layers = cell.get('map_four_layer_status');
         		var map2 = this.compare_maps[2];
@@ -338,18 +339,19 @@ $(function() {
     				layers = layers.slice(layers.indexOf(",")+1);
     				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
     				layers = layers.slice(layers.indexOf(",")+1);
+                    console.log(layers);
     				var lay = map2.layers.get_by_name(layer);
     				if(lay) {
 				    	if(flag==='true'){
 				    		lay.set_enabled(true);
 				    	}else{
 				    		lay.set_enabled(false);
-				    	}	
+				    	}
 				    }
         		}
         	}
         },
-        
+
         status_layer_map: function(map_name){
         	// enable layer, amazonas bounds
         	/*
@@ -367,10 +369,10 @@ $(function() {
         	 * id{?} name{True color RGB141}
         	 * id{?} name{False color RGB421}
         	 * id{?} name{F color infrared RGB214}
-        	 * 
-        	 */ 
+        	 *
+        	 */
         	var arraylayer = new Array("Brazil Legal Amazon","Brazil Municipalities Public","Brazil States Public","Brazil Federal Conservation Unit Public",
-        			"Brazil State Conservation Unit Public","LANDSAT/LE7_L1T","SMA","RGB","NDFI T0","NDFI T1","NDFI analysis","True color RGB141","False color RGB421",
+        			"Brazil State Conservation Unit Public","LANDSAT/LE7_L1T","LANDSAT/LC8_L1T","SMA","RGB","NDFI T0","NDFI T1","NDFI T0 (LANDSAT5)","NDFI T1 (LANDSAT5)","NDFI analysis","NDFI (LANDSAT5) analysis","True color RGB141","False color RGB421",
         			"F color infrared RGB214", "Baseline", "Previous RGB", "Validated polygons");
         	var save_status_layer="";
         	for(var num=0; num<arraylayer.length;num++){
@@ -387,7 +389,7 @@ $(function() {
 	                		save_status_layer += "\""+arraylayer[num]+"\",\""+lay.get_enabled()+"\",*";
 	                	}else{
 	                		save_status_layer += "\""+arraylayer[num]+"\",\""+lay.get_enabled()+"\",";
-	                	}                	
+	                	}
 	                }
 	            }
         	}
@@ -398,21 +400,21 @@ $(function() {
         	var cell = this.gridstack.current_cell;
         	cell.set({'compare_view':num});
         	cell.save();
-        },	
-        
+        },
+
         compare_view: function(compare_type) {
             var self = this;
             var compare_type_view = compare_type;
             this.map.close_layer_editor();
             if(compare_type !== 'one') {
-                
+
                 if(this.compare_layout !== null) {
                     this.compare_view('one');
                     this.compare_view_save('one');
                 }
                 // el gran putiferio
                 if(compare_type === 'two') {
-                    this.compare_two();	
+                    this.compare_two();
                     this.compare_view_save('two');
                 } else {
                     this.compare_four();
@@ -473,6 +475,10 @@ $(function() {
         },
 
         change_report: function() {
+            console.log("============ Report ================");
+            for(var key in this.reports.models[0]){
+                console.log(key);
+            }
             this.active_report = this.reports.models[0];
             this.cell_polygons.polygons.report = this.active_report;
             this.cell_polygons.polygons.fetch();
@@ -482,6 +488,8 @@ $(function() {
         // entering on work mode
         work_mode: function(x, y, z) {
             this.selection_toolbar.hide();
+            this.imagePicker.hide();
+            this.downscalling.hide();
             this.polygon_tools.show();
             this.ndfi_layer.show();
             this.map.show_zoom_control();
@@ -518,8 +526,8 @@ $(function() {
             this.active_report.fetch();
         },
 
-        go_back: function() {  
-        	//alert(this.status_layer_map(this.map)); 
+        go_back: function() {
+        	//alert(this.status_layer_map(this.map));
         	console.log(this.compare_type_view);
         	this.status_layer_map_save(this.compare_type_view);
         	//this.status_layer_map_save('two');
@@ -534,6 +542,8 @@ $(function() {
             this.map.hide_zoom_control();
             this.compare_view('one');
             this.selection_toolbar.show();
+            this.imagePicker.show();
+            this.downscalling.show();
             this.polygon_tools.hide();
             this.ndfi_layer.hide();
             this.overview.select_mode();
@@ -544,6 +554,24 @@ $(function() {
                 this.polygon_tools.reset();
                 delete this.editing_router;
             }
+        },
+        change_grid_level: function(){
+           var cell  = this.gridstack.current_cell;
+           var level = cell.get('z');
+           if(level == '0'){
+             this.selection_toolbar.show();
+             this.imagePicker.show();
+             this.downscalling.show();
+             console.log("1º Nível");
+           }
+           else if(level == '1'){
+             this.selection_toolbar.hide();
+             this.downscalling.hide();
+             console.log('2º Nível');
+           }
+           else if(level == '2'){
+             console.log('3º Nivel');
+           }
         },
 
         // this function is called when map is loaded
@@ -568,6 +596,7 @@ $(function() {
 
             // bindings
             this.gridstack.grid.bind('enter_cell', function(cell) {
+                self.change_grid_level();
                 self.overview.on_cell(cell.get('x'), cell.get('y'), cell.get('z'));
                 router.navigate('cell/' +  cell.get('z') + "/" + cell.get('x') + "/" + cell.get('y'));
             });
@@ -614,11 +643,15 @@ $(function() {
             Backbone.history.start();
             window.loading.finished("Imazon: start");
             console.log(" === App started === ");
+            this.gridstack.bind('cell_click', this.change_grid_level());
+
+
         },
 
         to_cell:function (z, x, y) {
             this.overview.on_cell(x, y, z);
             this.gridstack.enter_cell(parseInt(x, 10), parseInt(y, 10), parseInt(z, 10));
+            this.change_grid_level();
         },
 
         open_notes: function() {
@@ -692,7 +725,7 @@ $(function() {
     $.ajaxSetup({ cache: false });
     // some error tracking
     window.onerror = function(m, u, l) {
-        $.post("/error_track", { 
+        $.post("/error_track", {
             msg: m,
             url: u,
             line: l

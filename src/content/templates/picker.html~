@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block head %}
+   <link href="{{url_for('static', filename='css/style.css')}}" rel="stylesheet" type="text/css"/>
+   <link href="{{url_for('static', filename='css/image-picker.css')}}" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block js_files %}
+    <script src="{{url_for("static", filename="js/image-picker.js")}}"></script>
+    <script src="{{url_for("static", filename="js/picker.js")}}"></script>
+{% endblock %}
+
+{% block js %}
+
+$("select").imagepicker({limit: 31});
+$("option").css("width", "150px");
+$("option").css("height", "150px");
+
+{% endblock %}
+
+{% block body %}
+
+ <article class="picker">
+    {% block text_box %}
+       <form id="form" name="form" method="post" action="{{ url_for('picker') }}">
+          Cells:
+          <select id="cell" class="cell show-html">
+                <option value="" >Select</option>
+          </select>
+
+          Imagens:
+          <select class="image-picker show-labels show-html" multiple="multiple">
+          {% for i in range(thumbs|count) %}
+             <!-- <img id="img-{{dates[i]}}" name="img-{{dates[i]}}" src="https://earthengine.googleapis.com/api/thumb?thumbid={{thumbs[i]}}&token={{tokens[i]}}" width="150" height="150">
+              <input type="checkbox" id="check-{{dates[i]}}" name="check-{{dates[i]}}" value="{{dates[i]}}"> {{dates[i]}}-->
+             <option data-img-src="https://earthengine.googleapis.com/api/thumb?thumbid={{thumbs[i]}}&token={{tokens[i]}}" value="{{dates[i]}}"> {{dates[i]}} </option>
+
+             {% endfor %}
+          </select>
+          <input type="submit" name="submit" id="submit" value="Save in Fusion Tables">
+       </form>
+    {% endblock %}
+  </article>
+  
+{% endblock %}

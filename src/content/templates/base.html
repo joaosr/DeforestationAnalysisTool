@@ -2,7 +2,8 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-        <title>imazon</title>
+        <title>imazon</title> 
+       
         {% block head %}
         {% endblock %}
         <link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700&v2' rel='stylesheet' type='text/css'>
@@ -18,11 +19,11 @@
           <script src="{{url_for('static',filename='js/libs/json2.js')}}" type="text/javascript" charset="utf-8"></script>
           <script src="{{url_for('static',filename='js/libs/underscore-min.js')}}" type="text/javascript" charset="utf-8"></script>
           <script src="{{url_for('static',filename='js/libs/backbone.js')}}" type="text/javascript" charset="utf-8"></script>
-          <!--<script src="{{url_for('static',filename='js/libs/backbone-localstorage.js')}}" type="text/javascript" charset="utf-8"></script> -->
+          <!--<script src="{{url_for('static',filename='js/libs/backbone-localstorage.js')}}" type="text/javascript" charset="utf-8"></script>-->
 
         {% block js_files %}
         {% endblock %}
-        <script>
+        <script type="text/javascript" >
             {% block js %}
             {% endblock %}
         </script>

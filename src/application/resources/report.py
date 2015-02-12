@@ -18,10 +18,11 @@ from google.appengine.ext.db import Key
 from google.appengine.api import users
 
 from google.appengine.api import memcache
+import logging
 
-
+"""
 class NDFIMapApi(Resource):
-    """ resource to get ndfi map access data """
+     resource to get ndfi map access data
 
     @staticmethod
     def _cache_key(report_id):
@@ -33,11 +34,33 @@ class NDFIMapApi(Resource):
         if not data:
             r = Report.get(Key(report_id))
             ndfi = NDFI(r.comparation_range(), r.range())
+            logging.info('((((( Ponto de partida para a classificacao )))))')
             data = ndfi.mapid2(r.base_map())
             if not data:
                 abort(404)
             memcache.add(key=cache_key, value=data, time=3600)
         return jsonify(data)
+"""
+class NDFIMapApi(Resource):
+    """ resource to get ndfi map access data """
+
+    @staticmethod
+    def _cache_key(report_id, sensor):
+        return report_id + "_ndfi_" + sensor
+
+    def list(self, report_id, sensor):
+        cache_key = self._cache_key(report_id, sensor)
+        data = memcache.get(cache_key)
+        if not data:
+            r = Report.get(Key(report_id))
+            ndfi = NDFI(r.comparation_range(), r.range())
+            logging.info('((((( Report Id: ' + str(report_id) +', Sensor:'+ str(sensor) +' )))))')
+            data = ndfi.mapid2(r.base_map(), sensor)
+            if not data:
+                abort(404)
+            memcache.add(key=cache_key, value=data, time=3600)
+        return jsonify(data)
+
 
 
 class UserAPI(Resource):
@@ -141,7 +164,7 @@ class CellAPI(Resource):
         cell.map_one_layer_status = str(data['map_one_layer_status'])
         cell.map_two_layer_status = str(data['map_two_layer_status'])
         cell.map_three_layer_status = str(data['map_three_layer_status'])
-        cell.map_four_layer_status = str(data['map_four_layer_status']) 
+        cell.map_four_layer_status = str(data['map_four_layer_status'])
         cell.done = data['done']
         cell.last_change_by = users.get_current_user()
         cell.put()
@@ -157,12 +180,12 @@ class CellAPI(Resource):
         bounds = cell.bounds(amazon_bounds)
         ne = bounds[0]
         sw = bounds[1]
-        # spcify lon, lat 
+        # spcify lon, lat
         polygons = [ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]
         cols = 1
         rows = 1
         if z < 2:
-            cols = rows = 5 
+            cols = rows = 5
         data = ndfi.ndfi_change_value(r.base_map(), {"type":"Polygon","coordinates":[polygons]}, rows, cols)
         logging.info(data)
         ndfi = data #data['properties']['ndfiSum']['values']
@@ -275,7 +298,7 @@ class NoteAPI(Resource):
         if cell:
             return self._as_json([x.as_dict() for x in cell.note_set])
         return self._as_json([])
-        
+
 
     def create(self, report_id, cell_pos):
         r = Report.get(Key(report_id))

@@ -92,10 +92,105 @@
     <div id="tools">
         <div class="content">
 
-            <div id="range_select">
-              <p>Range analyzed: <strong id="report-date"></strong> - <strong id="report-date-end"></strong></p>
-              <!-- <a href="#download" id="select_range">reports</a>  -->
-            </div> <!-- range_select -->
+            <span id="range_select">
+                <!--<p>Range analyzed: <strong id="report-date"></strong> - <strong id="report-date-end"></strong></p>-->
+
+                    <form id="form" name="form" method="post" action="{{ url_for('range_report') }}">
+                         <p>Range analyzed: <input type="text" id="range_picker" name="range_picker" size="25"></p>
+                         <span><input id="submit_date_picker" type="submit" value="ok"></span>
+                    </form>
+
+              <!-- <a href="#download" id="select_range">reports</a>
+              <ul>
+                <li id="range_picker">
+                
+                </li>
+              </ul>-->
+            </span> <!-- range_select -->
+
+            <span id="image_picker">
+                
+                    <a class="button" href="#" id="picker_select">Image Picker</a>
+                    <div id="picker_form">
+                        <form id="form" name="form" method="post" action="{{ url_for('picker') }}">
+                            <ul>
+                                <li>
+                                    
+                                        <span>
+                                            <h3>Tiles:</h3>
+                                            <select id="tile" name="tile" class="tile" >
+                                                <option value="" >Select</option>
+                                            </select>
+                                        </span>
+                                        <span>
+                                            <input type="submit" name="submit" id="submit" value="Save in Fusion Tables">
+                                        </span>
+                                    
+                                </li>
+                                <li id="thumbs">
+                                    <select id="thumb" name="thumb" class="image-picker show-labels show-html" multiple="multiple" style="display:none">
+
+                                    </select>
+                                </li>
+                            </ul>
+                        </form>
+                    </div>
+                
+
+            </span>
+            
+            <span id="downscalling" unselectable="on">
+                    <a class="button" href="#" id="scalling_select">Donwscalling</a>
+                    <div id="scalling_form">
+                        <form id="form" name="form" method="post" action="{{ url_for('downscalling') }}">
+                                       <span>
+                                            <h3>Tiles:</h3>
+                                            <select id="tile" name="tile" class="tile" >
+                                                <option value="" >Select</option>
+                                            </select>
+                                        </span>
+                                        <span>
+                                                <input type="submit" name="submit" id="submit" value="Save in Fusion Tables">                                           
+                                        </span>
+
+                            <table style="width:100%">
+                                <tr>
+                                    <td><h3>Banda</h3></td>
+                                    <td ><h3>Sill</h3></td>    
+                                    <td ><h3>Range</h3></td>
+                                    <td ><h3>Nugget</h3></td>
+                                </tr>
+                                <tr id="band3">
+                                    <td ><h3>3</h3></td>
+                                    <td><select id="sill3" name="sill3"></select></td>
+                                    <td><select id="range3" name="range3"></select></td>
+                                    <td><select id="nugget3" name="nugget3"></select></td>
+                                </tr>
+                                <tr id="band4">
+                                    <td ><h3>4</h3></td>
+                                    <td><select id="sill4" name="sill4"></select></td>    
+                                    <td><select id="range4" name="range4"></select></td>
+                                    <td><select id="nugget4" name="nugget4"></select></td>
+                                </tr>
+                                <tr id="band6">
+                                    <td ><h3>6</h3></td>
+                                    <td><select id="sill6" name="sill6"></select></td>    
+                                    <td><select id="range6" name="range6"></select></td>
+                                    <td><select id="nugget6" name="nugget6"></select></td>
+                                </tr>
+                                <tr id="band7">
+                                    <td><h3>7</h3></td>
+                                    <td><select id="sill7" name="sill7"></select></td>    
+                                    <td><select id="range7" name="range7"></select></td>
+                                    <td><select id="nugget7" name="nugget7"></select></td>
+                                </tr>
+                             </table>
+
+                        </form>
+
+                    </div>
+
+            </span>
 
             <div id="work_toolbar" class="hidden">
 

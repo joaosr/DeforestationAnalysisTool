@@ -37,8 +37,7 @@ class RegionStatsAPI(Resource):
     def stats_for(self, report_id, assetid, table):
         return self.ee.get_stats(report_id, assetid,  table)
 
-    # TODO: change for get
-    def list(self, report_id):
+    # TODO: change for getattr    def list(self, report_id):
         cache_key = 'stats_' + report_id
         data = memcache.get(cache_key)
         if not data:

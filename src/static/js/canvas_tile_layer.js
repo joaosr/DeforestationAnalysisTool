@@ -11,7 +11,7 @@ function CanvasTileLayer(canvas_setup, filter) {
 
 // create a tile with a canvas element
 CanvasTileLayer.prototype.create_tile_canvas = function(coord, zoom, ownerDocument) {
-      
+
       // create canvas and reset style
       var canvas = ownerDocument.createElement('canvas');
       canvas.style.border = "none";
@@ -22,8 +22,8 @@ CanvasTileLayer.prototype.create_tile_canvas = function(coord, zoom, ownerDocume
       var ctx = canvas.getContext('2d');
       ctx.width = canvas.width = this.tileSize.width;
       ctx.height = canvas.height = this.tileSize.height;
-    
-      //set unique id 
+
+      //set unique id
       var tile_id = coord.x + '_' + coord.y + '_' + zoom;
       canvas.setAttribute('id', tile_id);
       if(tile_id in this.tiles) {
@@ -42,7 +42,7 @@ CanvasTileLayer.prototype.create_tile_canvas = function(coord, zoom, ownerDocume
 
 CanvasTileLayer.prototype.filter_tile = function(canvas, args) {
     var ctx = canvas.getContext('2d');
-    ctx.drawImage(canvas.image, 0, 0);  
+    ctx.drawImage(canvas.image, 0, 0);
     var I = ctx.getImageData(0, 0, canvas.width, canvas.height);
     this.filter.apply(this, [I.data, ctx.width, ctx.height].concat(args));
     ctx.putImageData(I,0,0);

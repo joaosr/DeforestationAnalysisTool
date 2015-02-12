@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block  head %}
+    <link href="{{url_for('static', filename='css/style.css')}}" rel="stylesheet" type="text/css"/>
+    <link href="{{url_for('static', filename='css/modal.css')}}" rel="stylesheet" type="text/css"/>
+    <link href="{{url_for('static', filename='css/selectbox.css')}}" rel="stylesheet" type="text/css"/>
+    <link href="{{url_for('static', filename='css/buttons.css')}}" rel="stylesheet" type="text/css"/>
+{% endblock %}
+
+
+
+
+{% block body %}
+
+<h5>Downscalling</h5>
+	<span class="modal-ipicker" style="margin-left:25%">
+                  <button id="modal-trigger" class="modal-trigger-button button-blue" type="button">Image Picker</button>
+
+
+	</span>
+
+	<span class="modal-downscalling">
+                  <button data-target="#myModal" data-toggle="modal" class="modal-trigger-button button-blue" type="button">Downscalling</button>
+	</span>
+
+    <div id="myModal" class="modal fade">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close pull-right button-red" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" style="color:black">Downscalling</h4>
+                </div>
+                <div class="modal-body">
+                    <table style="width:100%">
+                      <tr>
+                        <td style="color:black">Banda</td>
+                        <td style="color:black">Sill</td>    
+                        <td style="color:black">Range</td>
+                        <td style="color:black">Nugget</td>
+                      </tr>
+                      <tr>
+                        <td style="color:black">3</td>
+                        <td>
+                          <div >
+                            <select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12">
+                              <option value=""></option>
+                              <option >12.500</option>
+                              <option>500</option>
+                              <option>720</option>
+                              <option>11.200</option>
+                              <option selected>390.000</option>
+                              <option>170.000</option>
+                              <option>3.800</option>
+                              <option>400</option>
+                            </select>
+                          </div>
+                        </td>    
+                        <td><select id="range3" data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="13"></td>
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>
+                      </tr>
+                      <tr>
+                        <td style="color:black">4</td>
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>    
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>
+                      </tr>
+                      <tr>
+                        <td style="color:black">6</td>
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>    
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>
+                      </tr>
+                      <tr>
+                        <td style="color:black">7</td>
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>    
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>
+                        <td><select data-placeholder="Em branco" style="width:130px;" class="selectbox-select-deselect" tabindex="12"></td>
+                      </tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary button-green">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>  
+
+
+{% endblock %}
+{% block js_files %}
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.js"></script>
+  <script src="{{url_for('static', filename='js/selectbox.jquery.js')}}" type="text/javascript"></script>
+  <script src="{{url_for('static', filename='js/bootstrap.js')}}" type="text/javascript"></script>
+
+{% endblock %}
+
+{% block js %}
+    var config = {
+      '.selectbox-select'           : {},
+      '.selectbox-select-deselect'  : {allow_single_deselect:true},
+      '.selectbox-select-no-single' : {disable_search_threshold:10},
+      '.selectbox-select-no-results': {no_results_text:'Oops, não encontrei!'},
+      '.selectbox-select-width'     : {width:"95%"}
+    }
+    for (var selector in config) {
+      $(selector).selectbox(config[selector]);
+    }
+{% endblock %}

@@ -1,0 +1,49 @@
+$(function(){
+
+var cellArray = [
+                { name: "h11v08", value: "/11/08"},
+                { name: "h12v08", value: "/12/08"},
+                { name: "h10v09", value: "/10/09"},
+                { name: "h11v09", value: "/11/09"},
+                { name: "h12v09", value: "/12/09"},
+                { name: "h13v09", value: "/13/09"},
+                { name: "h11v10", value: "/11/10"},
+                { name: "h12v10", value: "/12/10"},
+                { name: "h12v10", value: "/13/10"}
+            ];
+
+var Cell = Backbone.Model.extend();
+
+var Cells = Backbone.Collection.extend({
+    model: Cell
+});
+
+var CellView = Backbone.View.extend({
+    tagName: "option",
+    initialize: function(){
+        _.bindAll(this, 'render');
+    },
+    render: function(){
+        $(this.el).attr('value', this.model.get('value')).html(this.model.get('name'));
+        return this;
+    }
+});
+
+var CellsView = Backbone.View.extend({
+    initialize: function(){
+        _.bindAll(this, 'addOne', 'addAll');
+        this.collection.bind('reset', this.addAll());
+    },
+    addOne: function(cell){
+        $(this.el).append(new CellView({model: cell}).render().el);
+    },
+    addAll: function(){
+        this.collection.each(this.addOne);
+    }
+});
+
+var cells = new Cells(cellArray);
+console.log(cells);
+new CellsView({el: $("#cell"), collection: cells});
+
+});

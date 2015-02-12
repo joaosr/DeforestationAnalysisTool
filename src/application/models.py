@@ -132,6 +132,14 @@ class Report(db.Model):
             d = st - relativedelta(months=1)
         return tuple(map(timestamp, (d, self.start)))
 
+    @staticmethod
+    def add_report(start, end, assetid=None):
+        start_date = datetime.strptime(start, "%d-%m-%Y").date()
+        end_date   = datetime.strptime(end, "%d-%m-%Y").date()
+        r = Report(start=start_date, end=end_date, assetid=assetid)
+        r.put()
+
+
     def base_map(self):
         r = self.previous()
         if r:
@@ -155,7 +163,7 @@ class Report(db.Model):
                                    datetime.fromtimestamp(r1[1]/1000).isoformat(),
                                    self.start.isoformat())
 
-SPLITS = 5 
+SPLITS = 5
 class Cell(db.Model):
 
     z = db.IntegerProperty(required=True)
@@ -171,12 +179,34 @@ class Cell(db.Model):
     last_change_by = db.UserProperty()
     last_change_on = db.DateTimeProperty(auto_now=True)
     compare_view = db.StringProperty(default='four')
-    map_one_layer_status = db.StringProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false","Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false","LANDSAT/LE7_L1T","false","SMA","false","RGB","false","NDFI T0","false","NDFI T1","false","NDFI analysis","true","True color RGB141","false","False color RGB421","false","F color infrared RGB214","false","Validated polygons","true",*')
-    map_two_layer_status = db.StringProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false","Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false","LANDSAT/LE7_L1T","false","SMA","false","RGB","false","NDFI T0","true","NDFI T1","false","NDFI analysis","true","True color RGB141","false","False color RGB421","false","F color infrared RGB214","false","Validated polygons","true",*')
-    map_three_layer_status = db.StringProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false","Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false","LANDSAT/LE7_L1T","false","SMA","false","RGB","false","NDFI T0","false","NDFI T1","true","NDFI analysis","true","True color RGB141","false","False color RGB421","false","F color infrared RGB214","false","Validated polygons","true",*')
-    map_four_layer_status = db.StringProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false","Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false","Terrain","true","Satellite","false","Hybrid","false","Roadmap","false","LANDSAT/LE7_L1T","true","NDFI T0","false","True color RGB141","false","False color RGB421","false","F color infrared RGB214","false",*')
-    
-     
+    map_one_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
+                                                     '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
+                                                     '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
+                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","false",'
+                                                     '"NDFI (LANDSAT5) analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                     '"F color infrared RGB214","false","Validated polygons","true",*')
+
+    map_two_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
+                                                    '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
+                                                     '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
+                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","true","NDFI T1 (LANDSAT5)","false","NDFI analysis","false",'
+                                                     '"NDFI (LANDSAT5) analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                     '"F color infrared RGB214","false","Validated polygons","true",*')
+
+    map_three_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
+                                                       '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
+                                                       '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
+                                                       '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","true","NDFI analysis","false",'
+                                                       '"NDFI (LANDSAT5) analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                       '"F color infrared RGB214","false","Validated polygons","true",*')
+
+    map_four_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
+                                                      '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
+                                                      '"Terrain","true","Satellite","false","Hybrid","false","Roadmap","false","LANDSAT/LE7_L1T","false",'
+                                                      '"LANDSAT/LC8_L1T","true","NDFI T0","false","True color RGB141","false","False color RGB421","false",'
+                                                      '"F color infrared RGB214","false",*')
+
+
     @staticmethod
     def get_cell(report, x, y, z):
         q = Cell.all()
@@ -533,3 +563,124 @@ class FustionTablesNames(db.Model):
 
     def as_dict(self):
         return json.loads(self.json)
+
+FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
+
+class ImagePickerFT(db.Model):
+    """ area selected by user """
+    #FT_TABLE_PICKER = '1VPNcpgPM8rPs8dQ6g-9Fmei9aJIydJAjZys3XuxN'
+    #FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
+
+    #DEGRADATION = 0
+    #DEFORESTATION = 1
+
+    #geo = db.TextProperty(required=True)
+    #added_by = db.UserProperty()
+    #added_on = db.DateTimeProperty(auto_now_add=True)
+    #type = db.IntegerProperty(required=True)
+    #fusion_tables_id = db.IntegerProperty()
+    #cell = db.ReferenceProperty(Cell)
+
+    added_on = db.DateTimeProperty(auto_now_add=True)
+    added_by = db.UserProperty()
+    fusion_tables_id = db.IntegerProperty()
+
+    cell = db.TextProperty(required=True)
+    year = db.TextProperty(required=True)
+    month = db.TextProperty(required=True)
+    day = db.TextProperty(required=True)
+    #location = db.TextProperty(required=True)
+    compounddate = db.TextProperty(required=True)
+
+    def as_dict(self):
+        return {
+                'id': str(self.key()),
+                'key': str(self.key()),
+                #'cell': str(self.cell.key()),
+                #'paths': json.loads(self.geo),
+                #'type': self.type,
+                'cell': self.cell,
+                'year': self.year,
+                'month': self.month,
+                'day': self.day,
+                'Location': self.location,
+                'compounddate': self.compounddate,
+                'fusion_tables_id': self.fusion_tables_id,
+                'added_on': timestamp(self.added_on),
+                'added_by': str(self.added_by.nickname())
+        }
+
+    def as_json(self):
+        return json.dumps(self.as_dict())
+
+    def save(self):
+        """ wrapper for put makes compatible with django"""
+        exists = True
+        try:
+            self.key()
+        except db.NotSavedError:
+            exists = False
+        ret = self.put()
+        # call defer AFTER saving instance
+        if not exists:
+            deferred.defer(self.create_fusion_tables)
+        else:
+            deferred.defer(self.update_fusion_tables)
+        return ret
+
+    @staticmethod
+    def _get_ft_client():
+        cl = FT(settings.FT_CONSUMER_KEY,
+                settings.FT_CONSUMER_SECRET,
+                settings.FT_TOKEN,
+                settings.FT_SECRET)
+        table_id = cl.table_id(FT_TABLE_PICKER)
+        logging.info(table_id)
+        if not table_id:
+            raise Exception("Create areas %s first" % FT_TABLE_PICKER)
+        return cl
+
+    #def fusion_tables_type(self):
+    #    """ custom type id for FT """
+    #    if self.type == self.DEGRADATION:
+    #        return 8
+    #    return 7
+
+    #def delete_fusion_tables(self):
+    #    """ delete area from fusion tables. Do not use this method directly, call delete method"""
+    #    cl = self._get_ft_client()
+    #    table_id = cl.table_id(settings.FT_TABLE)
+    #    cl.sql("delete from %s where rowid = '%s'" % (table_id, self.fusion_tables_id))
+
+    #def update_fusion_tables(self):
+    #    """ update polygon in fusion tables. Do not call this method, use save method when change instance data """
+    #    logging.info("updating fusion tables %s" % self.key())
+    #    cl = self._get_ft_client()
+    #    table_id = cl.table_id(settings.FT_TABLE)
+    #    geo_kml = path_to_kml(json.loads(self.geo))
+    #    cl.sql("update  %s set geo = '%s', type = '%s' where rowid = '%s'" % (table_id, geo_kml, self.fusion_tables_type(), self.fusion_tables_id))
+
+    def select_fusion_tables_row(self):
+        cl = self._get_ft_client()
+        table_id = cl.table_id(FT_TABLE_PICKER)
+        logging.info(type(cl.sql("select from %s where cell = %s" % (table_id, self.cell))))
+
+    def update_fusion_tables(self):
+        """ update polygon in fusion tables. Do not call this method, use save method when change instance data """
+        logging.info("updating fusion tables %s" % self.key())
+        cl = self._get_ft_client()
+        table_id = cl.table_id(self.FT_TABLE)
+        #geo_kml = path_to_kml(json.loads(self.geo))
+        cl.sql("update  %s set day = '%s' where rowid = '%s'" % (table_id, self.fusion_tables_day, self.fusion_tables_id))
+
+    def create_fusion_tables(self):
+        logging.info("saving to fusion tables report %s" % self.key())
+        cl = self._get_ft_client()
+        table_id = cl.table_id(self.FT_TABLE)
+        #geo_kml = path_to_kml(json.loads(self.geo))
+        rowid = cl.sql("insert into %s ('cell', 'year', 'month', 'day', 'compounddate') VALUES ('%s', %d, %d, '%s', '%s')" % (table_id, self.cell, self.year, self.month, self.day, self.compounddate))
+        #self.fusion_tables_id = int(rowid.split('\n')[1])
+        #rowid = cl.sql("update %s set rowid_copy = '%s' where rowid = '%s'" % (table_id, self.fusion_tables_id, self.fusion_tables_id))
+        #self.put()
+
+

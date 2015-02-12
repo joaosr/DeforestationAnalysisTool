@@ -131,7 +131,7 @@ var Grid = Backbone.View.extend({
 
         var wc = w/5;
         var wh = h/5;
-        
+
         this.x = x;
         this.y = y;
         this.w = w;

@@ -2,7 +2,9 @@
 
 {% block  head %}
     <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
+    <link href="{{url_for('static', filename='css/image-picker.css')}}" rel="stylesheet" type="text/css">
     <link href="{{url_for('static', filename='css/style.css')}}" rel="stylesheet" type="text/css"/>
+    <link href="{{url_for('static', filename='css/daterangepicker.css')}}" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block js_files %}
@@ -17,6 +19,13 @@
   <script src="{{url_for("static", filename="js/libs/jquery.scrollpane.js")}}"></script>
   <!--<script src="{{url_for("static", filename="js/libs/ahpi.imgload.js")}}"></script>-->
   <script src="{{url_for("static", filename="js/libs/pretty.js")}}"></script> <!-- for dates -->
+
+  <script src="{{url_for("static", filename="js/libs/moment.js")}}"></script> <!-- for dates -->
+
+  <script src="{{url_for("static", filename="js/libs/jquery.daterangepicker.js")}}"></script>
+
+  <!-- image-picker -->
+  <script src="{{url_for('static',filename='js/libs/image-picker.js')}}"></script>
 
   <!-- pixel operations library -->
   <script type="text/javascript" src="{{url_for("static", filename="js/pixel_ops.js")}}"></script>
@@ -54,6 +63,18 @@
   <script src="{{url_for('static',filename='js/models/grid.js')}}"></script>
   <script src="{{url_for('static',filename='js/controllers/grid.js')}}"></script>
 
+  <script src="{{url_for('static',filename='js/models/tiles.js')}}"></script>
+  <script src="{{url_for('static',filename='js/controllers/tiles.js')}}"></script>
+
+
+
+  <!-- picker -->
+  <script src="{{url_for("static",filename="js/picker.js")}}"></script>
+
+  <!-- downscalling -->
+  <script src="{{url_for("static",filename="js/downscalling.js")}}"></script>
+
+
   <!-- toolbar -->
   <script src="{{url_for('static',filename='js/controllers/toolbar.js')}}"></script>
   
@@ -75,6 +96,7 @@
 
   <!-- app -->
   <script src="{{url_for('static',filename='js/app.js')}}"></script>
+
 
 {% endblock %}
 
@@ -118,6 +140,7 @@
         {% for m in maps %}
            available_maps.splice(0, 0, {
               id: '{{m.data.mapid}}',
+              token: '{{m.data.token}}',
               type: 'xyz',
               description: '{{m.info}}',
               url: 'https://earthengine.googleapis.com/map/{{m.data.mapid}}/{Z}/{X}/{Y}?token={{m.data.token}}'

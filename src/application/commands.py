@@ -209,7 +209,7 @@ def update_report_stats(report_id):
     }
     for desc, table, name in tables:
         stats['stats'].update(stats_for(str(r.key().id()), r.assetid, table))
-        # sleep for some time to avoid problems with FT 
+        # sleep for some time to avoid problems with FT
         time.sleep(4)
 
     data = json.dumps(stats)
@@ -260,7 +260,7 @@ def fusion_tables_names():
         info = cl.sql("select %s, description from %s" % (name, table))
         data = []
         # sorry
-        for line in info.split('\n')[1:]: 
+        for line in info.split('\n')[1:]:
             if line:
                 tk = line.split(',')
                 #TODO: fix html decoding

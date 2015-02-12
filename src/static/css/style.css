@@ -38,6 +38,7 @@ caption, th, td {
   vertical-align: middle;
 }
 
+
 q, blockquote {
   quotes: none;
 }
@@ -443,6 +444,7 @@ article .example .field {
 }
 #header #tools #range_select {
   padding-top: 20px;
+  display: inline-block;
 }
 #header #tools #range_select p {
   display: inline-block;
@@ -466,6 +468,170 @@ article .example .field {
 }
 #header #tools #range_select a#select_range:hover {
   background-position: 0 -19px;
+}
+
+header #tools #range_select #range_picker {
+  background: url("") repeat 0 0;
+}
+
+#header #tools #image_picker {
+  margin: 0 20px 0 20px;
+  padding: 16px 14px 11px 20px;
+}
+#header #tools #image_picker a#picker_select {
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: white;
+  text-shadow: 0 1px black;
+  padding: 3px 3px 3px 3px;
+  text-decoration: none;
+}
+
+#header #tools #image_picker #picker_form {
+  position: absolute;
+  width: 700px;
+  height: 718px;
+  padding: 40px 30px 30px 30px;
+  top: 40px;
+  left: 370px;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  background: url("../img/bkg_image_picker.png") no-repeat 0 0;
+  display: none;
+}
+#header #tools #image_picker #picker_form ul li span h3{
+font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+color: rgba(153, 153, 153, 0.9);
+text-shadow: #000000 0px 1px 0px;
+}
+#header #tools #image_picker #picker_form ul li span select{
+  padding-right: 2.5em;
+  border: 0;
+  border-radius: 3px;
+  -webkit-appearance: none;
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#ebebeb), to(#cccccc));
+  font-size: 0.8em;
+  padding: .5em;
+  margin: 0;
+  font: normal 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: #666666;
+  text-shadow: 0 1px white;
+}
+#header #tools #image_picker #picker_form ul li span select::after{
+    color: rgba(0,0,0,.4);
+    content: "\25BC";
+    height: 1em;
+    font-size: .625em;
+    line-height: 1;
+    right: 1.2em;
+    top: 50%;
+    margin-top: -.5em;
+    position: absolute;
+    pointer-events: none;
+
+}
+#header #tools #image_picker #picker_form ul li span input#submit{
+    float: right;
+    margin: 0 13px 0 0;
+    padding: 8px;
+    font: bold 12px "Helvetica Neue", Arial, Sans-Serif;
+    color: #fff;
+    text-transform: uppercase;
+    text-align: center;
+    border: 1px solid #000;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-radius: 5px;
+    background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#08d531), to(#319f06));
+}
+#header #tools #image_picker #picker_form ul li#thumbs {
+    /*overflow: auto;*/
+    max-height: 600px;
+    max-width: 700px;
+    margin-top: 20px;
+}
+#header #tools #downscalling {
+  margin: 0 20px 0 20px;
+  padding: 16px 19px 11px 20px;
+}
+#header #tools #downscalling a#scalling_select {
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: white;
+  text-shadow: 0 1px black;
+  padding: 3px 3px 3px 3px;
+  text-decoration: none;
+}
+#header #tools #downscalling #scalling_form {
+  position: absolute;
+  top: 40px;
+  left: 540px;
+  padding: 40px 30px 30px 30px;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  background: url("../img/bkg_downscalling.png") repeat 0 0;
+  display: none;
+}
+#header #tools #downscalling #scalling_form span h3{
+  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+  color: rgba(153, 153, 153, 0.9);
+  text-shadow: #000000 0px 1px 0px;
+  text-align: left;
+  margin: 0 0 0 13px;
+}
+
+#header #tools #downscalling #scalling_form select{
+    min-width: 80px;
+    padding-right: 2.5em;
+    border: 0;
+    border-radius: 3px;
+    -webkit-appearance: none;
+    background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#ebebeb), to(#cccccc));
+    font-size: 0.8em;
+    padding: .5em;
+    margin: 0 0 0 13px;
+    font: normal 13px "Helvetica Neue", Arial, Sans-Serif;
+    color: #666666;
+    text-shadow: 0 1px white;
+}
+
+#header #tools #downscalling #scalling_form span input#submit{
+    float: right;
+    margin: 0 13px 0 0;
+    padding: 8px;
+    font: bold 12px "Helvetica Neue", Arial, Sans-Serif;
+    color: #fff;
+    text-transform: uppercase;
+    text-align: center;
+    border: 1px solid #000;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-radius: 5px;
+    background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#08d531), to(#319f06));
+}
+#header #tools #downscalling #scalling_form table h3{
+  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+  color: rgba(153, 153, 153, 0.9);
+  text-shadow: #000000 0px 1px 0px;
+  text-align: center;
+}
+#header #tools #downscalling #scalling_form table{
+  margin-top: 30px;
+}
+#header #tools #downscalling #scalling_form table select{
+    min-width: 80px;
+    padding-right: 2.5em;
+    border: 0;
+    border-radius: 3px;
+    -webkit-appearance: none;
+    background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#ebebeb), to(#cccccc));
+    font-size: 0.8em;
+    padding: .5em;
+    margin: 0;
+    font: normal 13px "Helvetica Neue", Arial, Sans-Serif;
+    color: #666666;
+    text-shadow: 0 1px white;
+}
+#header #tools #downscalling #scalling_form table td{
+ padding: 10px 15px 10px 15px;
 }
 #header #tools #work_toolbar {
   padding-top: 13px;
@@ -1804,4 +1970,8 @@ article.login a.sign_in {
 }
 article.login a.sign_in:hover {
   background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#cccccc), to(#ebebeb));
+}
+
+img.image_picker_image{
+    width: 200px;
 }
