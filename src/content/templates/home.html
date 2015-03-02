@@ -64,7 +64,7 @@
   <script src="{{url_for('static',filename='js/controllers/grid.js')}}"></script>
 
   <script src="{{url_for('static',filename='js/models/tiles.js')}}"></script>
-  <script src="{{url_for('static',filename='js/controllers/tiles.js')}}"></script>
+  <script src="{{url_for('static',filename='js/models/tiles.js')}}"></script>
 
 
 
@@ -111,6 +111,7 @@
               type: 'fusion_tables',
               table: '1560866',
               select: 'geometry',
+              visibility: true,
               description: 'Brazil Municipalities Public'
             },
             {
@@ -119,21 +120,24 @@
               table: '1560836',
               //table: '304268',
               select: 'geometry',
-              description: 'Brazil States Public'
+               visibility: true,
+             description: 'Brazil States Public'
             },
             {
               id: '4',
               type: 'fusion_tables',
               table: '322554',
               select: 'geometry',
-              description: 'Brazil Federal Conservation Unit Public'
+                visibility: true,
+            description: 'Brazil Federal Conservation Unit Public'
             },
             {
               id: '5',
               type: 'fusion_tables',
               table: '322660',
               select: 'geometry',
-              description: 'Brazil State Conservation Unit Public'
+                 visibility: true,
+           description: 'Brazil State Conservation Unit Public'
             }
 
         ];
@@ -142,7 +146,8 @@
               id: '{{m.data.mapid}}',
               token: '{{m.data.token}}',
               type: 'xyz',
-              description: '{{m.info}}',
+                  visibility: true,
+          description: '{{m.info}}',
               url: 'https://earthengine.googleapis.com/map/{{m.data.mapid}}/{Z}/{X}/{Y}?token={{m.data.token}}'
         
             });
@@ -153,7 +158,8 @@
               id: '1',
               type: 'fusion_tables',
               table: '1205151',
-              select: 'geometry',
+               visibility: true,
+             select: 'geometry',
               description: 'Brazil Legal Amazon'
             }
         );
@@ -161,26 +167,30 @@
               id: '6',
               type: 'google_maps',
               map_id: 'TERRAIN',
-              description: 'Terrain',
+                visibility: true,
+            description: 'Terrain',
               enabled: true
         });
         available_maps.splice(0, 0, {
               id: '7',
               type: 'google_maps',
               map_id: 'SATELLITE',
-              description: 'Satellite'
+                 visibility: true,
+           description: 'Satellite'
         });
         available_maps.splice(0, 0, {
               id: '9',
               type: 'google_maps',
               map_id: 'ROADMAP',
-              description: 'Roadmap'
+                  visibility: true,
+          description: 'Roadmap'
         });
         available_maps.splice(0, 0, {
               id: '8',
               type: 'google_maps',
               map_id: 'HYBRID',
-              description: 'Hybrid',
+               visibility: true,
+             description: 'Hybrid',
         });
 
         window.app.available_layers.reset(available_maps.reverse());

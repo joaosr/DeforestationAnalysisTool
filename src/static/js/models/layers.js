@@ -113,6 +113,25 @@ var LayerCollection = Backbone.Collection.extend({
                 }
             });
         },
+        update_maps_id: function(){
+            this.each(function(m){
+                if(m.get('type') === 'xyz'){
+                    m.url = ""
+                    m.fetch({
+                        success: function(){
+
+                        }
+                    });
+                }
+            });
+        },
+        update_visibility_with_type: function(visibility, type){
+             this.each(function(m){
+                if(m.get('type') == type, m.get('visibility') != visibility){
+                    m.set('visibility', visibility);
+                }
+             });
+        },
         get_by_name: function(name) {
             var lay;
             this.each(function(m) {

@@ -94,85 +94,29 @@ var RangeSlider = Backbone.View.extend({
     }
 });
 
-var ImagePicker = Toolbar.extend({
-    el: $("#image_picker"),
-    events: {
-        'focusout #picker_form': 'visibility_change',
-        'click #picker_select' : 'visibility_change'
-    },
-    initialize: function(){
-        _.bindAll(this, 'visibility_change');
-        this.thumbsView = new ThumbsView();
-        this.visibility = false;
-    },
-    visibility_change: function(){
-        if(this.visibility){
-          $("#picker_form").hide();
-          $(this.el).css("background", "");
-          this.visibility = false;
-        }else{
-          $(this.el).css("background", 'url("static/img/bkg_image_picker_over.png") no-repeat -1px 0');
-          $("#picker_form").show();
-          this.visibility = true;
-        }
-    }
-});
-var DownScalling = Toolbar.extend({
-    el: $("#downscalling"),
-    events: {
-        'focusout scalling_form': 'visibility_change',
-        'click #scalling_select': 'visibility_change'
-    },
-    initialize: function(){
-        _.bindAll(this, 'visibility_change', 'hide_form');
-
-        var parameters = new Parameters();
-        this.downScalling = new SelectParameters({collection: parameters});
-        this.visibility = false;
-    },
-    hide_form: function(){
-        $("#scalling_form").hide();
-        $(this.el).css("background", "");
-        this.visibility = false;
-    },
-    visibility_change: function(){
-        if(this.visibility){
-            this.hide_form();
-        }
-        else{
-          $("#scalling_form").show();
-          $(this.el).css("background", 'url("static/img/bkg_downscalling_over.png") no-repeat 4px 0');
-          this.visibility = true;
-        }
-    }
-
-});
-
 var ReportToolbar = Toolbar.extend({
     el: $("#range_select"),
     initialize: function() {
        _.bindAll(this, 'update_range_date', 'render');
-       this.report = this.options.report;
+       this.report     = this.options.report;
+       this.callerView = this.options.callerView;
        //this.$("#report-date").html(this.report.escape('str'));
        //this.$("#report-date-end").html(this.report.escape('str_end'));
        var start = this.report.escape('str');
-       this.start_date = moment(new Date(start)).format("DD-MM-YYYY");
+       this.start_date = moment(new Date(start)).format("DD/MMM/YYYY");
        var end = this.report.escape('str_end');
-       this.end_date = moment(new Date(end)).format("DD-MM-YYYY");
+       this.end_date = moment(new Date(end)).format("DD/MMM/YYYY");
 
        this.$("#range_picker").attr("value", this.start_date+' - '+this.end_date).html();
        this.visibility_picker_range = false;
 
-
-       //this.$("ul li#range_picker").dateRangePicker();
        this.$("#range_picker").dateRangePicker({
-            format: 'DD-MM-YYYY',
-            separator: ' - ',
+            format: 'DD/MMM/YYYY',
+            separator: ' to ',
             showShortcuts: false}).bind('datepicker-change', this.update_range_date);
     },
-
     update_range_date: function(evt, obj){
-        var dates = obj.value.split(" - ");
+        var dates = obj.value.split(' to ');
         console.log(dates[0]+' - '+dates[1]);
         this.start_date = dates[0];
         this.end_date = dates[1];
@@ -180,7 +124,323 @@ var ReportToolbar = Toolbar.extend({
     render: function(){
         return this;
     }
+});
 
+var ImagePicker = Toolbar.extend({
+    el: $("#image_picker"),
+    events: {
+        'click #picker_select' : 'visibility_change'
+    },
+    initialize: function(){
+        _.bindAll(this, 'visibility_change');
+        this.thumbsView = new ThumbsView();
+        this.callerView = this.options.callerView;
+        this.visibility = false;
+    },
+    change_sensor: function(sensor){
+        this.thumbsView.change_sensor(sensor);
+    },
+    visibility_change: function(e){
+        console.log(e.currentTarget);
+        if(this.visibility){
+          $("#picker_form").hide();
+          //$(this.el).css("background", "");
+          this.visibility = false;
+        }else{
+          //$(this.el).css("background", 'url("static/img/bkg_image_picker_over.png") no-repeat -1px 0');
+          $("#picker_form").show();
+          this.visibility = true;
+          this.callerView.callback(this);
+        }
+    }
+});
+
+var DownScalling = Toolbar.extend({
+    el: $("#downscalling"),
+    events: {
+        'click #scalling_select': 'visibility_change'
+    },
+    initialize: function(){
+        _.bindAll(this, 'visibility_change', 'hide_form');
+        var parameters = new Parameters();
+        this.callerView = this.options.callerView;
+        this.downScalling = new SelectParameters({collection: parameters});
+        this.visibility = false;
+    },
+    hide_form: function(){
+        $("#scalling_form").hide();
+        //$(this.el).css("background", "");
+        this.visibility = false;
+    },
+    visibility_change: function(e){
+        if(this.visibility){
+            this.hide_form();
+        }
+        else{
+          $("#scalling_form").show();
+          //$(this.el).css("background", 'url("static/img/bkg_downscalling_over.png") no-repeat 4px 0');
+          this.visibility = true;
+          this.callerView.callback(this);
+        }
+        e.preventDefault();
+    }
+
+});
+
+var MonthlySAD = Toolbar.extend({
+    el: $("#monthly_sad"),
+    events: {
+        'click #monthly_sad_select': 'visibility_change'
+    },
+    initialize: function(){
+        _.bindAll(this, 'visibility_change', 'setting_report_data', 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'hide_down_scalling', 'show_down_scalling');
+        this.callerView = this.options.callerView;
+        this.setting_report_data();
+        this.report_tool_bar = new ReportToolbar({el: this.$("range_picker"), report: this.options.report, callerView: this});
+        this.image_picker = new ImagePicker({el: this.$("image_picker"), callerView: this});
+        this.down_scalling = new DownScalling({callerView: this});
+        this.visibility = false;
+    },
+    setting_report_data: function(){
+        var data     = new Date();
+        var start    = this.options.report.escape('str');
+        var data_sad = new Date(start);
+
+        var current_month     = date.getMonth();
+        var current_month_sad = date_sad.getMonth();
+
+        var current_year     = date.getYear();
+        var current_year_sad = date_sad.getYear();
+
+        var month_diference = current_month - current_month_sad;
+        var year_diference  = current_year  - current_year_sad;
+
+        if(month_diference == 2 && year_diference == 0){
+            var new_start = moment(new Date(current_year, current_month_sad + 1, 1)).format("dd-MM-YYYY");
+            var new_end   = moment(new Date(current_year, current_month_sad + 1, 0)).format("dd-MM-YYYY");
+
+            this.options.report.set('str', new_start);
+            this.options.report.set('str_end', new_end);
+        }
+        else if(month_diference == -10 && year_diference == 1){
+            var new_start = moment(new Date(current_year_sad, current_month_sad + 1, 1)).format("dd-MM-YYYY");
+            var new_end   = moment(new Date(current_year_sad, current_month_sad + 1, 0)).format("dd-MM-YYYY");
+
+            this.options.report.set('str', new_start);
+            this.options.report.set('str_end', new_end);
+        }
+
+
+    },
+    callback: function(view){
+        if(view === this.report_tool_bar && this.report_tool_bar.visibility){
+            this.hide_image_picker();
+            this.hide_down_scalling();
+        }
+        else if(view === this.image_picker && this.image_picker.visibility){
+            this.hide_report_tool_bar();
+            this.hide_down_scalling();
+        }
+        else if(view === this.down_scalling && this.down_scalling.visibility){
+            this.hide_report_tool_bar();
+            this.hide_image_picker();
+        }
+    },
+    hide_report_tool_bar: function(){
+        if(this.report_tool_bar.visibility){
+          this.report_tool_bar.visibility_change();
+        }
+    },
+    show_report_tool_bar: function(){
+        if(!this.report_tool_bar.visibility){
+          this.report_tool_bar.visibility_change();
+        }
+    },
+    hide_image_picker: function(){
+        if(this.image_picker.visibility){
+          this.image_picker.visibility_change();
+        }
+    },
+    show_image_picker: function(){
+        if(!this.image_picker.visibility){
+          this.image_picker.visibility_change();
+        }
+    },
+    hide_down_scalling: function(){
+        if(this.down_scalling.visibility){
+          this.down_scalling.visibility_change();
+        }
+    },
+    show_down_scalling: function(){
+        if(!this.down_scalling.visibility){
+          this.down_scalling.visibility_change();
+        }
+    },
+    visibility_change: function(){
+        if(this.visibility){
+            $(this.el).css("background-color", "rgba(0, 0, 0, 0)")
+            this.$("#monthly_sad_select h3").css("color", "#999999");
+            this.$("#monthly_sad_content").hide();
+            this.visibility = false;
+        }
+        else{
+          $(this.el).css("background-color", "rgba(0, 0, 0, 1)");
+          this.$("#monthly_sad_select h3").css("color", "white");
+          this.$("#monthly_sad_content").show();
+          this.visibility = true;
+          this.callerView.callback(this);
+        }
+    }
+
+});
+
+var Baseline = Toolbar.extend({
+    el: $("#baseline"),
+    events:{
+        'click #baseline_select': 'visibility_change'
+    },
+    initialize: function(){
+        _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change');
+        this.callerView = this.options.callerView;
+        this.report_tool_bar = new ReportToolbar({el: this.$("range_picker"), report: this.options.report, callerView: this});
+        this.image_picker = new ImagePicker({el: this.$("image_picker"), callerView: this});
+        this.visibility = false;
+    },
+    callback: function(view){
+        if(view === this.report_tool_bar && this.report_tool_bar.visibility){
+            this.hide_image_picker();
+        }
+        else if(view === this.image_picker && this.image_picker.visibility){
+            this.hide_report_tool_bar();
+        }
+    },
+    hide_report_tool_bar: function(){
+        if(this.report_tool_bar.visibility){
+          this.report_tool_bar.visibility_change();
+        }
+    },
+    show_report_tool_bar: function(){
+        if(!this.report_tool_bar.visibility){
+          this.report_tool_bar.visibility_change();
+        }
+    },
+    hide_image_picker: function(){
+        if(this.image_picker.visibility){
+          this.image_picker.visibility_change();
+        }
+    },
+    show_image_picker: function(){
+        if(!this.image_picker.visibility){
+          this.image_picker.visibility_change();
+        }
+    },
+    visibility_change: function(){
+        if(this.visibility){
+            $(this.el).css("background-color", "rgba(0, 0, 0, 0)");
+            this.$("#baseline_select h3").css("color", "#999999");
+            this.$("#baseline_content").hide();
+            this.visibility = false;
+        }
+        else{
+            $(this.el).css("background-color", "rgba(0, 0, 0, 1)");
+            this.$("#baseline_select h3").css("color", "white");
+            this.$("#baseline_content").show();
+            this.visibility = true;
+            this.callerView.callback(this);
+        }
+
+    }
+});
+
+var TimeSeries = Toolbar.extend({
+    el: $("#time_series"),
+     events:{
+        'click #time_series_select': 'visibility_change'
+    },
+    initialize: function(){
+        _.bindAll(this, 'visibility_change');
+        this.callerView = this.options.callerView;
+        this.visibility = false;
+    },
+    visibility_change: function(){
+        if(this.visibility){
+            $(this.el).css("background-color", "rgba(0, 0, 0, 0)");
+            this.$("#time_series_select h3").css("color", "#999999");
+            this.visibility = false;
+        }
+        else{
+             $(this.el).css("background-color", "rgba(0, 0, 0, 1)");
+            this.$("#time_series_select h3").css("color", "white");
+            this.visibility = true;
+            this.callerView.callback(this);
+        }
+    }
+
+});
+
+var MainOperations = Backbone.View.extend({
+    initialize: function(){
+        _.bindAll(this, 'hide_monthly_sad', 'show_monthly_sad', 'hide_baseline', 'show_baseline', 'hide_time_series', 'show_time_series', 'hide_all', 'show_all','callback');
+        this.monthly_sad = new MonthlySAD({report: this.options.report, callerView: this});
+        this.baseline    = new Baseline({report: this.options.report, callerView: this});
+        this.time_series = new TimeSeries({callerView: this});
+
+    },
+    callback: function(view){
+        if(view === this.monthly_sad && this.monthly_sad.visibility){
+            this.hide_baseline();
+            this.hide_time_series();
+        }
+        else if(view === this.baseline && this.baseline.visibility){
+            this.hide_monthly_sad();
+            this.hide_time_series();
+        }
+        else if(view === this.time_series && this.time_series.visibility){
+            this.hide_monthly_sad();
+            this.hide_baseline();
+        }
+    },
+    hide_monthly_sad: function(){
+        if(this.monthly_sad.visibility){
+          this.monthly_sad.visibility_change();
+        }
+    },
+    show_monthly_sad: function(){
+        if(!this.monthly_sad.visibility){
+          this.monthly_sad.visibility_change();
+        }
+    },
+    hide_baseline: function(){
+        if(this.baseline.visibility){
+          this.baseline.visibility_change();
+        }
+    },
+    show_baseline: function(){
+        if(!this.baseline.visibility){
+          this.baseline.visibility_change();
+        }
+    },
+    hide_time_series: function(){
+        if(this.time_series.visibility){
+          this.time_series.visibility_change();
+        }
+    },
+    show_time_series: function(){
+        if(!this.time_series.visibility){
+          this.time_series.visibility_change();
+        }
+    },
+
+    hide_all: function(){
+        this.monthly_sad.hide();
+        this.baseline.hide();
+        this.time_series.hide();
+    },
+    show_all: function(){
+        this.monthly_sad.show();
+        this.baseline.show();
+        this.time_series.show();
+    }
 });
 
 var ButtonGroup = Backbone.View.extend({

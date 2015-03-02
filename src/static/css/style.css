@@ -442,11 +442,37 @@ article .example .field {
   height: 58px;
   color: white;
 }
-#header #tools #range_select {
+#header #tools #monthly_sad{
+  margin: 0 20px 0 200px;
+  padding: 20px 14px 23px 20px;
+  display: inline-block;
+}
+#header #tools #monthly_sad #monthly_sad_select{
+ text-decoration: none;
+   
+}
+#header #tools #monthly_sad #monthly_sad_select h3{
+  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+  color: #999999;
+  text-shadow: 0 1px black;
+}
+#header #tools #monthly_sad #monthly_sad_content{
+  position: absolute;
+  width: 702px;
+  height: 60px;
+  padding: 0 30px 0 30px;
+  margin-top: 19px;
+  /* border: 1px solid rgba(51, 51, 51, 0.5); */
+  background: rgba(0, 0 , 0, 1);
+  top: 40px;
+  left: 200px;
+  display: none;
+}
+#header #tools #monthly_sad #monthly_sad_content #range_select {
   padding-top: 20px;
   display: inline-block;
 }
-#header #tools #range_select p {
+#header #tools #monthly_sad #monthly_sad_content #range_select p {
   display: inline-block;
   vertical-align: top;
   padding: 1px 0 0;
@@ -454,11 +480,11 @@ article .example .field {
   color: #4D575F;
   text-shadow: 0 1px black;
 }
-#header #tools #range_select p strong {
+#header #tools #monthly_sad #monthly_sad_content #range_select p strong {
   font-weight: bold;
   color: white;
 }
-#header #tools #range_select a#select_range {
+#header #tools #monthly_sad #monthly_sad_content #range_select a#select_range {
   display: inline-block;
   vertical-align: top;
   width: 19px;
@@ -466,44 +492,42 @@ article .example .field {
   text-indent: -9999px;
   background: url("../img/icons/report.png") no-repeat 0 0;
 }
-#header #tools #range_select a#select_range:hover {
+#header #tools #monthly_sad #monthly_sad_content #range_select a#select_range:hover {
   background-position: 0 -19px;
 }
 
-header #tools #range_select #range_picker {
+header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
   background: url("") repeat 0 0;
 }
 
-#header #tools #image_picker {
+#header #tools #monthly_sad #monthly_sad_content #image_picker {
   margin: 0 20px 0 20px;
   padding: 16px 14px 11px 20px;
 }
-#header #tools #image_picker a#picker_select {
+#header #tools #monthly_sad #monthly_sad_content #image_picker a#picker_select {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
   text-shadow: 0 1px black;
   padding: 3px 3px 3px 3px;
   text-decoration: none;
 }
-
-#header #tools #image_picker #picker_form {
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form {
   position: absolute;
   width: 700px;
   height: 718px;
   padding: 40px 30px 30px 30px;
-  top: 40px;
-  left: 370px;
-  border-bottom-left-radius: 5px;
-  border-bottom-right-radius: 5px;
-  background: url("../img/bkg_image_picker.png") no-repeat 0 0;
+  top: 60px;
+  left: 0px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 22, 23, 1);
   display: none;
 }
-#header #tools #image_picker #picker_form ul li span h3{
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span h3{
 font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
 color: rgba(153, 153, 153, 0.9);
 text-shadow: #000000 0px 1px 0px;
 }
-#header #tools #image_picker #picker_form ul li span select{
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span select{
   padding-right: 2.5em;
   border: 0;
   border-radius: 3px;
@@ -516,7 +540,7 @@ text-shadow: #000000 0px 1px 0px;
   color: #666666;
   text-shadow: 0 1px white;
 }
-#header #tools #image_picker #picker_form ul li span select::after{
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span select::after{
     color: rgba(0,0,0,.4);
     content: "\25BC";
     height: 1em;
@@ -529,7 +553,7 @@ text-shadow: #000000 0px 1px 0px;
     pointer-events: none;
 
 }
-#header #tools #image_picker #picker_form ul li span input#submit{
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span input#submit{
     float: right;
     margin: 0 13px 0 0;
     padding: 8px;
@@ -543,34 +567,35 @@ text-shadow: #000000 0px 1px 0px;
     -webkit-radius: 5px;
     background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#08d531), to(#319f06));
 }
-#header #tools #image_picker #picker_form ul li#thumbs {
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li#thumbs {
     /*overflow: auto;*/
     max-height: 600px;
     max-width: 700px;
     margin-top: 20px;
 }
-#header #tools #downscalling {
+#header #tools #monthly_sad #monthly_sad_content #downscalling {
   margin: 0 20px 0 20px;
   padding: 16px 19px 11px 20px;
 }
-#header #tools #downscalling a#scalling_select {
+#header #tools #monthly_sad #monthly_sad_content #downscalling a#scalling_select {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
   text-shadow: 0 1px black;
   padding: 3px 3px 3px 3px;
   text-decoration: none;
 }
-#header #tools #downscalling #scalling_form {
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form {
   position: absolute;
-  top: 40px;
-  left: 540px;
+  top: 60px;
+  left: 0px;
+  width: 700px;
   padding: 40px 30px 30px 30px;
   border-bottom-left-radius: 5px;
   border-bottom-right-radius: 5px;
-  background: url("../img/bkg_downscalling.png") repeat 0 0;
+  background: rgba(22, 22, 23, 1);
   display: none;
 }
-#header #tools #downscalling #scalling_form span h3{
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form span h3{
   font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
   color: rgba(153, 153, 153, 0.9);
   text-shadow: #000000 0px 1px 0px;
@@ -578,7 +603,7 @@ text-shadow: #000000 0px 1px 0px;
   margin: 0 0 0 13px;
 }
 
-#header #tools #downscalling #scalling_form select{
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form select{
     min-width: 80px;
     padding-right: 2.5em;
     border: 0;
@@ -593,7 +618,7 @@ text-shadow: #000000 0px 1px 0px;
     text-shadow: 0 1px white;
 }
 
-#header #tools #downscalling #scalling_form span input#submit{
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form span input#submit{
     float: right;
     margin: 0 13px 0 0;
     padding: 8px;
@@ -607,16 +632,16 @@ text-shadow: #000000 0px 1px 0px;
     -webkit-radius: 5px;
     background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#08d531), to(#319f06));
 }
-#header #tools #downscalling #scalling_form table h3{
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table h3{
   font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
   color: rgba(153, 153, 153, 0.9);
   text-shadow: #000000 0px 1px 0px;
   text-align: center;
 }
-#header #tools #downscalling #scalling_form table{
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table{
   margin-top: 30px;
 }
-#header #tools #downscalling #scalling_form table select{
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table select{
     min-width: 80px;
     padding-right: 2.5em;
     border: 0;
@@ -630,8 +655,34 @@ text-shadow: #000000 0px 1px 0px;
     color: #666666;
     text-shadow: 0 1px white;
 }
-#header #tools #downscalling #scalling_form table td{
+#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table td{
  padding: 10px 15px 10px 15px;
+}
+#header #tools #baseline{
+  margin: 0 20px 0 100px;
+  padding: 20px 14px 23px 20px;
+  display: inline-block;
+}
+#header #tools #baseline #baseline_select{
+ text-decoration: none;
+}
+#header #tools #baseline #baseline_select h3{
+  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+  color: #999999;
+  text-shadow: 0 1px black;
+}
+#header #tools #time_series{
+  margin: 0 20px 0 100px;
+  padding: 20px 14px 23px 20px;
+  display: inline-block;
+}
+#header #tools #time_series #time_series_select{
+    text-decoration: none;
+}
+#header #tools #time_series #time_series_select  h3{
+  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+  color: #999999;
+  text-shadow: 0 1px black;
 }
 #header #tools #work_toolbar {
   padding-top: 13px;

@@ -11,7 +11,8 @@ Important: Place your keys in the secret_keys.py module,
 from google.appengine.api import app_identity
 import os
 
-from secret_keys import *
+#from secret_keys import *
+from secret_keys import EE_ACCOUNT, EE_PRIVATE_KEY_FILE, CSRF_SECRET_KEY, SESSION_KEY
 import ee
 from oauth2client import appengine
 
@@ -45,7 +46,8 @@ else:
 # Initialize the EE API.
 EE_TILE_SERVER = EE_API_URL + '/map/'
 ee.data.DEFAULT_DEADLINE = 60 * 20
-ee.Initialize(EE_CREDENTIALS, EE_API_URL)
+#ee.Initialize(EE_CREDENTIALS, EE_API_URL)
+ee.Initialize()
 
 # Set secret keys for CSRF protection
 SECRET_KEY = CSRF_SECRET_KEY

@@ -27,7 +27,7 @@ from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
 #from forms import ExampleForm
-from application.ee_bridge import NDFI, EELandsat,  get_modis_thumbnails_list
+from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list
 
 from app import app
 
@@ -83,7 +83,33 @@ def default_maps():
     return maps
 
 
+def map_from_bbox(map_image, bbox):
+    bounds = bbox.split(',')
+    report = Report.current()
+    map_data = ''
+    map_type = ''
 
+    if EELandsat.from_class(map_image):
+        landsat = EELandsat(timestamp(report.start), datetime.datetime.now())
+        map_data = landsat.find_mapid_from_sensor(map_image, bounds)
+        map_type = 'base_map'
+    elif SMA.from_class(map_image):
+        sma = SMA(timestamp(report.start), datetime.datetime.now())
+        map_data = sma.find_mapid_from_sensor(map_image, bounds)
+        map_type = 'processed'
+    elif NDFI.from_class(map_image):
+        ndfi     = NDFI(past_month_range(report.start), report.range())
+        map_data = ndfi.find_mapid_from_sensor(map_image, bounds)
+        map_type = 'analysis'
+
+    return jsonify({
+        'id': map_data.mapid,
+        'token': map_data.token,
+        'type': map_type,
+        'visibility': True,
+       'description': map_image,
+        'url': 'https://earthengine.googleapis.com/map/'+map_data.mapid+'/{Z}/{X}/{Y}?token='+map_data.token
+    })
 
 def get_or_create_user():
     user = users.get_current_user()
@@ -210,8 +236,8 @@ FT_TABLE_DOWNSCALLING = '17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 @app.route('/range_report', methods=['POST', 'GET'])
 def range_report():
     range_picker = request.form.get('range_picker')
-    date_start = range_picker.split(' - ')[0]
-    date_end   = range_picker.split(' - ')[1]
+    date_start = range_picker.split(' to ')[0]
+    date_end   = range_picker.split(' to ')[1]
     try:
         Report.add_report(date_start, date_end)
     except:

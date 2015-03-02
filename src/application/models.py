@@ -133,11 +133,13 @@ class Report(db.Model):
         return tuple(map(timestamp, (d, self.start)))
 
     @staticmethod
-    def add_report(start, end, assetid=None):
+    def add_report(start, end, assetid='null'):
         start_date = datetime.strptime(start, "%d-%m-%Y").date()
         end_date   = datetime.strptime(end, "%d-%m-%Y").date()
-        r = Report(start=start_date, end=end_date, assetid=assetid)
-        r.put()
+        report = Report.all().filter('start', start_date).filter('end', end_date)
+        if report:
+            r = Report(start=start_date, end=end_date, assetid=assetid)
+            r.put()
 
 
     def base_map(self):

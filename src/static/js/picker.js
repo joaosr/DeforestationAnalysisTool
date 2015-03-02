@@ -44,7 +44,10 @@ var ThumbsView = Backbone.View.extend({
                console.log(that.collection);
            }
        });
-
+    },
+    //TODO 13/02/15 mudança na implementação do fluxo de uso do sistema, esse método pode não ser mais necessário
+    change_sensor: function(sensor){
+        this.tilesView.setSensor(sensor);
     },
     addOne: function(thumb){
         console.log('mais aqui');

@@ -132,7 +132,19 @@ var MapView = Backbone.View.extend({
             c.hide();
         }
     },
-
+    setting_layer_in_level: function(level){
+        if(level == '0'){
+            this.layers.update_visibility_with_type(false, 'processed');
+            this.layers.update_visibility_with_type(false, 'analysis');
+        }
+        else if(level == '1'){
+            this.layers.update_visibility_with_type(true, 'processed');
+            this.layers.update_visibility_with_type(false, 'analysis');
+        }
+        else if(level == '2'){
+            this.layers.update_visibility_with_type(true, 'analysis');
+        }
+    },
     //close layer editor if it's opened
     close_layer_editor: function() {
         if(this.layer_editor !== undefined && this.layer_editor.showing) {
@@ -142,7 +154,6 @@ var MapView = Backbone.View.extend({
             this.open_google_maps_base_layer_editor();
         }
     },
-
     open_google_maps_base_layer_editor: function(e) {
             if(e) e.preventDefault();
             if(this.layer_editor_base === undefined) {
@@ -171,13 +182,20 @@ var MapView = Backbone.View.extend({
 
             }
     },
-
     open_layer_editor: function(e) {
             if(e) e.preventDefault();
             if(this.layer_editor === undefined) {
                 this.layer_editor = new LayerEditor({
                     parent: this.el,
                     layers: this.layers
+                });
+            }
+            else{
+                this.layers_editor.layers = this.layers;
+                this.layers_editor.layers.each(function(m){
+                    if(m.get('visibility') == false){
+                        this.remove(m);
+                    }
                 });
             }
 

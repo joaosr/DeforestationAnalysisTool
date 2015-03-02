@@ -140,11 +140,12 @@ $(function() {
         },
 
         init_ui: function() {
-            this.selection_toolbar = new ReportToolbar({report:this.active_report});
+            this.main_operations = new MainOperations({report: this.active_report});
+//            this.selection_toolbar = new ReportToolbar({report:this.active_report});
             this.polygon_tools = new PolygonToolbar();
             this.overview = new Overview({report: this.active_report});
-            this.imagePicker = new ImagePicker();
-            this.downscalling = new DownScalling();
+//            this.imagePicker = new ImagePicker();
+//            this.downscalling = new DownScalling();
 
             this.ndfi_layer = new NDFILayer({mapview: this.map, report: this.active_report, available_layers: this.available_layers});
 
@@ -487,9 +488,10 @@ $(function() {
 
         // entering on work mode
         work_mode: function(x, y, z) {
-            this.selection_toolbar.hide();
-            this.imagePicker.hide();
-            this.downscalling.hide();
+            //this.selection_toolbar.hide();
+            //this.imagePicker.hide();
+            //this.downscalling.hide();
+            this.main_operations.hide_all();
             this.polygon_tools.show();
             this.ndfi_layer.show();
             this.map.show_zoom_control();
@@ -541,9 +543,10 @@ $(function() {
         select_mode: function() {
             this.map.hide_zoom_control();
             this.compare_view('one');
-            this.selection_toolbar.show();
-            this.imagePicker.show();
-            this.downscalling.show();
+            //this.selection_toolbar.show();
+            //this.imagePicker.show();
+            //this.downscalling.show();
+            this.main_operations.show_all();
             this.polygon_tools.hide();
             this.ndfi_layer.hide();
             this.overview.select_mode();
@@ -559,15 +562,15 @@ $(function() {
            var cell  = this.gridstack.current_cell;
            var level = cell.get('z');
            if(level == '0'){
-             this.selection_toolbar.show();
-             this.imagePicker.show();
-             this.downscalling.show();
-             console.log("1º Nível");
+            // this.selection_toolbar.show();
+            //  this.imagePicker.show();
+            // this.downscalling.show();
+             this.main_operations.show_monthly_sad();
            }
            else if(level == '1'){
-             this.selection_toolbar.hide();
-             this.downscalling.hide();
-             console.log('2º Nível');
+              //this.selection_toolbar.hide();
+              // this.downscalling.hide();
+             this.main_operations.hide_monthly_sad();
            }
            else if(level == '2'){
              console.log('3º Nivel');
