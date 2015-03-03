@@ -95,7 +95,7 @@ var RangeSlider = Backbone.View.extend({
 });
 
 var ReportToolbar = Toolbar.extend({
-    el: $("#range_select"),
+    //el: $("#range_select"),
     initialize: function() {
        _.bindAll(this, 'update_range_date', 'render');
        this.report     = this.options.report;
@@ -107,7 +107,7 @@ var ReportToolbar = Toolbar.extend({
        var end = this.report.escape('str_end');
        this.end_date = moment(new Date(end)).format("DD/MMM/YYYY");
 
-       this.$("#range_picker").attr("value", this.start_date+' - '+this.end_date).html();
+       this.$("#range_picker").attr("value", this.start_date+' to '+this.end_date).html();
        this.visibility_picker_range = false;
 
        this.$("#range_picker").dateRangePicker({
@@ -127,7 +127,7 @@ var ReportToolbar = Toolbar.extend({
 });
 
 var ImagePicker = Toolbar.extend({
-    el: $("#image_picker"),
+    //el: $("#image_picker"),
     events: {
         'click #picker_select' : 'visibility_change'
     },
@@ -143,12 +143,12 @@ var ImagePicker = Toolbar.extend({
     visibility_change: function(e){
         console.log(e.currentTarget);
         if(this.visibility){
-          $("#picker_form").hide();
+          this.$("#picker_form").hide();
           //$(this.el).css("background", "");
           this.visibility = false;
         }else{
           //$(this.el).css("background", 'url("static/img/bkg_image_picker_over.png") no-repeat -1px 0');
-          $("#picker_form").show();
+          this.$("#picker_form").show();
           this.visibility = true;
           this.callerView.callback(this);
         }
@@ -193,18 +193,21 @@ var MonthlySAD = Toolbar.extend({
         'click #monthly_sad_select': 'visibility_change'
     },
     initialize: function(){
-        _.bindAll(this, 'visibility_change', 'setting_report_data', 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'hide_down_scalling', 'show_down_scalling');
+        _.bindAll(this, 'visibility_change', 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'hide_down_scalling', 'show_down_scalling');
         this.callerView = this.options.callerView;
+        this.report = this.options.report
+        console.log("==== setting_report_data ====");
+
         this.setting_report_data();
-        this.report_tool_bar = new ReportToolbar({el: this.$("range_picker"), report: this.options.report, callerView: this});
-        this.image_picker = new ImagePicker({el: this.$("image_picker"), callerView: this});
+        this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, callerView: this});
+        this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.down_scalling = new DownScalling({callerView: this});
         this.visibility = false;
     },
     setting_report_data: function(){
-        var data     = new Date();
-        var start    = this.options.report.escape('str');
-        var data_sad = new Date(start);
+        var date    = new Date();
+        var start    = this.report.escape('str');
+        var date_sad = new Date(start);
 
         var current_month     = date.getMonth();
         var current_month_sad = date_sad.getMonth();
@@ -216,20 +219,19 @@ var MonthlySAD = Toolbar.extend({
         var year_diference  = current_year  - current_year_sad;
 
         if(month_diference == 2 && year_diference == 0){
-            var new_start = moment(new Date(current_year, current_month_sad + 1, 1)).format("dd-MM-YYYY");
-            var new_end   = moment(new Date(current_year, current_month_sad + 1, 0)).format("dd-MM-YYYY");
-
-            this.options.report.set('str', new_start);
-            this.options.report.set('str_end', new_end);
+            var new_start = moment(new Date(current_year, current_month_sad + 1, 1)).format("DD-MM-YYYY");
+            var new_end   = moment(new Date(current_year, current_month_sad + 1, 0)).format("DD-MM-YYYY");
+            console.log("Nem start: "+new_start);
+            this.report.set('str', new_start);
+            this.report.set('str_end', new_end);
         }
         else if(month_diference == -10 && year_diference == 1){
-            var new_start = moment(new Date(current_year_sad, current_month_sad + 1, 1)).format("dd-MM-YYYY");
-            var new_end   = moment(new Date(current_year_sad, current_month_sad + 1, 0)).format("dd-MM-YYYY");
-
-            this.options.report.set('str', new_start);
-            this.options.report.set('str_end', new_end);
+            var new_start = moment(new Date(current_year_sad, current_month_sad + 1, 1)).format("DD-MM-YYYY");
+            var new_end   = moment(new Date(current_year_sad, current_month_sad + 1, 0)).format("DD-MM-YYYY");
+            console.log("Nem start: "+new_start);
+            this.report.set('str', new_start);
+            this.report.set('str_end', new_end);
         }
-
 
     },
     callback: function(view){
@@ -302,11 +304,25 @@ var Baseline = Toolbar.extend({
     initialize: function(){
         _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change');
         this.callerView = this.options.callerView;
-        this.report_tool_bar = new ReportToolbar({el: this.$("range_picker"), report: this.options.report, callerView: this});
-        this.image_picker = new ImagePicker({el: this.$("image_picker"), callerView: this});
+        this.report = this.options.report
+//        this.setting_report_data();
+        this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, callerView: this});
+        this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.visibility = false;
     },
-    callback: function(view){
+    setting_report_data: function(){
+        var date    = new Date();
+        var current_month     = date.getMonth();
+        var current_year     = date.getYear();
+
+        var new_start = moment(new Date(current_year, current_month_sad + 1, 1)).format("DD-MM-YYYY");
+        var new_end   = moment(new Date(current_year, current_month_sad + 1, 0)).format("DD-MM-YYYY");
+        console.log("Nem start: "+new_start);
+        this.report.set('str', new_start);
+        this.report.set('str_end', new_end);
+
+    },
+   callback: function(view){
         if(view === this.report_tool_bar && this.report_tool_bar.visibility){
             this.hide_image_picker();
         }

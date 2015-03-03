@@ -41,7 +41,7 @@ def default_maps():
     maps = []
     r = Report.current()
     logging.info("report " + unicode(r))
-    landsat = EELandsat()
+    landsat = EELandsat(timestamp(r.start), datetime.datetime.now())
     ndfi = NDFI(past_month_range(r.start), r.range())
 
     logging.info('Past_month_range: '+str(past_month_range(r.start))+', Range: '+str(r.range)+', Timestamp: '+str(timestamp(r.start))+', Datetime: '+str(datetime.datetime.now()) )

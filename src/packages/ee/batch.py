@@ -76,12 +76,6 @@ class Task(object):
     if result['state'] == 'UNKNOWN': result['state'] = Task.State.UNSUBMITTED
     return result
 
-  def active(self):
-    """Returns whether the task is still running."""
-    return self.status()['state'] in (Task.State.READY,
-                                      Task.State.RUNNING,
-                                      Task.State.CANCEL_REQUESTED)
-
   def cancel(self):
     """Cancels the task."""
     data.cancelTask(self.id)
@@ -177,7 +171,7 @@ class Export(object):
       region = config.get('region')
       region_error = ee_exception.EEException(
           'Invalid format for region property. '
-          'See Export.image() documentation for more details.')
+          'See exportImage() documentation for more details.')
       if isinstance(region, basestring):
         try:
           region = json.loads(region)

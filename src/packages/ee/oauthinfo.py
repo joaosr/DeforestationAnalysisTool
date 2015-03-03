@@ -9,6 +9,8 @@ class OAuthInfo(object):
                'apps.googleusercontent.com')
   CLIENT_SECRET = 'RUP0RZ6e0pPhDzsqIJ7KlNd1'
 
+
   @classmethod
   def credentials_path(cls):
-    return os.path.expanduser('~/.config/earthengine/credentials')
+    return  '/home/joao_manoel/.config/earthengine/credentials'
+    #return os.path.expanduser('~/.config/earthengine/credentials')

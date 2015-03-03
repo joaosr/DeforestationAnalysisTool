@@ -12,7 +12,7 @@ from google.appengine.api import app_identity
 import os
 
 #from secret_keys import *
-from secret_keys import EE_ACCOUNT, EE_PRIVATE_KEY_FILE, CSRF_SECRET_KEY, SESSION_KEY
+from secret_keys import EE_ACCOUNT, EE_PRIVATE_KEY_FILE, CSRF_SECRET_KEY, SESSION_KEY, FT_CONSUMER_KEY, FT_CONSUMER_SECRET, FT_TOKEN, FT_SECRET
 import ee
 from oauth2client import appengine
 

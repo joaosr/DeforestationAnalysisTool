@@ -9,7 +9,6 @@ This class is never intended to be instantiated by the user.
 # pylint: disable=g-bad-name
 
 import apifunction
-import deprecation
 import ee_exception
 import element
 import filter   # pylint: disable=redefined-builtin
@@ -56,7 +55,6 @@ class Collection(element.Element):
     return self._cast(apifunction.ApiFunction.call_(
         'Collection.filter', self, new_filter))
 
-  @deprecation.CanUseDeprecated
   def filterMetadata(self, name, operator, value):
     """Shortcut to add a metadata filter to a collection.
 
