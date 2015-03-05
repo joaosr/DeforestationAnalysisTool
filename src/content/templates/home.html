@@ -141,7 +141,7 @@
             }
 
         ];
-        {% for m in maps %}
+      /*  {% for m in maps %}
            available_maps.splice(0, 0, {
               id: '{{m.data.mapid}}',
               token: '{{m.data.token}}',
@@ -151,7 +151,7 @@
               url: 'https://earthengine.googleapis.com/map/{{m.data.mapid}}/{Z}/{X}/{Y}?token={{m.data.token}}'
         
             });
-        {% endfor %}
+        {% endfor %}*/
         // this layer must be the first
         available_maps.splice(0, 0,
             {

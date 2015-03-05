@@ -102,7 +102,7 @@ var CellView = Backbone.View.extend({
 var Grid = Backbone.View.extend({
 
     initialize: function() {
-        _.bindAll(this, 'render', 'add_cells', 'cell_selected', 'populate_cells','set_visible_zone', 'clear_visible_zone');
+        _.bindAll(this, 'render', 'add_cells', 'cell_selected', 'populate_cells','set_visible_zone', 'clear_visible_zone', 'bounds');
         if(this.options.mapview === undefined) {
             throw "you should specify MapView in constructor";
         }
@@ -177,10 +177,17 @@ var Grid = Backbone.View.extend({
     },
 
     bounds: function() {
+        var x = Number(this.x);
+        var y = Number(this.y);
+        var h = Number(this.h);
+        var w = Number(this.w);
         var prj = this.mapview.projector;
+
+        console.log("X: "+x+" ,Y: "+y+" ,H: "+h+", W: "+w);
+
         bounds = new google.maps.LatLngBounds(
-            prj.untransformCoordinates(new google.maps.Point(this.x, this.y + this.h)),
-            prj.untransformCoordinates(new google.maps.Point(this.x + this.w, this.y))
+            prj.untransformCoordinates(new google.maps.Point(x, y + h)),
+            prj.untransformCoordinates(new google.maps.Point(x + w, y))
         );
         return bounds;
     },
@@ -192,7 +199,7 @@ var Grid = Backbone.View.extend({
         var sw = bounds.getSouthWest();
         var ne = bounds.getNorthEast();
         var paths = [[
-            new google.maps.LatLng(-X, -Y),
+                new google.maps.LatLng(-X, -Y),
                 new google.maps.LatLng(-X, Y),
                 new google.maps.LatLng(X, Y),
                 new google.maps.LatLng(X, -Y)
@@ -284,8 +291,13 @@ var GridStack = Backbone.View.extend({
     cell_click: function(cell) {
         this.enter_cell(cell.get('x'), cell.get('y'), cell.get('z'), cell);
     },
+    bound: function(){
+        var bounds = this.grid.bounds();
+        var sw     = bounds.getSouthWest();
+        var ne     = bounds.getNorthEast();
 
-
+        return sw.lng()+','+sw.lat()+','+ne.lng()+','+ne.lat();
+    },
     to_parent: function() {
 
     },
@@ -314,6 +326,7 @@ var GridStack = Backbone.View.extend({
                 y: y,
                 z: z,
                 report: this.report
+
             });
             this.set_cells(cells);
             this.trigger('select_mode');

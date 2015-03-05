@@ -82,8 +82,33 @@ def default_maps():
     if d: maps.append({'data': d, 'info': 'Previous RGB'})
     return maps
 
+@app.route('/map/level/<level>/<bbox>/')
+def maps_level(level, bbox):
+    result = []
+    if level == '0':
+       result.append(map_from_bbox(EELandsat.LANDSAT5, bbox))
+       result.append(map_from_bbox(EELandsat.LANDSAT7, bbox))
+       result.append(map_from_bbox(EELandsat.LANDSAT8, bbox))
+    elif level == '1':
+       result.append(map_from_bbox(SMA.LANDSAT5_T0, bbox))
+       result.append(map_from_bbox(SMA.LANDSAT5_T1, bbox))
+       result.append(map_from_bbox(SMA.LANDSAT7_T0, bbox))
+       result.append(map_from_bbox(SMA.LANDSAT7_T1, bbox))
+       result.append(map_from_bbox(SMA.LANDSAT8_T0, bbox))
+       result.append(map_from_bbox(SMA.LANDSAT8_T1, bbox))
+    elif level == '2':
+       result.append(map_from_bbox(NDFI.LANDSAT5_T0, bbox))
+       result.append(map_from_bbox(NDFI.LANDSAT5_T1, bbox))
+       result.append(map_from_bbox(NDFI.LANDSAT7_T0, bbox))
+       result.append(map_from_bbox(NDFI.LANDSAT7_T1, bbox))
+       result.append(map_from_bbox(NDFI.LANDSAT8_T0, bbox))
+       result.append(map_from_bbox(NDFI.LANDSAT8_T1, bbox))
+
+    return jsonify({'result': result})
 
 def map_from_bbox(map_image, bbox):
+    logging.info("==================> Map image: "+map_image)
+    logging.info("==================> BBOX: "+bbox)
     bounds = bbox.split(',')
     report = Report.current()
     map_data = ''
@@ -94,7 +119,7 @@ def map_from_bbox(map_image, bbox):
         map_data = landsat.find_mapid_from_sensor(map_image, bounds)
         map_type = 'base_map'
     elif SMA.from_class(map_image):
-        sma = SMA(timestamp(report.start), datetime.datetime.now())
+        sma = SMA(past_month_range(report.start), report.range())
         map_data = sma.find_mapid_from_sensor(map_image, bounds)
         map_type = 'processed'
     elif NDFI.from_class(map_image):
@@ -102,14 +127,17 @@ def map_from_bbox(map_image, bbox):
         map_data = ndfi.find_mapid_from_sensor(map_image, bounds)
         map_type = 'analysis'
 
-    return jsonify({
-        'id': map_data.mapid,
-        'token': map_data.token,
-        'type': map_type,
-        'visibility': True,
-       'description': map_image,
-        'url': 'https://earthengine.googleapis.com/map/'+map_data.mapid+'/{Z}/{X}/{Y}?token='+map_data.token
-    })
+    if map_data == '':
+        return None
+    else:
+        return {
+            'id': map_data.get('mapid'),
+            'token': map_data.get('token'),
+            'type': map_type,
+            'visibility': True,
+            'description': map_image,
+            'url': 'https://earthengine.googleapis.com/map/'+map_data.get('mapid')+'/{Z}/{X}/{Y}?token='+map_data.get('token')
+        }
 
 def get_or_create_user():
     user = users.get_current_user()

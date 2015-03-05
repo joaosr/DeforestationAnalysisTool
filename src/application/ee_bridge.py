@@ -209,7 +209,9 @@ class EELandsat(object):
 
     @staticmethod
     def from_class(map_image):
-        if EELandsat.LANDSAT5 or EELandsat.LANDSAT7 or EELandsat.LANDSAT8 in map_image:
+        if (EELandsat.LANDSAT5 or EELandsat.LANDSAT7 or EELandsat.LANDSAT8) == map_image:
+            return True
+        elif (EELandsat.LANDSAT5 or EELandsat.LANDSAT7 or EELandsat.LANDSAT8) in map_image:
             return True
         else:
             return False
@@ -224,12 +226,13 @@ class EELandsat(object):
         elif EELandsat.LANDSAT8 in map_image:
             return ['B4', 'B3', 'B2']
 
-    def find_mapid_from_sensor(self, sensor, bound=None):
+    def find_mapid_from_sensor(self, map_image, bound=None):
         PREVIEW_GAIN = 500
-        map_image_bands = EELandsat.get_image_bands(sensor)
+
+        map_image_bands = EELandsat.get_image_bands(map_image)
 
 
-        map_collection = self.find_map_collection(sensor, bound)
+        map_collection = self.find_map_collection(map_image, bound)
 
         return _get_raw_mapid(map_collection.mosaic().getMapId({
             'bands': ','.join(map_image_bands),
@@ -265,7 +268,15 @@ class EELandsat(object):
 
         return thumbs_info
 
-    def find_map_image(self, sensor, bounds=None):
+    def find_map_image(self, map_image, bounds=None):
+        sensor = ''
+        if EELandsat.LANDSAT5 in map_image:
+            sensor = EELandsat.LANDSAT5
+        elif EELandsat.LANDSAT7 in map_image:
+            sensor = EELandsat.LANDSAT7
+        elif EELandsat.LANDSAT8 in map_image:
+            sensor = EELandsat.LANDSAT8
+
         return self.find_map_collection(sensor, bounds).mosaic()
 
     def find_map_collection(self, sensor, bounds=None):
@@ -285,7 +296,7 @@ class EELandsat(object):
 
     # TODO empty collections must be checked
     def _get_landsat_toa_with_bounds(self, sensor, bounds, version=-1):
-        bbox = ee.Geometry(ee.Geometry.Rectangle(bounds[0], bounds[1], bounds[2], bounds[3]))
+        bbox = ee.Geometry.Rectangle(float(bounds[0]), float(bounds[1]), float(bounds[2]), float(bounds[3]))
         #bbox = ee.Feature.Rectangle(*[float(i.strip()) for i in bounds.split(',')])
 
         collection = ee.ImageCollection.load(sensor, version)
@@ -332,6 +343,7 @@ class SMA(object):
         self.last_period = dict(start=last_period[0], end=last_period[1])
         self.work_period = dict(start=work_period[0], end=work_period[1])
 
+
     def _define_period(self, map_image):
 
         if 'T0' in map_image:
@@ -342,8 +354,9 @@ class SMA(object):
             self.end_time   = self.work_period['end']
 
 
-    def from_class(self, map_image):
-        if SMA.LANDSAT5_T0 or SMA.LANDSAT5_T1 or SMA.LANDSAT7_T0 or SMA.LANDSAT7_T1 or SMA.LANDSAT8_T0 or SMA.LANDSAT8_T1 or SMA.MODIS_T0 or SMA.MODIS_T1 in map_image:
+    @staticmethod
+    def from_class(map_image):
+        if (SMA.LANDSAT5_T0 or SMA.LANDSAT5_T1 or SMA.LANDSAT7_T0 or SMA.LANDSAT7_T1 or SMA.LANDSAT8_T0 or SMA.LANDSAT8_T1 or SMA.MODIS_T0 or SMA.MODIS_T1) in map_image:
             return True
         else:
             return False
@@ -367,7 +380,7 @@ class SMA(object):
     def find_map_unmixed(self, map_image, bounds=None, long_span=False):
         initial_map = ''
         sma_map     = ''
-        self._define_peridod(map_image)
+        self._define_period(map_image)
 
         if EELandsat.from_class(map_image):
             landsat     = EELandsat(self.start_time, self.end_time)
@@ -586,7 +599,7 @@ class NDFI(object):
     @staticmethod
     def from_class(map_image):
 
-        if NDFI.LANDSAT5_T0 or NDFI.LANDSAT5_T1 or NDFI.LANDSAT7_T0 or NDFI.LANDSAT7_T1 or NDFI.LANDSAT8_T0 or NDFI.LANDSAT8_T1 or NDFI.MODIS_T0 or NDFI.MODIS_T1 in map_image:
+        if (NDFI.LANDSAT5_T0 or NDFI.LANDSAT5_T1 or NDFI.LANDSAT7_T0 or NDFI.LANDSAT7_T1 or NDFI.LANDSAT8_T0 or NDFI.LANDSAT8_T1 or NDFI.MODIS_T0 or NDFI.MODIS_T1) in map_image:
             return True
         else:
             return False
@@ -1465,7 +1478,7 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
     nextYear = year
     nextMonth = str(int(month) + 1).zfill(2)
 
-    if month == 12:
+    if month == '12':
         nextYear = str(int(year) + 1)
         nextMonth = '01'
 
@@ -1681,7 +1694,6 @@ def _get_landsat_oito(start_time, end_time, version=-1):
     collection = ee.ImageCollection.load('LC8_L1T', version)
     collection = collection.filterDate(start_time, end_time)
     return collection.map(ee.Algorithms.LandsatTOA)
-
 
 
 def _get_modis_tile(horizontal, vertical):

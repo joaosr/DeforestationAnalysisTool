@@ -73,8 +73,8 @@ var NDFILayer = Backbone.View.extend({
               layer: this.layer
         });
 
-        console.log("MapId: "+this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('id')+', Token: '+
-                    this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('token'));
+       /* console.log("MapId: "+this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('id')+', Token: '+
+                    this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('token'));*/
 
         //Joao code
         this.map_layer_L5 = new LayerModel({
@@ -126,24 +126,34 @@ var NDFILayer = Backbone.View.extend({
     },
 
     change_map_auth: function(){
-        if(this.mapview.layers.get_by_name(this.map_layer.get('description')).get_enabled()){
+        var map_layer = this.mapview.layers.get_by_name(this.map_layer.get('description'));
+
+        if(map_layer){
+          if(map_layer.get_enabled()){
             //this.ndfimap.set({sensor: 'modis'});
             this.token = this.ndfimap.get('token');
             this.mapid = this.ndfimap.get('mapid');
+          }
         }
 
-        if(this.mapview.layers.get_by_name(this.map_layer_L5.get('description')).get_enabled()){
+        map_layer = this.mapview.layers.get_by_name(this.map_layer_L5.get('description'));
+        if(map_layer){
+          if(map_layer.get_enabled()){
             //this.ndfimap.set({sensor: 'landsat5'});
             this.token = this.ndfimap_L5.get('token');
             this.mapid = this.ndfimap_L5.get('mapid');
+           }
         }
 
-        if(this.mapview.layers.get_by_name(this.map_layer_L7.get('description')).get_enabled()){
+        map_layer = this.mapview.layers.get_by_name(this.map_layer_L7.get('description'));
+
+        if(map_layer){
+          if(map_layer.get_enabled()){
             //this.ndfimap.set({sensor: 'landsat5'});
             this.token = this.ndfimap_L7.get('token');
             this.mapid = this.ndfimap_L7.get('mapid');
+           }
         }
-
     },
 
     class_visibility: function(layer_id, enabled) {

@@ -1,6 +1,6 @@
 
 
-// google maps map
+    // google maps map
 var MapView = Backbone.View.extend({
     mapOptions: {
             zoom: 5,
@@ -132,6 +132,15 @@ var MapView = Backbone.View.extend({
             c.hide();
         }
     },
+    reload_layers: function(level, bound){
+        this.layers.url = 'map/level/'+level+'/'+bound+'/'
+        var that = this;
+        this.layers.fetch({
+            success: function(){
+                that.setting_layer_in_level(level);
+            }
+        });
+    },
     setting_layer_in_level: function(level){
         if(level == '0'){
             this.layers.update_visibility_with_type(false, 'processed');
@@ -185,18 +194,19 @@ var MapView = Backbone.View.extend({
     open_layer_editor: function(e) {
             if(e) e.preventDefault();
             if(this.layer_editor === undefined) {
+                //console.log(this.layer_editor);
                 this.layer_editor = new LayerEditor({
                     parent: this.el,
                     layers: this.layers
                 });
             }
             else{
-                this.layers_editor.layers = this.layers;
-                this.layers_editor.layers.each(function(m){
+              /*  this.layer_editor.layers = this.layers;
+                this.layer_editor.layers.each(function(m){
                     if(m.get('visibility') == false){
                         this.remove(m);
                     }
-                });
+                });*/
             }
 
 
@@ -209,6 +219,12 @@ var MapView = Backbone.View.extend({
                 if(this.layer_editor_base !== undefined && this.layer_editor_base.showing) {
                     this.open_google_maps_base_layer_editor();
                 }
+                this.layer_editor.layers = this.layers;
+                this.layer_editor.layers.each(function(m){
+                    if(m.get('visibility') == false){
+                        this.remove(m);
+                    }
+                });
                 var view_bkg = {'background-image': "url('/static/img/layer_editor_raster_selected.png')"};
                 this.$(".layer_raster").css(view_bkg);
                 this.$(".layer_google_maps").css(view_bkg);

@@ -141,7 +141,7 @@ var ImagePicker = Toolbar.extend({
         this.thumbsView.change_sensor(sensor);
     },
     visibility_change: function(e){
-        console.log(e.currentTarget);
+
         if(this.visibility){
           this.$("#picker_form").hide();
           //$(this.el).css("background", "");

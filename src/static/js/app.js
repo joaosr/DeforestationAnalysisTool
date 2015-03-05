@@ -560,7 +560,9 @@ $(function() {
         },
         change_grid_level: function(){
            var cell  = this.gridstack.current_cell;
+           var bound = this.gridstack.bound();
            var level = cell.get('z');
+           this.map.reload_layers(level, bound);
            if(level == '0'){
             // this.selection_toolbar.show();
             //  this.imagePicker.show();
@@ -646,7 +648,6 @@ $(function() {
             Backbone.history.start();
             window.loading.finished("Imazon: start");
             console.log(" === App started === ");
-            this.gridstack.bind('cell_click', this.change_grid_level());
 
 
         },
@@ -654,7 +655,7 @@ $(function() {
         to_cell:function (z, x, y) {
             this.overview.on_cell(x, y, z);
             this.gridstack.enter_cell(parseInt(x, 10), parseInt(y, 10), parseInt(z, 10));
-            this.change_grid_level();
+//            this.change_grid_level();
         },
 
         open_notes: function() {

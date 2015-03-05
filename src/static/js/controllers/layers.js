@@ -142,7 +142,12 @@ var LayerEditor = Backbone.View.extend({
 
     addLayers: function(layers) {
          this.el.find('ul').html('');
-         layers.raster_layers().each(this.addLayer);
+         var that = this;
+         layers.raster_layers().each(function(m){
+            if(m.get('visibility')){
+                that.addLayer(m);
+            }
+         });
     },
 
     show: function(pos, side) {

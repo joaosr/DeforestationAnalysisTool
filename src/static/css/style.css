@@ -514,7 +514,7 @@ header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
 #header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form {
   position: absolute;
   width: 700px;
-  height: 718px;
+  height: 618px;
   padding: 40px 30px 30px 30px;
   top: 60px;
   left: 0px;
@@ -522,7 +522,7 @@ header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
   background: rgba(22, 22, 23, 1);
   display: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span h3{
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span label{
 font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
 color: rgba(153, 153, 153, 0.9);
 text-shadow: #000000 0px 1px 0px;
@@ -553,7 +553,7 @@ text-shadow: #000000 0px 1px 0px;
     pointer-events: none;
 
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span input#submit{
+#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span #submit{
     float: right;
     margin: 0 13px 0 0;
     padding: 8px;

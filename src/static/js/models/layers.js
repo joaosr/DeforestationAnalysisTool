@@ -105,6 +105,10 @@ var LayerCollection = Backbone.Collection.extend({
         initialize: function()  {
 
         },
+        parse: function(result){
+            console.log(result.result);
+            return result.result;
+        },
         update_time_range: function(start, end){
             this.each(function(m){
                 if(m.get('type') === 'xyz'){
@@ -127,7 +131,7 @@ var LayerCollection = Backbone.Collection.extend({
         },
         update_visibility_with_type: function(visibility, type){
              this.each(function(m){
-                if(m.get('type') == type, m.get('visibility') != visibility){
+                if(m.get('type') == type && m.get('visibility') != visibility){
                     m.set('visibility', visibility);
                 }
              });
