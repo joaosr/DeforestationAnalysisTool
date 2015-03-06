@@ -184,9 +184,10 @@ class EELandsat(object):
     LANDSAT7 = 'L7_L1T_SR'
     LANDSAT8 = 'LC8_L1T'
 
-    def __init__(self, start, end):
+    def __init__(self, start, end, sensor=''):
         self.start = start
         self.end = end
+        self.sensor = sensor
 
     def list(self, bounds):
         """Returns a list of IDs of Landsat 7 images intersecting a given area.
@@ -211,33 +212,33 @@ class EELandsat(object):
     def from_class(map_image):
         if (EELandsat.LANDSAT5 or EELandsat.LANDSAT7 or EELandsat.LANDSAT8) == map_image:
             return True
-        elif (EELandsat.LANDSAT5 or EELandsat.LANDSAT7 or EELandsat.LANDSAT8) in map_image:
-            return True
         else:
             return False
 
-    @staticmethod
-    def get_image_bands(map_image):
+    def get_image_bands(self):
+        logging.info("=========>>>>> Sensor: "+self.sensor)
 
-        if EELandsat.LANDSAT5 in map_image:
+        if self.sensor == EELandsat.LANDSAT5:
             return ['B3', 'B2', 'B1']
-        elif EELandsat.LANDSAT7 in map_image:
+        elif self.sensor == EELandsat.LANDSAT7:
             return ['B3', 'B2', 'B1']
-        elif EELandsat.LANDSAT8 in map_image:
+        elif self.sensor == EELandsat.LANDSAT8:
             return ['B4', 'B3', 'B2']
 
-    def find_mapid_from_sensor(self, map_image, bound=None):
+    def find_mapid_from_sensor(self, bound=None):
         PREVIEW_GAIN = 500
 
-        map_image_bands = EELandsat.get_image_bands(map_image)
+        map_image_bands = self.get_image_bands()
 
+        image = self.find_map_image(bound)
 
-        map_collection = self.find_map_collection(map_image, bound)
-
-        return _get_raw_mapid(map_collection.mosaic().getMapId({
-            'bands': ','.join(map_image_bands),
-            'gain': PREVIEW_GAIN
-        }))
+        if image:
+           return _get_raw_mapid(image.getMapId({
+               'bands': ','.join(map_image_bands),
+               'gain': PREVIEW_GAIN
+            }))
+        else:
+           return _get_raw_mapid(None)
 
     def get_thumbs(self, map_image, bounds):
         thumbs_info = []
@@ -268,40 +269,29 @@ class EELandsat(object):
 
         return thumbs_info
 
-    def find_map_image(self, map_image, bounds=None):
-        sensor = ''
-        if EELandsat.LANDSAT5 in map_image:
-            sensor = EELandsat.LANDSAT5
-        elif EELandsat.LANDSAT7 in map_image:
-            sensor = EELandsat.LANDSAT7
-        elif EELandsat.LANDSAT8 in map_image:
-            sensor = EELandsat.LANDSAT8
+    def find_map_image(self, bounds=None):
 
-        return self.find_map_collection(sensor, bounds).mosaic()
+        image = self.find_map_collection(bounds)
 
-    def find_map_collection(self, sensor, bounds=None):
+        if image:
+           return self.find_map_collection(bounds).mosaic()
+        else:
+           return None
+
+    def find_map_collection(self, bounds=None, version=-1):
 
         if bounds:
-            return self._get_landsat_toa_with_bounds(sensor, bounds)
+            bbox = ee.Geometry.Rectangle(float(bounds[0]), float(bounds[1]), float(bounds[2]), float(bounds[3]))
+            collection = ee.ImageCollection.load(self.sensor, version)
+            collection = collection.filterBounds(bbox).filterDate(self.start, self.end)
         else:
-            return self._get_landsat_toa(sensor)
+            collection = ee.ImageCollection.load(self.sensor, version)
+            collection = collection.filterDate(self.start, self.end)
 
-    # TODO empty collections must be checked
-    def _get_landsat_toa(self, sensor, version=-1):
-
-        # Load a specific version of an image collection.
-        collection = ee.ImageCollection.load(sensor, version)
-        collection = collection.filterDate(self.start, self.end)
-        return collection.map(ee.Algorithms.LandsatTOA)
-
-    # TODO empty collections must be checked
-    def _get_landsat_toa_with_bounds(self, sensor, bounds, version=-1):
-        bbox = ee.Geometry.Rectangle(float(bounds[0]), float(bounds[1]), float(bounds[2]), float(bounds[3]))
-        #bbox = ee.Feature.Rectangle(*[float(i.strip()) for i in bounds.split(',')])
-
-        collection = ee.ImageCollection.load(sensor, version)
-        collection = collection.filterBounds(bbox).filterDate(self.start, self.end)
-        return collection.map(ee.Algorithms.LandsatTOA)
+        if len(collection.getInfo().get('features')) != 0:
+           return collection.map(ee.Algorithms.LandsatTOA)
+        else:
+           return None
 
 
     def mapid(self, start, end):
@@ -339,53 +329,61 @@ class SMA(object):
     MODIS_T0    = 'SMA T0 (MODIS)'
     MODIS_T1    = 'SMA T1 (MODIS)'
 
-    def __init__(self, work_period, last_period):
+    def __init__(self, work_period, last_period, map_image):
         self.last_period = dict(start=last_period[0], end=last_period[1])
         self.work_period = dict(start=work_period[0], end=work_period[1])
+        self.map_image   = map_image
+        self.name_sensor = re.findall(r'\((.*?)\)', map_image)[0]
 
-
-    def _define_period(self, map_image):
-
-        if 'T0' in map_image:
+        if 'T0' in self.map_image:
             self.start_time = self.last_period['start']
             self.end_time   = self.last_period['end']
-        elif 'T1' in map_image:
+        elif 'T1' in self.map_image:
             self.start_time = self.work_period['start']
             self.end_time   = self.work_period['end']
+
+        if EELandsat.from_class(self.name_sensor):
+            self.sensor = EELandsat(self.start_time, self.end_time, self.name_sensor)
+        else:
+            self.sensor = ''
 
 
     @staticmethod
     def from_class(map_image):
-        if (SMA.LANDSAT5_T0 or SMA.LANDSAT5_T1 or SMA.LANDSAT7_T0 or SMA.LANDSAT7_T1 or SMA.LANDSAT8_T0 or SMA.LANDSAT8_T1 or SMA.MODIS_T0 or SMA.MODIS_T1) in map_image:
+        if (SMA.LANDSAT5_T0 or SMA.LANDSAT5_T1 or SMA.LANDSAT7_T0 or SMA.LANDSAT7_T1 or SMA.LANDSAT8_T0 or SMA.LANDSAT8_T1 or SMA.MODIS_T0 or SMA.MODIS_T1) == map_image:
             return True
         else:
             return False
 
-    def find_mapid_from_sensor(self, map_image, bounds=None):
-        image = self.find_map_unmixed(map_image, bounds)
+    def find_mapid_from_sensor(self, bounds=None):
+        image = self.find_map_unmixed(bounds)
 
-        if EELandsat.from_class(map_image):
-            return _get_raw_mapid(image.getMapId({
-                 'bands': ','.join(EELandsat.get_image_bands(map_image)),
-                 'gain': 500
-            }))
+        if image:
+            if EELandsat.from_class(self.name_sensor):
+                return _get_raw_mapid(image.getMapId({
+                    'bands': ','.join(self.sensor.get_image_bands()),
+                    'gain': 500
+                }))
+            else:
+                return _get_raw_mapid(image.getMapId({
+                    'bands': 'gv,soil,npv',
+                    'gain': 256,
+                    'bias': 0.0,
+                    'gamma': 1.6
+                }))
         else:
-            return _get_raw_mapid(image.getMapId({
-                'bands': 'gv,soil,npv',
-                'gain': 256,
-                'bias': 0.0,
-                'gamma': 1.6
-            }))
+            return _get_raw_mapid(None)
 
-    def find_map_unmixed(self, map_image, bounds=None, long_span=False):
+    def find_map_unmixed(self, bounds=None, long_span=False):
         initial_map = ''
         sma_map     = ''
-        self._define_period(map_image)
 
-        if EELandsat.from_class(map_image):
-            landsat     = EELandsat(self.start_time, self.end_time)
-            initial_map = landsat.find_map_image(map_image, bounds)
-            sma_map     = self._unmixed_landsat(initial_map)
+        if EELandsat.from_class(self.name_sensor):
+            initial_map = self.sensor.find_map_image(bounds)
+            if initial_map:
+                sma_map     = self._unmixed_landsat(initial_map)
+            else:
+                return None
         else:
             sma_map = self._unmixed_modis(long_span)
 
@@ -1724,7 +1722,13 @@ def _get_modis_tile(horizontal, vertical):
 
 def _get_raw_mapid(mapid):
     """Strips any fields other than "mapid" and "token" from a MapId object."""
-    return {
-        'token': mapid['token'],
-        'mapid': mapid['mapid']
-    }
+    if mapid:
+        return {
+            'token': mapid['token'],
+            'mapid': mapid['mapid']
+        }
+    else:
+        return {
+            'token': '',
+            'mapid': ''
+        }

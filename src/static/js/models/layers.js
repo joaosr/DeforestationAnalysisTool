@@ -131,8 +131,8 @@ var LayerCollection = Backbone.Collection.extend({
         },
         update_visibility_with_type: function(visibility, type){
              this.each(function(m){
-                if(m.get('type') == type && m.get('visibility') != visibility){
-                    m.set('visibility', visibility);
+                if(m.get('type') == type && m.get_enabled != visibility){
+                    m.set_enabled(visibility);
                 }
              });
         },

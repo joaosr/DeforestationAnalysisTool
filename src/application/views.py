@@ -115,12 +115,12 @@ def map_from_bbox(map_image, bbox):
     map_type = ''
 
     if EELandsat.from_class(map_image):
-        landsat = EELandsat(timestamp(report.start), datetime.datetime.now())
-        map_data = landsat.find_mapid_from_sensor(map_image, bounds)
+        landsat = EELandsat(timestamp(report.start), datetime.datetime.now(), map_image)
+        map_data = landsat.find_mapid_from_sensor(bounds)
         map_type = 'base_map'
     elif SMA.from_class(map_image):
-        sma = SMA(past_month_range(report.start), report.range())
-        map_data = sma.find_mapid_from_sensor(map_image, bounds)
+        sma = SMA(past_month_range(report.start), report.range(), map_image)
+        map_data = sma.find_mapid_from_sensor(bounds)
         map_type = 'processed'
     elif NDFI.from_class(map_image):
         ndfi     = NDFI(past_month_range(report.start), report.range())
@@ -134,7 +134,6 @@ def map_from_bbox(map_image, bbox):
             'id': map_data.get('mapid'),
             'token': map_data.get('token'),
             'type': map_type,
-            'visibility': True,
             'description': map_image,
             'url': 'https://earthengine.googleapis.com/map/'+map_data.get('mapid')+'/{Z}/{X}/{Y}?token='+map_data.get('token')
         }

@@ -200,14 +200,6 @@ var MapView = Backbone.View.extend({
                     layers: this.layers
                 });
             }
-            else{
-              /*  this.layer_editor.layers = this.layers;
-                this.layer_editor.layers.each(function(m){
-                    if(m.get('visibility') == false){
-                        this.remove(m);
-                    }
-                });*/
-            }
 
 
             if(this.layer_editor.showing) {
@@ -221,7 +213,7 @@ var MapView = Backbone.View.extend({
                 }
                 this.layer_editor.layers = this.layers;
                 this.layer_editor.layers.each(function(m){
-                    if(m.get('visibility') == false){
+                    if(!m.get_enabled){
                         this.remove(m);
                     }
                 });

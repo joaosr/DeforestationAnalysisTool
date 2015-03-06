@@ -543,9 +543,6 @@ $(function() {
         select_mode: function() {
             this.map.hide_zoom_control();
             this.compare_view('one');
-            //this.selection_toolbar.show();
-            //this.imagePicker.show();
-            //this.downscalling.show();
             this.main_operations.show_all();
             this.polygon_tools.hide();
             this.ndfi_layer.hide();
@@ -565,7 +562,7 @@ $(function() {
            this.map.reload_layers(level, bound);
            if(level == '0'){
             // this.selection_toolbar.show();
-            //  this.imagePicker.show();
+            // this.imagePicker.show();
             // this.downscalling.show();
              this.main_operations.show_monthly_sad();
            }
