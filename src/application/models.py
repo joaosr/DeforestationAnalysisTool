@@ -91,7 +91,6 @@ class Report(db.Model):
         if r:
             return r[0]
         return None
-
     def cells_finished(self):
         return Cell.all().filter('report =', self).filter('done =', True).count()
 
@@ -134,12 +133,20 @@ class Report(db.Model):
 
     @staticmethod
     def add_report(start, end, assetid='null'):
-        start_date = datetime.strptime(start, "%d-%m-%Y").date()
-        end_date   = datetime.strptime(end, "%d-%m-%Y").date()
-        report = Report.all().filter('start', start_date).filter('end', end_date)
-        if report:
-            r = Report(start=start_date, end=end_date, assetid=assetid)
-            r.put()
+        logging.info(start+', '+end)
+        start_date = datetime.strptime(start, "%d/%b/%Y").date()
+        end_date   = datetime.strptime(end, "%d/%b/%Y").date()
+
+        q = Report.all().filter('start', start_date).filter('end', end_date)
+        r = q.fetch(1)
+        logging.info(r)
+        if len(r) > 0:
+           if r[0].finished:
+              r = Report(start=start_date, end=end_date, assetid=assetid)
+              r.put()
+              return 'New period of analyse saved!'
+           else:
+              return 'Last period not finalized!'
 
 
     def base_map(self):
@@ -409,7 +416,6 @@ class Cell(db.Model):
         #return [[[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]]
         return {"type":"Polygon", "coordinates": [[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]}
 
-
 class Area(db.Model):
     """ area selected by user """
 
@@ -456,7 +462,6 @@ class Area(db.Model):
     def delete(self):
         super(Area, self).delete()
         deferred.defer(self.delete_fusion_tables)
-
     @staticmethod
     def _get_ft_client():
         cl = FT(settings.FT_CONSUMER_KEY,
@@ -479,7 +484,6 @@ class Area(db.Model):
         cl = self._get_ft_client()
         table_id = cl.table_id(settings.FT_TABLE)
         cl.sql("delete from %s where rowid = '%s'" % (table_id, self.fusion_tables_id))
-
     def update_fusion_tables(self):
         """ update polygon in fusion tables. Do not call this method, use save method when change instance data """
         logging.info("updating fusion tables %s" % self.key())
@@ -570,7 +574,7 @@ FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
 
 class ImagePickerFT(db.Model):
     """ area selected by user """
-    #FT_TABLE_PICKER = '1VPNcpgPM8rPs8dQ6g-9Fmei9aJIydJAjZys3XuxN'
+    FT_TABLE_PICKER = '1VPNcpgPM8rPs8dQ6g-9Fmei9aJIydJAjZys3XuxN'
     #FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
 
     #DEGRADATION = 0

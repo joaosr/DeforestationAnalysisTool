@@ -183,6 +183,7 @@ class EELandsat(object):
     LANDSAT5 = 'L5_L1T_SR'
     LANDSAT7 = 'L7_L1T_SR'
     LANDSAT8 = 'LC8_L1T'
+    SENSORS  = [LANDSAT5, LANDSAT7, LANDSAT8]
 
     def __init__(self, start, end, sensor=''):
         self.start = start
@@ -210,20 +211,22 @@ class EELandsat(object):
 
     @staticmethod
     def from_class(map_image):
-        if (EELandsat.LANDSAT5 or EELandsat.LANDSAT7 or EELandsat.LANDSAT8) == map_image:
-            return True
-        else:
-            return False
+        for a in EELandsat.SENSORS:
+            if a == map_image:
+                return True
 
-    def get_image_bands(self):
-        logging.info("=========>>>>> Sensor: "+self.sensor)
+        return False
 
-        if self.sensor == EELandsat.LANDSAT5:
+    @staticmethod
+    def get_image_bands(map_image):
+        logging.info("=========>>>>> Sensor: "+map_image)
+
+        if map_image == EELandsat.LANDSAT5:
             return ['B3', 'B2', 'B1']
-        elif self.sensor == EELandsat.LANDSAT7:
+        elif map_image == EELandsat.LANDSAT7:
             return ['B3', 'B2', 'B1']
-        elif self.sensor == EELandsat.LANDSAT8:
-            return ['B4', 'B3', 'B2']
+        elif map_image == EELandsat.LANDSAT8:
+            return ['band_3', 'band_1', 'band_0']
 
     def find_mapid_from_sensor(self, bound=None):
         PREVIEW_GAIN = 500
@@ -274,7 +277,7 @@ class EELandsat(object):
         image = self.find_map_collection(bounds)
 
         if image:
-           return self.find_map_collection(bounds).mosaic()
+           return image.mosaic()
         else:
            return None
 
@@ -288,7 +291,11 @@ class EELandsat(object):
             collection = ee.ImageCollection.load(self.sensor, version)
             collection = collection.filterDate(self.start, self.end)
 
-        if len(collection.getInfo().get('features')) != 0:
+        collection_size = len(collection.getInfo().get('features'))
+
+        logging.info("==========>>> Collections: "+str(collection_size))
+
+        if collection_size != 0:
            return collection.map(ee.Algorithms.LandsatTOA)
         else:
            return None
@@ -328,6 +335,7 @@ class SMA(object):
     LANDSAT8_T1 = 'SMA T1 (LC8_L1T)'
     MODIS_T0    = 'SMA T0 (MODIS)'
     MODIS_T1    = 'SMA T1 (MODIS)'
+    SENSORS     = [LANDSAT5_T0, LANDSAT5_T1, LANDSAT7_T0, LANDSAT7_T1, LANDSAT8_T0, LANDSAT8_T1, MODIS_T0, MODIS_T1]
 
     def __init__(self, work_period, last_period, map_image):
         self.last_period = dict(start=last_period[0], end=last_period[1])
@@ -342,18 +350,13 @@ class SMA(object):
             self.start_time = self.work_period['start']
             self.end_time   = self.work_period['end']
 
-        if EELandsat.from_class(self.name_sensor):
-            self.sensor = EELandsat(self.start_time, self.end_time, self.name_sensor)
-        else:
-            self.sensor = ''
-
-
     @staticmethod
     def from_class(map_image):
-        if (SMA.LANDSAT5_T0 or SMA.LANDSAT5_T1 or SMA.LANDSAT7_T0 or SMA.LANDSAT7_T1 or SMA.LANDSAT8_T0 or SMA.LANDSAT8_T1 or SMA.MODIS_T0 or SMA.MODIS_T1) == map_image:
-            return True
-        else:
-            return False
+        for a in SMA.SENSORS:
+            if a == map_image:
+                return True
+
+        return False
 
     def find_mapid_from_sensor(self, bounds=None):
         image = self.find_map_unmixed(bounds)
@@ -361,7 +364,7 @@ class SMA(object):
         if image:
             if EELandsat.from_class(self.name_sensor):
                 return _get_raw_mapid(image.getMapId({
-                    'bands': ','.join(self.sensor.get_image_bands()),
+                    'bands': ','.join(EELandsat.get_image_bands(self.name_sensor)),
                     'gain': 500
                 }))
             else:
@@ -379,7 +382,8 @@ class SMA(object):
         sma_map     = ''
 
         if EELandsat.from_class(self.name_sensor):
-            initial_map = self.sensor.find_map_image(bounds)
+            sensor = EELandsat(self.start_time, self.end_time, self.name_sensor)
+            initial_map = sensor.find_map_image(bounds)
             if initial_map:
                 sma_map     = self._unmixed_landsat(initial_map)
             else:

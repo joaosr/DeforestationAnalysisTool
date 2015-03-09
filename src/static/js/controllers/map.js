@@ -212,9 +212,10 @@ var MapView = Backbone.View.extend({
                     this.open_google_maps_base_layer_editor();
                 }
                 this.layer_editor.layers = this.layers;
+                var that = this;
                 this.layer_editor.layers.each(function(m){
-                    if(!m.get_enabled){
-                        this.remove(m);
+                    if(!m.get('visibility')){
+                        that.layer_editor.layers.remove(m);
                     }
                 });
                 var view_bkg = {'background-image': "url('/static/img/layer_editor_raster_selected.png')"};
@@ -224,7 +225,12 @@ var MapView = Backbone.View.extend({
                 this.layer_editor.show(this.$('.layer_editor').position(), this.layer_dialog_pos);
             }
     },
-
+    show_sad_info: function(){
+        $("#map_info").show();
+    },
+    hide_sad_info: function(){
+        $("#map_info").hide();
+    },
     tile_info: function(info) {
         var nfo = this.$('.tiles_info');
         if(info.length > 0) {

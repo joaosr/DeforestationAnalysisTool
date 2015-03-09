@@ -107,22 +107,23 @@ def maps_level(level, bbox):
     return jsonify({'result': result})
 
 def map_from_bbox(map_image, bbox):
-    logging.info("==================> Map image: "+map_image)
-    logging.info("==================> BBOX: "+bbox)
     bounds = bbox.split(',')
     report = Report.current()
     map_data = ''
     map_type = ''
 
     if EELandsat.from_class(map_image):
+        logging.info("==================> Map image landsat: "+map_image)
         landsat = EELandsat(timestamp(report.start), datetime.datetime.now(), map_image)
         map_data = landsat.find_mapid_from_sensor(bounds)
         map_type = 'base_map'
     elif SMA.from_class(map_image):
+        logging.info("==================> Map image SMA: "+map_image)
         sma = SMA(past_month_range(report.start), report.range(), map_image)
         map_data = sma.find_mapid_from_sensor(bounds)
         map_type = 'processed'
     elif NDFI.from_class(map_image):
+        logging.info("==================> Map image NDFI: "+map_image)
         ndfi     = NDFI(past_month_range(report.start), report.range())
         map_data = ndfi.find_mapid_from_sensor(map_image, bounds)
         map_type = 'analysis'
@@ -135,6 +136,7 @@ def map_from_bbox(map_image, bbox):
             'token': map_data.get('token'),
             'type': map_type,
             'description': map_image,
+            'visibility': True,
             'url': 'https://earthengine.googleapis.com/map/'+map_data.get('mapid')+'/{Z}/{X}/{Y}?token='+map_data.get('token')
         }
 
@@ -260,17 +262,18 @@ import urllib2
 import urllib
 FT_TABLE_DOWNSCALLING = '17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 
-@app.route('/range_report', methods=['POST', 'GET'])
+@app.route('/range_report/', methods=['POST', 'GET'])
 def range_report():
     range_picker = request.form.get('range_picker')
     date_start = range_picker.split(' to ')[0]
     date_end   = range_picker.split(' to ')[1]
+    message = ''
     try:
-        Report.add_report(date_start, date_end)
+       message =  Report.add_report(date_start, date_end)
     except:
         return jsonify({'result': 'error'})
 
-    return jsonify({'result': 'sucess'})
+    return jsonify({'result': message})
 
 @app.route('/tiles_sensor/<sensor>/', methods=['POST', 'GET'])
 def tiles_sensor(sensor=None):

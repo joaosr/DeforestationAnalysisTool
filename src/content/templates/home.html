@@ -138,20 +138,29 @@
               select: 'geometry',
                  visibility: true,
            description: 'Brazil State Conservation Unit Public'
+            },
+            {
+              id: '6',
+              type: 'fusion_tables',
+              table: '2949980',
+              select: 'geometry',
+              visibility: true,
+              description: 'SAD Polygons'
             }
 
+
         ];
-      /*  {% for m in maps %}
+        {% for m in maps %}
            available_maps.splice(0, 0, {
               id: '{{m.data.mapid}}',
               token: '{{m.data.token}}',
               type: 'xyz',
-                  visibility: true,
-          description: '{{m.info}}',
+              visibility: true,
+              description: '{{m.info}}',
               url: 'https://earthengine.googleapis.com/map/{{m.data.mapid}}/{Z}/{X}/{Y}?token={{m.data.token}}'
         
             });
-        {% endfor %}*/
+        {% endfor %}
         // this layer must be the first
         available_maps.splice(0, 0,
             {
@@ -230,6 +239,12 @@
         {% include "_layout_1.html" %}
         {% include "_layout_half.html" %}
 
+        <div id="map_info">
+            <h3 id="base_name">Baseline: SAD_2014_11</h3>
+            </br>
+            <h3 id="base_period">Period: 01/Nov/2014 to 30/Nov/2014</h3>
+
+        </div>
         <div id="grid"></div>
 
         <div id="loading">

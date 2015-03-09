@@ -537,6 +537,7 @@ $(function() {
             var p = this.gridstack.current_cell.parent_cell();
             this.to_cell(p.get('z'), p.get('x'), p.get('y'));
             router.navigate('cell/' +  p.get('z') + "/" + p.get('x') + "/" + p.get('y'));
+            this.change_grid_level();
         },
 
         // entering on select_mode
@@ -565,14 +566,17 @@ $(function() {
             // this.imagePicker.show();
             // this.downscalling.show();
              this.main_operations.show_monthly_sad();
+             this.map.hide_sad_info();
            }
            else if(level == '1'){
               //this.selection_toolbar.hide();
               // this.downscalling.hide();
              this.main_operations.hide_monthly_sad();
+             this.map.show_sad_info();
            }
            else if(level == '2'){
              console.log('3º Nivel');
+             this.map.hide_sad_info();
            }
         },
 

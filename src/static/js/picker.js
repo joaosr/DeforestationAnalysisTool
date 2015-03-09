@@ -37,13 +37,13 @@ var ThumbsView = Backbone.View.extend({
        $(this.el).attr('disabled', false);
        this.collection.url = "picker/"+this.tilesView.tileId;
        var that = this;
-       window.loading_small.show();
+       window.loading_small.loading('loading image picker');
        this.collection.fetch({
            success: function(){
                that.render();
                $(that.el).imagepicker({show_label: true, limit: 7});
                console.log(that.collection);
-               window.loading_small.finished();
+               window.loading_small.finished('loading image picker');
            }
        });
     },

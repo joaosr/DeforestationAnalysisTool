@@ -70,8 +70,9 @@ var NDFILayer = Backbone.View.extend({
               id: 'NDFI',
               type: 'custom',
               description: 'NDFI analysis',
-              layer: this.layer
-        });
+               layer: this.layer,
+               visibility: true
+       });
 
        /* console.log("MapId: "+this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('id')+', Token: '+
                     this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('token'));*/
@@ -81,15 +82,17 @@ var NDFILayer = Backbone.View.extend({
               id: 'NDFI LANDSAT5',
               type: 'custom',
               description: 'NDFI (LANDSAT5) analysis',
-              layer: this.layer_L5
+              layer: this.layer_L5,
+              visibility: true
         });
 
         this.map_layer_L7 = new LayerModel({
               id: 'NDFI LANDSAT7',
               type: 'custom',
               description: 'NDFI (LANDSAT7) analysis',
-              layer: this.layer_L7
-        });
+              layer: this.layer_L7,
+              visibility: true
+       });
 
         this.sub_map_layer = [];
         this.add_class_control_layers();
@@ -130,7 +133,7 @@ var NDFILayer = Backbone.View.extend({
 
         if(map_layer){
           if(map_layer.get_enabled()){
-            //this.ndfimap.set({sensor: 'modis'});
+            this.ndfimap.set({sensor: 'modis'});
             this.token = this.ndfimap.get('token');
             this.mapid = this.ndfimap.get('mapid');
           }
@@ -139,7 +142,7 @@ var NDFILayer = Backbone.View.extend({
         map_layer = this.mapview.layers.get_by_name(this.map_layer_L5.get('description'));
         if(map_layer){
           if(map_layer.get_enabled()){
-            //this.ndfimap.set({sensor: 'landsat5'});
+            this.ndfimap.set({sensor: 'landsat5'});
             this.token = this.ndfimap_L5.get('token');
             this.mapid = this.ndfimap_L5.get('mapid');
            }
@@ -149,7 +152,7 @@ var NDFILayer = Backbone.View.extend({
 
         if(map_layer){
           if(map_layer.get_enabled()){
-            //this.ndfimap.set({sensor: 'landsat5'});
+            this.ndfimap.set({sensor: 'landsat5'});
             this.token = this.ndfimap_L7.get('token');
             this.mapid = this.ndfimap_L7.get('mapid');
            }

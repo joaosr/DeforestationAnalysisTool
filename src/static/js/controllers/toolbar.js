@@ -96,6 +96,9 @@ var RangeSlider = Backbone.View.extend({
 
 var ReportToolbar = Toolbar.extend({
     //el: $("#range_select"),
+    events: {
+        'click #submit_date_picker': 'send_date_report'
+    },
     initialize: function() {
        _.bindAll(this, 'update_range_date', 'render');
        this.report     = this.options.report;
@@ -114,6 +117,21 @@ var ReportToolbar = Toolbar.extend({
             format: 'DD/MMM/YYYY',
             separator: ' to ',
             showShortcuts: false}).bind('datepicker-change', this.update_range_date);
+    },
+    send_date_report: function(){
+        var date_picker = this.$("#range_picker").val();
+        console.log(date_picker);
+        var message = $.ajax({
+                              url: "/range_report/",
+                              type: 'POST',
+                              data: {range_picker: date_picker},
+                              dataType: 'json',
+                              async: false,
+                            }).responseText;
+
+        var s = jQuery.parseJSON(message);
+        alert(s.result);
+        console.log(s);
     },
     update_range_date: function(evt, obj){
         var dates = obj.value.split(' to ');
