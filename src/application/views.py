@@ -152,10 +152,14 @@ def get_or_create_user():
 def start():
     return redirect('/analysis')
 
+
 @app.route('/analysis')
 @login_required
 def home(cell_path=None):
     maps = memcache.get('default_maps')
+    logging.info('========= FT CLIENT =========')
+    ImagePickerFT._get_ft_client()
+
     if maps:
         maps = json.loads(maps)
     else:
@@ -164,15 +168,18 @@ def home(cell_path=None):
 
     # send only the active report
     reports = json.dumps([Report.current().as_dict()])
+    report_base = json.dumps([Report.current().previous().as_dict()])
     logging.info("Reports: "+str(reports))
     logging.info("Maps: "+str(maps))
     u = get_or_create_user()
     if not u:
         abort(403)
 
+
     logout_url = users.create_logout_url('/')
     return render_template('home.html',
             reports_json=reports,
+            report_base_json=report_base,
             user=u,
             maps=maps,
             polygons_table=settings.FT_TABLE_ID,
@@ -430,3 +437,32 @@ def picker(tile=None):
           return jsonify({'result': []})
           #result = {'thumbid': '', 'token': ''}
           #return render_template('picker.html', result=result)
+
+from oauth2client.client import OAuth2WebServerFlow
+
+@app.route('/callbackOauth2/', methods=['POST', 'GET'])
+def callbackOauth2():
+    client_id = '1020234688983-a45r3i5uvpber4t21cmlqh9mrl951p3v.apps.googleusercontent.com'
+    client_secret = 'o0p27QRNfMhCGYsIF3awrLuO'
+    redirect_uri = 'http://localhost:8080/callbackOauth2/'
+    scope = 'https://www.googleapis.com/auth/fusiontables'
+
+    flow = OAuth2WebServerFlow(client_id=client_id,
+                               client_secret=client_secret,
+                               scope=scope,
+                               redirect_uri=redirect_uri)
+
+    response = redirect(
+      '%s?client_id=%s&redirect_uri=%s&scope=%s&response_type=code' % \
+        ('https://accounts.google.com/o/oauth2/auth',
+             client_id,
+             redirect_uri,
+             scope)
+    )
+
+    response_flow = redirect(flow.step1_get_authorize_url())
+
+    logging.info("============ Request data =============")
+    logging.info(response.headers.items())
+    logging.info(response_flow.headers.items())
+    return jsonify({'result': 'success'})

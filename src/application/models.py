@@ -415,7 +415,6 @@ class Cell(db.Model):
         # spcify lon, lat
         #return [[[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]]
         return {"type":"Polygon", "coordinates": [[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]}
-
 class Area(db.Model):
     """ area selected by user """
 
@@ -566,11 +565,10 @@ class StatsStore(db.Model):
 class FustionTablesNames(db.Model):
     table_id = db.StringProperty()
     json = db.TextProperty()
-
     def as_dict(self):
         return json.loads(self.json)
 
-FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
+#FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
 
 class ImagePickerFT(db.Model):
     """ area selected by user """
@@ -633,17 +631,17 @@ class ImagePickerFT(db.Model):
         else:
             deferred.defer(self.update_fusion_tables)
         return ret
-
     @staticmethod
     def _get_ft_client():
         cl = FT(settings.FT_CONSUMER_KEY,
                 settings.FT_CONSUMER_SECRET,
                 settings.FT_TOKEN,
                 settings.FT_SECRET)
-        table_id = cl.table_id(FT_TABLE_PICKER)
+        table_id = cl.get_public_table_id(ImagePickerFT.FT_TABLE_PICKER)
         logging.info(table_id)
         if not table_id:
-            raise Exception("Create areas %s first" % FT_TABLE_PICKER)
+            #raise Exception("Create image_picker %s first" % ImagePickerFT.FT_TABLE_PICKER)
+            logging.info("Create image_picker %s first" % ImagePickerFT.FT_TABLE_PICKER)
         return cl
 
     #def fusion_tables_type(self):
@@ -681,8 +679,8 @@ class ImagePickerFT(db.Model):
 
     def create_fusion_tables(self):
         logging.info("saving to fusion tables report %s" % self.key())
-        cl = self._get_ft_client()
-        table_id = cl.table_id(self.FT_TABLE)
+#        cl = self._get_ft_client()
+#        table_id = cl.table_id(self.FT_TABLE)
         #geo_kml = path_to_kml(json.loads(self.geo))
         rowid = cl.sql("insert into %s ('cell', 'year', 'month', 'day', 'compounddate') VALUES ('%s', %d, %d, '%s', '%s')" % (table_id, self.cell, self.year, self.month, self.day, self.compounddate))
         #self.fusion_tables_id = int(rowid.split('\n')[1])

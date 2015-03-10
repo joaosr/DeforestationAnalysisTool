@@ -104,6 +104,7 @@
     function initial_data() {
         window.app.user = new User({{user.as_json()|safe}});
         window.app.reports.reset({{reports_json|safe}});
+        window.app.report_base.reset({{report_base_json|safe}});
         console.log("=== Initial data loaded == ");
         var available_maps = [
             {

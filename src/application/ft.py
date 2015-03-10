@@ -27,6 +27,15 @@ class FT(object):
             return FT.table_cache[table_name]
         return None
 
+    def get_public_table_id(self, table_id):
+        #client = ftclient.OAuthEasyFTClient()
+        r = self.client.query("select * from "+table_id)
+        if r:
+            logging.info(r)
+        else:
+            logging.error("get_tables: no response")
+
+
     def get_tables(self):
         """ return a list with (table_id, table_name) """
         r = self.client.query("show tables")

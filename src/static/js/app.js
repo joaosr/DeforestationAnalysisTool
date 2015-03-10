@@ -127,6 +127,7 @@ $(function() {
 
             window.loading.loading("Imazon:initialize");
             this.reports = new ReportCollection();
+            this.report_base = new ReportCollection();
             this.compare_layout = null;
 
             this.map = new MapView({el: this.$("#main_map")});
@@ -492,6 +493,7 @@ $(function() {
             //this.imagePicker.hide();
             //this.downscalling.hide();
             this.main_operations.hide_all();
+            this.map.hide_sad_info();
             this.polygon_tools.show();
             this.ndfi_layer.show();
             this.map.show_zoom_control();
@@ -560,7 +562,7 @@ $(function() {
            var cell  = this.gridstack.current_cell;
            var bound = this.gridstack.bound();
            var level = cell.get('z');
-           this.map.reload_layers(level, bound);
+           //this.map.reload_layers(level, bound);
            if(level == '0'){
             // this.selection_toolbar.show();
             // this.imagePicker.show();
@@ -572,11 +574,11 @@ $(function() {
               //this.selection_toolbar.hide();
               // this.downscalling.hide();
              this.main_operations.hide_monthly_sad();
-             this.map.show_sad_info();
+             this.map.show_sad_info(this.report_base.models[0]);
            }
            else if(level == '2'){
+
              console.log('3º Nivel');
-             this.map.hide_sad_info();
            }
         },
 
@@ -609,6 +611,9 @@ $(function() {
             router.bind('route:cell', this.to_cell);
             this.gridstack.bind('select_mode', this.select_mode);
             this.gridstack.bind('work_mode', this.work_mode);
+//            this.gridstack.bind('select_mode', this.change_grid_level());
+//            this.gridstack.bind('work_mode', this.change_grid_level();
+
 
             // init interface elements
             this.init_ui();

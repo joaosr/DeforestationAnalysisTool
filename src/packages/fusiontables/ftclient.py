@@ -9,17 +9,17 @@ Issue requests to Fusion Tables.
 
 __author__ = 'kbrisbin@google.com (Kathryn Brisbin)'
 
-import urllib2, urllib
+import urllib2, urllib, httplib2
 try:
   import oauth2
   import authorization.oauth
+  from authorization.clientlogin import ClientLogin
 except: pass
 
 
 class FTClient():
   def _get(self, query): pass
   def _post(self, query): pass
-
   def query(self, query, request_type=None):
     """ Issue a query to the Fusion Tables API and return the result. """
 
@@ -65,13 +65,19 @@ class ClientLoginFTClient(FTClient):
     return serv_resp.read()
 
 
+class OAuthEasyFTClient(FTClient):
+
+    def __init__(self):
+        token = ClientLogin().authorize('1020234688983-a45r3i5uvpber4t21cmlqh9mrl951p3v@developer.gserviceaccount.com', 'o0p27QRNfMhCGYsIF3awrLuO')
+
+
 class OAuthFTClient(FTClient):
 
   def __init__(self, consumer_key, consumer_secret, oauth_token, oauth_token_secret):
     self.consumer_key = consumer_key
     self.consumer_secret = consumer_secret
     self.token = oauth2.Token(oauth_token, oauth_token_secret)
-    
+
     self.scope = "https://www.google.com/fusiontables/api/query"
 
 
@@ -82,7 +88,6 @@ class OAuthFTClient(FTClient):
                          method="GET")
     return content
 
-
   def _post(self, query):
     consumer = oauth2.Consumer(self.consumer_key, self.consumer_secret)
     client = oauth2.Client(consumer, self.token)
@@ -92,4 +97,4 @@ class OAuthFTClient(FTClient):
     return content
 
 
-  
+

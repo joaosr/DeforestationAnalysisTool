@@ -225,7 +225,16 @@ var MapView = Backbone.View.extend({
                 this.layer_editor.show(this.$('.layer_editor').position(), this.layer_dialog_pos);
             }
     },
-    show_sad_info: function(){
+    show_sad_info: function(report){
+        $("#map_info h3#base_name").html('');
+        $("#map_info h3#base_period").html('');
+        $("#map_info h3#base_name").html('Baseline: '+report.get('assetid'));
+        var start = moment(new Date(report.get('str'))).format("DD/MMM/YYYY");
+        var end   = moment(new Date(report.get('str_end'))).format("DD/MMM/YYYY");
+
+        $("#map_info h3#base_period").html('Period: '+start+' to '+end);
+
+
         $("#map_info").show();
     },
     hide_sad_info: function(){

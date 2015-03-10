@@ -23,5 +23,6 @@ class ClientLogin():
 
     auth_resp_dict = dict(
         x.split('=') for x in auth_resp_body.split('\n') if x)
+
     return auth_resp_dict['Auth']
 
