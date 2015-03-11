@@ -41,7 +41,7 @@ var ThumbsView = Backbone.View.extend({
        this.collection.fetch({
            success: function(){
                that.render();
-               $(that.el).imagepicker({show_label: true, limit: 7});
+               $(that.el).imagepicker({show_label: true});
                console.log(that.collection);
                window.loading_small.finished('loading image picker');
            }

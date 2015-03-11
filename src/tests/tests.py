@@ -111,7 +111,7 @@ class PolygonApi(unittest.TestCase, GoogleAuthMixin):
         self.assertEquals('test', cell.get_parent().last_change_by.nickname())
         self.assertEquals('test', cell.get_parent().get_parent().last_change_by.nickname())
         self.assertNotEquals(0, cell.get_parent().last_change_on)
-        
+
 
     def test_create(self):
         rv = self.app.post('/api/v0/report/' + str(self.r.key()) + '/cell/2_0_0/polygon',
@@ -200,8 +200,8 @@ class CellApi(unittest.TestCase, GoogleAuthMixin):
     def test_update_cell_2_0_1(self):
         rv = self.app.put('/api/v0/report/' + str(self.r.key())+'/cell/2_1_3',
             data='''{
-                "ndfi_low": 0.0, "ndfi_high": 1.0, "done": false, 
-                "compare_view": "", 
+                "ndfi_low": 0.0, "ndfi_high": 1.0, "done": false,
+                "compare_view": "",
                 "map_one_layer_status": "",
                 "map_two_layer_status": "",
                 "map_three_layer_status": "",

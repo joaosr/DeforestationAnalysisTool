@@ -17,7 +17,8 @@ class FT(object):
     table_cache = {}
 
     def __init__(self, consumer_key, consumer_secret, token, secret):
-        self.client = ftclient.OAuthFTClient(consumer_key, consumer_secret, token, secret)
+        self.client    = ftclient.OAuthFTClient(consumer_key, consumer_secret, token, secret)
+        self.client_v2 = ftclient.OAuthFTClientV2(consumer_key, consumer_secret, token, secret)
 
     def table_id(self, table_name):
         if table_name in FT.table_cache:

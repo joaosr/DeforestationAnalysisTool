@@ -55,7 +55,7 @@ class OAuth():
                                                            oauth_token,
                                                            OAUTH_SETTINGS['scope'],
                                                            domain)
-      
+
     return auth_url, oauth_token, oauth_token_secret
 
 
@@ -70,11 +70,11 @@ class OAuth():
     client = oauth2.Client(consumer, token)
 
     resp, content = client.request(OAUTH_SETTINGS['access_token_url'], "POST")
-    
+
     urlparts = content.split("&")
     oauth_token = urllib.unquote_plus(urlparts[0].split("=")[1])
     oauth_token_secret = urllib.unquote_plus(urlparts[1].split("=")[1])
-    
+
     return oauth_token, oauth_token_secret
 
 

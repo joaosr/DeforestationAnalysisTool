@@ -147,7 +147,8 @@ var ReportToolbar = Toolbar.extend({
 var ImagePicker = Toolbar.extend({
     //el: $("#image_picker"),
     events: {
-        'click #picker_select' : 'visibility_change'
+        'click #picker_select' : 'visibility_change',
+        'click #submit': 'send_images'
     },
     initialize: function(){
         _.bindAll(this, 'visibility_change');
@@ -157,6 +158,22 @@ var ImagePicker = Toolbar.extend({
     },
     change_sensor: function(sensor){
         this.thumbsView.change_sensor(sensor);
+    },
+    send_images: function(){
+        var thumb = this.$("#thumb").val();
+        var tile = this.$("#tile").val();
+        console.log(thumb);
+        var message = $.ajax({
+                              url: "/picker/",
+                              type: 'POST',
+                              data: {thumb: thumb, tile: tile},
+                              dataType: 'json',
+                              async: false,
+                            }).responseText;
+
+        var s = jQuery.parseJSON(message);
+        alert(s.result);
+        console.log(s);
     },
     visibility_change: function(e){
 

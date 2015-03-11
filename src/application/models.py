@@ -415,6 +415,7 @@ class Cell(db.Model):
         # spcify lon, lat
         #return [[[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]]
         return {"type":"Polygon", "coordinates": [[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]}
+
 class Area(db.Model):
     """ area selected by user """
 
@@ -570,30 +571,20 @@ class FustionTablesNames(db.Model):
 
 #FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
 
-class ImagePickerFT(db.Model):
-    """ area selected by user """
-    FT_TABLE_PICKER = '1VPNcpgPM8rPs8dQ6g-9Fmei9aJIydJAjZys3XuxN'
-    #FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
+import urllib2, urllib
+from google.appengine.api import urlfetch
 
-    #DEGRADATION = 0
-    #DEFORESTATION = 1
-
-    #geo = db.TextProperty(required=True)
-    #added_by = db.UserProperty()
-    #added_on = db.DateTimeProperty(auto_now_add=True)
-    #type = db.IntegerProperty(required=True)
-    #fusion_tables_id = db.IntegerProperty()
-    #cell = db.ReferenceProperty(Cell)
+class ImagePicker(db.Model):
+    """ images selected by user """
 
     added_on = db.DateTimeProperty(auto_now_add=True)
     added_by = db.UserProperty()
-    fusion_tables_id = db.IntegerProperty()
 
     cell = db.TextProperty(required=True)
     year = db.TextProperty(required=True)
     month = db.TextProperty(required=True)
     day = db.TextProperty(required=True)
-    #location = db.TextProperty(required=True)
+    location = db.TextProperty(required=True)
     compounddate = db.TextProperty(required=True)
 
     def as_dict(self):
@@ -607,84 +598,32 @@ class ImagePickerFT(db.Model):
                 'year': self.year,
                 'month': self.month,
                 'day': self.day,
-                'Location': self.location,
+                'Location': json.loads(self.location),
                 'compounddate': self.compounddate,
                 'fusion_tables_id': self.fusion_tables_id,
                 'added_on': timestamp(self.added_on),
                 'added_by': str(self.added_by.nickname())
         }
 
+
+
     def as_json(self):
         return json.dumps(self.as_dict())
 
+
+
     def save(self):
-        """ wrapper for put makes compatible with django"""
         exists = True
+
         try:
             self.key()
         except db.NotSavedError:
             exists = False
+
         ret = self.put()
         # call defer AFTER saving instance
         if not exists:
-            deferred.defer(self.create_fusion_tables)
+          return ret
         else:
-            deferred.defer(self.update_fusion_tables)
-        return ret
-    @staticmethod
-    def _get_ft_client():
-        cl = FT(settings.FT_CONSUMER_KEY,
-                settings.FT_CONSUMER_SECRET,
-                settings.FT_TOKEN,
-                settings.FT_SECRET)
-        table_id = cl.get_public_table_id(ImagePickerFT.FT_TABLE_PICKER)
-        logging.info(table_id)
-        if not table_id:
-            #raise Exception("Create image_picker %s first" % ImagePickerFT.FT_TABLE_PICKER)
-            logging.info("Create image_picker %s first" % ImagePickerFT.FT_TABLE_PICKER)
-        return cl
-
-    #def fusion_tables_type(self):
-    #    """ custom type id for FT """
-    #    if self.type == self.DEGRADATION:
-    #        return 8
-    #    return 7
-
-    #def delete_fusion_tables(self):
-    #    """ delete area from fusion tables. Do not use this method directly, call delete method"""
-    #    cl = self._get_ft_client()
-    #    table_id = cl.table_id(settings.FT_TABLE)
-    #    cl.sql("delete from %s where rowid = '%s'" % (table_id, self.fusion_tables_id))
-
-    #def update_fusion_tables(self):
-    #    """ update polygon in fusion tables. Do not call this method, use save method when change instance data """
-    #    logging.info("updating fusion tables %s" % self.key())
-    #    cl = self._get_ft_client()
-    #    table_id = cl.table_id(settings.FT_TABLE)
-    #    geo_kml = path_to_kml(json.loads(self.geo))
-    #    cl.sql("update  %s set geo = '%s', type = '%s' where rowid = '%s'" % (table_id, geo_kml, self.fusion_tables_type(), self.fusion_tables_id))
-
-    def select_fusion_tables_row(self):
-        cl = self._get_ft_client()
-        table_id = cl.table_id(FT_TABLE_PICKER)
-        logging.info(type(cl.sql("select from %s where cell = %s" % (table_id, self.cell))))
-
-    def update_fusion_tables(self):
-        """ update polygon in fusion tables. Do not call this method, use save method when change instance data """
-        logging.info("updating fusion tables %s" % self.key())
-        cl = self._get_ft_client()
-        table_id = cl.table_id(self.FT_TABLE)
-        #geo_kml = path_to_kml(json.loads(self.geo))
-        cl.sql("update  %s set day = '%s' where rowid = '%s'" % (table_id, self.fusion_tables_day, self.fusion_tables_id))
-
-    def create_fusion_tables(self):
-        logging.info("saving to fusion tables report %s" % self.key())
-#        cl = self._get_ft_client()
-#        table_id = cl.table_id(self.FT_TABLE)
-        #geo_kml = path_to_kml(json.loads(self.geo))
-        rowid = cl.sql("insert into %s ('cell', 'year', 'month', 'day', 'compounddate') VALUES ('%s', %d, %d, '%s', '%s')" % (table_id, self.cell, self.year, self.month, self.day, self.compounddate))
-        #self.fusion_tables_id = int(rowid.split('\n')[1])
-        #rowid = cl.sql("update %s set rowid_copy = '%s' where rowid = '%s'" % (table_id, self.fusion_tables_id, self.fusion_tables_id))
-        #self.put()
-
+          return 'Could not save imagens!'
 

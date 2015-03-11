@@ -1513,8 +1513,18 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
 
     return result_final
 
+def get_modis_location(cell):
+    inclusions_filter = ee.Filter.eq('cell', cell);
 
+    MODIS_INCLUSIONS_TABLE_TEST = "ft:1zqKClXoaHjUovWSydYDfOvwsrLVw-aNU4rh3wLc"
 
+    inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE_TEST)
+
+    inclusions = inclusions.filter(inclusions_filter).first()
+
+    location = inclusions.getInfo()['geometry']['coordinates']
+
+    return str(location)
 
 
 

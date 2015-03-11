@@ -37,7 +37,7 @@ def oauth_example(key, secret):
   print client.query("SELECT * FROM 316962")
 
 if __name__ == "__main__":
-  FT_CONSUMER_KEY = '1020234688983-a45r3i5uvpber4t21cmlqh9mrl951p3v.apps.googleusercontent.com'
-  FT_CONSUMER_SECRET = 'o0p27QRNfMhCGYsIF3awrLuO'
+  FT_CONSUMER_KEY = 'javisantana.com'
+  FT_CONSUMER_SECRET = '9vJ0i9kf5WNey20D41CIF0YB'
   oauth_example(FT_CONSUMER_KEY, FT_CONSUMER_SECRET)
 

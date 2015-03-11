@@ -27,12 +27,12 @@ from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
 #from forms import ExampleForm
-from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list
+from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location
 
 from app import app
 
-from models import Report, User, Error, ImagePickerFT
-from google.appengine.api import memcache
+from models import Report, User, Error, ImagePicker
+from google.appengine.api import memcache, users
 #from google.appengine.ext.db import Key
 
 from application import settings
@@ -157,8 +157,6 @@ def start():
 @login_required
 def home(cell_path=None):
     maps = memcache.get('default_maps')
-    logging.info('========= FT CLIENT =========')
-    ImagePickerFT._get_ft_client()
 
     if maps:
         maps = json.loads(maps)
@@ -206,6 +204,7 @@ def vis():
 @app.route('/login')
 def login():
     return render_template('login.html')
+
 
 @app.route('/error_track',  methods=['GET', 'POST'])
 def error_track():
@@ -346,7 +345,7 @@ def downscalling(tile=None):
 
 
 
-@app.route('/picker', methods=['POST', 'GET'])
+@app.route('/picker/', methods=['POST', 'GET'])
 @app.route('/picker/<tile>/')
 def picker(tile=None):
     """
@@ -380,14 +379,16 @@ def picker(tile=None):
        day          = ','.join(days)
        compounddate = year + month
 
-       logging.info('Cell: '+cell+', Year: '+year+', Month: '+month+', Day: '+day+', Compounddate: '+compounddate)
-       imagePickerFT = ImagePickerFT(cell=cell, year=year, month=month, day=day, compounddate=compounddate)
-       imagePickerFT.select_fusion_tables_row()
+       location = get_modis_location(cell)
+
+       logging.info('Cell: '+cell+', Year: '+year+', Month: '+month+', Day: '+day+', Location: '+location+', Compounddate: '+compounddate)
+       imagePicker = ImagePicker(added_by= users.get_current_user(), cell=cell,  year=year, month=month, day=day, location=location, compounddate=compounddate)
+       return imagePicker.save()
 
 
        #logging.info("hello" + str(request.form.keys()))
        #logging.info("json"  + str(json.dumps(request.form.keys())))
-
+       """
        reports = Report.current().as_dict()
        date = time.gmtime(reports['start'] / 1000)
 
@@ -419,7 +420,7 @@ def picker(tile=None):
        #added_on = ""
 
        #return request.form['check-2013-01-01']
-       return request.data
+       return request.datai"""
 
     else:
        #cell = request.args.get('cell', '')
@@ -438,7 +439,16 @@ def picker(tile=None):
           #result = {'thumbid': '', 'token': ''}
           #return render_template('picker.html', result=result)
 
-from oauth2client.client import OAuth2WebServerFlow
+from google.appengine.api import urlfetch
+@app.route('/new_access_fusion_tables/', methods=['POST', 'GET'])
+def new_access_fusion_tables():
+    url_pattern = 'https://accounts.google.com/o/oauth2/auth'
+    client_id = '1020234688983-a45r3i5uvpber4t21cmlqh9mrl951p3v.apps.googleusercontent.com'
+    redirect_uri = 'http://localhost:8080/callbackOauth2/'
+    scope = 'https://www.googleapis.com/auth/fusiontables'
+    url = '%s?client_id=%s&redirect_uri=%s&scope=%s&response_type=code' % (url_pattern, client_id, redirect_uri, scope)
+
+    return redirect(url)
 
 @app.route('/callbackOauth2/', methods=['POST', 'GET'])
 def callbackOauth2():
@@ -446,23 +456,44 @@ def callbackOauth2():
     client_secret = 'o0p27QRNfMhCGYsIF3awrLuO'
     redirect_uri = 'http://localhost:8080/callbackOauth2/'
     scope = 'https://www.googleapis.com/auth/fusiontables'
+    auth_code = request.args.get('code')
 
-    flow = OAuth2WebServerFlow(client_id=client_id,
-                               client_secret=client_secret,
-                               scope=scope,
-                               redirect_uri=redirect_uri)
+    data= urllib.urlencode({
+         'code': auth_code,
+         'client_id': client_id,
+         'client_secret': client_secret,
+         'redirect_uri': redirect_uri,
+         'grant_type': 'authorization_code'
+       })
 
-    response = redirect(
-      '%s?client_id=%s&redirect_uri=%s&scope=%s&response_type=code' % \
-        ('https://accounts.google.com/o/oauth2/auth',
-             client_id,
-             redirect_uri,
-             scope)
-    )
+    req = urllib2.Request(
+       url='https://accounts.google.com/o/oauth2/token',
+       data=data)
 
-    response_flow = redirect(flow.step1_get_authorize_url())
+    request_open = urllib2.urlopen(req)
+    response = request_open.read()
+    tokens = json.loads(response)
 
     logging.info("============ Request data =============")
-    logging.info(response.headers.items())
-    logging.info(response_flow.headers.items())
+    logging.info(tokens)
+
+    access_token = tokens['access_token']
+    refresh_token = ''
+    try:
+      refresh_token = tokens['refresh_token']
+    except:
+      pass
+
+    req = urllib2.Request(
+      url='https://www.googleapis.com/fusiontables/v2/query?%s' % \
+         (urllib.urlencode({'access_token': access_token,#access_token,
+                            'sql': "SELECT * FROM 1VPNcpgPM8rPs8dQ6g-9Fmei9aJIydJAjZys3XuxN WHERE cell = '%s' AND year = '%s' AND month = '%s'" % ('h11v10', '2012', '12')})))
+
+    request_open = urllib2.urlopen(req)
+    response = request_open.read()
+    result   = json.loads(response)
+
+    logging.info("============ Request data =============")
+    logging.info(tokens)
+    logging.info(result)
     return jsonify({'result': 'success'})

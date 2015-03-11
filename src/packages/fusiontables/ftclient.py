@@ -9,11 +9,10 @@ Issue requests to Fusion Tables.
 
 __author__ = 'kbrisbin@google.com (Kathryn Brisbin)'
 
-import urllib2, urllib, httplib2
+import urllib2, urllib
 try:
   import oauth2
-  import authorization.oauth
-  from authorization.clientlogin import ClientLogin
+
 except: pass
 
 
@@ -64,11 +63,6 @@ class ClientLoginFTClient(FTClient):
     serv_resp = urllib2.urlopen(serv_req)
     return serv_resp.read()
 
-
-class OAuthEasyFTClient(FTClient):
-
-    def __init__(self):
-        token = ClientLogin().authorize('1020234688983-a45r3i5uvpber4t21cmlqh9mrl951p3v@developer.gserviceaccount.com', 'o0p27QRNfMhCGYsIF3awrLuO')
 
 
 class OAuthFTClient(FTClient):
