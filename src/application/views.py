@@ -361,14 +361,14 @@ def picker(tile=None):
     """
 
     if request.method == 'POST':
-       logging.info(request.form.getlist('thumb'))
+       logging.info(request.form.get('thumb'))
 
        cell   = request.form.get('tile')
        p      = re.compile('\d+')
        p      = p.findall(cell)
        cell   = 'h' + p[0] + 'v' + p[1]
 
-       thumbs = request.form.getlist('thumb')
+       thumbs = request.form.get('thumb').split(',')
        days   = []
        day, month, year = ['', '', '']
 

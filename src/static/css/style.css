@@ -449,7 +449,8 @@ article .example .field {
 }
 #header #tools #monthly_sad #monthly_sad_select{
  text-decoration: none;
-   
+ float: right;
+ margin-left: 10px;
 }
 #header #tools #monthly_sad #monthly_sad_select h3{
   font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
@@ -665,6 +666,8 @@ text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #baseline #baseline_select{
  text-decoration: none;
+ float: right;
+ margin-left: 10px;
 }
 #header #tools #baseline #baseline_select h3{
   font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
@@ -795,6 +798,8 @@ text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #time_series #time_series_select{
     text-decoration: none;
+    float: right;
+    margin-left: 10px;
 }
 #header #tools #time_series #time_series_select  h3{
   font: bold 15px "Helvetica Neue", Arial, Sans-Serif;

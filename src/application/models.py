@@ -623,7 +623,7 @@ class ImagePicker(db.Model):
         ret = self.put()
         # call defer AFTER saving instance
         if not exists:
-          return ret
+          return 'Images saved'
         else:
-          return 'Could not save imagens!'
+          return 'Could not save imagens.'
 

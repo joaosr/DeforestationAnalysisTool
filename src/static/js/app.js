@@ -661,7 +661,6 @@ $(function() {
         to_cell:function (z, x, y) {
             this.overview.on_cell(x, y, z);
             this.gridstack.enter_cell(parseInt(x, 10), parseInt(y, 10), parseInt(z, 10));
-//            this.change_grid_level();
         },
 
         open_notes: function() {

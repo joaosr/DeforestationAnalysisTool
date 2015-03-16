@@ -166,9 +166,9 @@ var ImagePicker = Toolbar.extend({
         var message = $.ajax({
                               url: "/picker/",
                               type: 'POST',
-                              data: {thumb: thumb, tile: tile},
+                              data: {thumb: thumb.join(), tile: tile},
                               dataType: 'json',
-                              async: false,
+                              async: false
                             }).responseText;
 
         var s = jQuery.parseJSON(message);
@@ -225,7 +225,8 @@ var DownScalling = Toolbar.extend({
 var MonthlySAD = Toolbar.extend({
     el: $("#monthly_sad"),
     events: {
-        'click #monthly_sad_select': 'visibility_change'
+        'click #monthly_sad_select': 'visibility_change',
+        'click #sad_check': 'selected'
     },
     initialize: function(){
         _.bindAll(this, 'visibility_change', 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'hide_down_scalling', 'show_down_scalling');
@@ -238,6 +239,7 @@ var MonthlySAD = Toolbar.extend({
         this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.down_scalling = new DownScalling({callerView: this});
         this.visibility = false;
+        this.selected = false;
     },
     setting_report_data: function(){
         var date    = new Date();
@@ -268,6 +270,14 @@ var MonthlySAD = Toolbar.extend({
             this.report.set('str_end', new_end);
         }
 
+    },
+    selected: function(){
+      this.selected = document.getElementById('sad_check').checked;
+      this.callerView.callback_selected(this);
+    },
+    disable: function(){
+        this.selected = false;
+        document.getElementById('sad_check').checked = false;
     },
     callback: function(view){
         if(view === this.report_tool_bar && this.report_tool_bar.visibility){
@@ -334,7 +344,8 @@ var MonthlySAD = Toolbar.extend({
 var Baseline = Toolbar.extend({
     el: $("#baseline"),
     events:{
-        'click #baseline_select': 'visibility_change'
+        'click #baseline_select': 'visibility_change',
+        'click #baseline_check':  'selected'
     },
     initialize: function(){
         _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change');
@@ -344,6 +355,7 @@ var Baseline = Toolbar.extend({
         this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, callerView: this});
         this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.visibility = false;
+        this.selected = false;
     },
     setting_report_data: function(){
         var date    = new Date();
@@ -357,7 +369,15 @@ var Baseline = Toolbar.extend({
         this.report.set('str_end', new_end);
 
     },
-   callback: function(view){
+    selected: function(){
+        this.selected = document.getElementById('baseline_check').checked;
+        this.callerView.callback_selected(this);
+    },
+    disable: function(){
+        this.selected = false;
+        document.getElementById('baseline_check').checked = false;
+    },
+    callback: function(view){
         if(view === this.report_tool_bar && this.report_tool_bar.visibility){
             this.hide_image_picker();
         }
@@ -406,12 +426,22 @@ var Baseline = Toolbar.extend({
 var TimeSeries = Toolbar.extend({
     el: $("#time_series"),
      events:{
-        'click #time_series_select': 'visibility_change'
+        'click #time_series_select': 'visibility_change',
+        'click #time_series_check': 'selected'
     },
     initialize: function(){
         _.bindAll(this, 'visibility_change');
         this.callerView = this.options.callerView;
         this.visibility = false;
+        this.selected = false;
+    },
+    selected: function(){
+        this.selected = document.getElementById('time_series_check').checked;
+        this.callerView.callback_selected(this);
+    },
+    disable: function(){
+        this.selected = false;
+        document.getElementById('time_series_check').checked = false;
     },
     visibility_change: function(){
         if(this.visibility){
@@ -435,7 +465,25 @@ var MainOperations = Backbone.View.extend({
         this.monthly_sad = new MonthlySAD({report: this.options.report, callerView: this});
         this.baseline    = new Baseline({report: this.options.report, callerView: this});
         this.time_series = new TimeSeries({callerView: this});
-
+        this.operation_selected = false;
+    },
+    callback_selected: function(view){
+        this.operation_selected = true;
+        if(view === this.monthly_sad && this.monthly_sad.selected){
+            this.baseline.disable();
+            this.time_series.disable();
+        }
+        else if(view === this.baseline && this.baseline.selected){
+            this.monthly_sad.disable();
+            this.time_series.disable();
+        }
+        else if(view === this.time_series && this.time_series.selected){
+            this.monthly_sad.disable();
+            this.baseline.disable();
+        }
+        else{
+            this.operation_selected = false;
+        }
     },
     callback: function(view){
         if(view === this.monthly_sad && this.monthly_sad.visibility){
