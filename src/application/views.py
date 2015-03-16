@@ -381,9 +381,10 @@ def picker(tile=None):
 
        location = get_modis_location(cell)
 
-       logging.info('Cell: '+cell+', Year: '+year+', Month: '+month+', Day: '+day+', Location: '+location+', Compounddate: '+compounddate)
-       imagePicker = ImagePicker(added_by= users.get_current_user(), cell=cell,  year=year, month=month, day=day, location=location, compounddate=compounddate)
-       return imagePicker.save()
+       report = Report.current()
+
+       imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=str(day), location=location, compounddate=str(compounddate))
+       return jsonify({'result': imagePicker.save()})
 
 
        #logging.info("hello" + str(request.form.keys()))

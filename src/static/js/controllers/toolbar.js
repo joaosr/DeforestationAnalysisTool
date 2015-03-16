@@ -152,7 +152,7 @@ var ImagePicker = Toolbar.extend({
     },
     initialize: function(){
         _.bindAll(this, 'visibility_change');
-        this.thumbsView = new ThumbsView();
+        this.thumbsView = new ThumbsView({el: this.$("#thumb"), tile_el: this.$("#tile")});
         this.callerView = this.options.callerView;
         this.visibility = false;
     },
@@ -460,12 +460,20 @@ var TimeSeries = Toolbar.extend({
 });
 
 var MainOperations = Backbone.View.extend({
+    el: $("#tools"),
+    events:{
+        'click #hide_message_tools': 'hide_message_tools'
+    },
     initialize: function(){
-        _.bindAll(this, 'hide_monthly_sad', 'show_monthly_sad', 'hide_baseline', 'show_baseline', 'hide_time_series', 'show_time_series', 'hide_all', 'show_all','callback');
+        _.bindAll(this, 'hide_message_tools', 'hide_monthly_sad', 'show_monthly_sad', 'hide_baseline', 'show_baseline', 'hide_time_series', 'show_time_series', 'hide_all', 'show_all','callback');
         this.monthly_sad = new MonthlySAD({report: this.options.report, callerView: this});
         this.baseline    = new Baseline({report: this.options.report, callerView: this});
         this.time_series = new TimeSeries({callerView: this});
         this.operation_selected = false;
+        this.MESSAGE_ALERT = 1;
+        this.MESSAGE_ERROR = 2;
+        this.MESSAGE_SUCCESS = 3;
+
     },
     callback_selected: function(view){
         this.operation_selected = true;
@@ -539,7 +547,29 @@ var MainOperations = Backbone.View.extend({
         this.monthly_sad.show();
         this.baseline.show();
         this.time_series.show();
+    },
+    show_messagem_tools: function(text, type){
+        var background = '';
+
+        if(type === this.MESSAGE_SUCCESS){
+              background = 'rgba(98, 193, 84, 0.8)';
+        }else if(type === this.MESSAGE_ALERT){
+            background = 'rgba(277, 72, 45, 0.8)';
+        }else if(type === this.MESSAGE_ERROR){
+            background === 'rgba(277, 72, 45, 0.8)';
+        }
+
+        this.$("#message_tools").css({background: background});
+        this.$("#hide_message_tools").css({background: background})
+        this.$("#messege_tools").show();
+
+    },
+    hide_message_tools: function(e){
+        console.log("Aqui");
+        this.$("#message_tools").hide();
+        $(e.target).hide();
     }
+
 });
 
 var ButtonGroup = Backbone.View.extend({

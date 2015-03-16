@@ -545,6 +545,7 @@ $(function() {
         // entering on select_mode
         select_mode: function() {
             this.map.hide_zoom_control();
+            this.map.show_sad_info(this.report_base.models[0]);
             this.compare_view('one');
             this.main_operations.show_all();
             this.polygon_tools.hide();
@@ -567,14 +568,13 @@ $(function() {
             // this.selection_toolbar.show();
             // this.imagePicker.show();
             // this.downscalling.show();
-             this.main_operations.show_monthly_sad();
+
              this.map.hide_sad_info();
            }
            else if(level == '1'){
               //this.selection_toolbar.hide();
               // this.downscalling.hide();
              this.main_operations.hide_monthly_sad();
-             this.map.show_sad_info(this.report_base.models[0]);
            }
            else if(level == '2'){
 
@@ -582,6 +582,9 @@ $(function() {
            }
         },
 
+        show_messagem: function(){
+
+        },
         // this function is called when map is loaded
         // and all stuff can start to work.
         // do *NOT* perform any operation over map before this function
@@ -604,9 +607,14 @@ $(function() {
 
             // bindings
             this.gridstack.grid.bind('enter_cell', function(cell) {
-                self.change_grid_level();
-                self.overview.on_cell(cell.get('x'), cell.get('y'), cell.get('z'));
-                router.navigate('cell/' +  cell.get('z') + "/" + cell.get('x') + "/" + cell.get('y'));
+                if(cell.get('z') == '1' && !self.main_operations.operation_selected){
+                    alert("One operation must be selected in Toolbar");
+                }else{
+                    self.change_grid_level();
+                    self.gridstack.grid.trigger('cell_click', cell);
+                    self.overview.on_cell(cell.get('x'), cell.get('y'), cell.get('z'));
+                    router.navigate('cell/' +  cell.get('z') + "/" + cell.get('x') + "/" + cell.get('y'));
+                }
             });
             router.bind('route:cell', this.to_cell);
             this.gridstack.bind('select_mode', this.select_mode);

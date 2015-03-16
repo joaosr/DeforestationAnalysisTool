@@ -571,21 +571,19 @@ class FustionTablesNames(db.Model):
 
 #FT_TABLE_PICKER = 'Merged and Exported SAD inclusions - Testes Image Picker'
 
-import urllib2, urllib
-from google.appengine.api import urlfetch
 
 class ImagePicker(db.Model):
     """ images selected by user """
 
     added_on = db.DateTimeProperty(auto_now_add=True)
     added_by = db.UserProperty()
-
-    cell = db.TextProperty(required=True)
-    year = db.TextProperty(required=True)
-    month = db.TextProperty(required=True)
-    day = db.TextProperty(required=True)
+    report = db.ReferenceProperty(Report)
+    cell = db.StringProperty(required=True)
+    year = db.StringProperty(required=True)
+    month = db.StringProperty(required=True)
+    day = db.StringProperty(required=True)
     location = db.TextProperty(required=True)
-    compounddate = db.TextProperty(required=True)
+    compounddate = db.StringProperty(required=True)
 
     def as_dict(self):
         return {
@@ -613,17 +611,19 @@ class ImagePicker(db.Model):
 
 
     def save(self):
-        exists = True
+        q = ImagePicker.all().filter('compounddate =', self.compounddate).filter('cell =', self.cell)
+        r = q.fetch(1)
 
         try:
-            self.key()
-        except db.NotSavedError:
-            exists = False
+            if r:
+               r[0].day = self.day
+               logging.info(self.compounddate+' <<<<<=====>>>>> '+self.cell)
+               r[0].put()
+            else:
+               self.put()
 
-        ret = self.put()
-        # call defer AFTER saving instance
-        if not exists:
-          return 'Images saved'
-        else:
-          return 'Could not save imagens.'
+            return 'Images saved.'
+        except:
+            return 'Could not save imagens.'
+
 

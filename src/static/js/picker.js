@@ -30,7 +30,7 @@ var ThumbsView = Backbone.View.extend({
         console.log("Aqui");
         this.collection = new Thumbs();
         this.collection.bind('reset', this.addAll());
-        this.tilesView = new TilesView({el: $("#picker_form #tile"), sensor: 'modis', callerView: this});
+        this.tilesView = new TilesView({el: this.options.tile_el, sensor: 'modis', callerView: this});
     },
     callback: function(){
        $(this.el).empty();
