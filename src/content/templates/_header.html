@@ -134,16 +134,15 @@
                 <span id="downscalling" unselectable="on">
                         <a class="button" href="#" id="scalling_select">Donwscalling</a>
                         <div id="scalling_form">
-                            <form id="form" name="form" method="post" action="{{ url_for('downscalling') }}">
-                                           <span>
-                                                <h3>Tiles:</h3>
-                                                <select id="tile" name="tile" class="tile" >
-                                                    <option value="" >Select</option>
-                                                </select>
-                                            </span>
-                                            <span>
-                                                    <input type="submit" name="submit" id="submit" value="Save in Fusion Tables">                                           
-                                            </span>
+                                <span>
+                                      <h3>Tiles:</h3>
+                                      <select id="tile" name="tile" class="tile" >
+                                             <option value="" >Select</option>
+                                      </select>
+                                </span>
+                                <span>
+                                     <input type="submit" name="submit" id="submit" value="Save in Fusion Tables">                                           
+                                </span>
 
                                 <table style="width:100%">
                                     <tr>
@@ -189,11 +188,8 @@
                 <input type="checkbox" id="baseline_check"><a class="button" href="#" id="baseline_select"> <h3>Baseline</h3></a>
                 <div id="baseline_content">
                     <span id="range_select">
-                        <form id="form" name="form" method="post" action="{{ url_for('range_report') }}">
                              <p>Range analyzed: <input type="text" id="range_picker" name="range_picker" size="25"></p>
                              <span><input id="submit_date_picker" type="submit" value="ok"></span>
-                        </form>
-
                     </span> <!-- range_select -->
 
                     <span id="image_picker">

@@ -112,6 +112,7 @@ var ReportToolbar = Toolbar.extend({
 
        this.$("#range_picker").attr("value", this.start_date+' to '+this.end_date).html();
        this.visibility_picker_range = false;
+       this.url_send = this.options.url_send;
 
        this.$("#range_picker").dateRangePicker({
             format: 'DD/MMM/YYYY',
@@ -122,7 +123,7 @@ var ReportToolbar = Toolbar.extend({
         var date_picker = this.$("#range_picker").val();
         console.log(date_picker);
         var message = $.ajax({
-                              url: "/range_report/",
+                              url: this.url_send,
                               type: 'POST',
                               data: {range_picker: date_picker},
                               dataType: 'json',
@@ -193,7 +194,8 @@ var ImagePicker = Toolbar.extend({
 var DownScalling = Toolbar.extend({
     el: $("#downscalling"),
     events: {
-        'click #scalling_select': 'visibility_change'
+        'click #scalling_select': 'visibility_change',
+        'click #submit':          'send_downscalling'
     },
     initialize: function(){
         _.bindAll(this, 'visibility_change', 'hide_form');
@@ -201,6 +203,45 @@ var DownScalling = Toolbar.extend({
         this.callerView = this.options.callerView;
         this.downScalling = new SelectParameters({collection: parameters});
         this.visibility = false;
+    },
+     send_downscalling: function(){
+        var sill3 = this.$("#sill3").val();
+        var range3 = this.$("#range3").val();
+        var nugget3 = this.$("#nugget3").val();
+
+        var sill4 = this.$("#sill4").val();
+        var range4 = this.$("#range4").val();
+        var nugget4 = this.$("#nugget4").val();
+
+        var sill6 = this.$("#sill6").val();
+        var range6 = this.$("#range6").val();
+        var nugget6 = this.$("#nugget6").val();
+
+        var sill7 = this.$("#sill7").val();
+        var range7 = this.$("#range7").val();
+        var nugget7 = this.$("#nugget7").val();
+
+        var tile = this.$("#tile").val();
+        var compounddate = this.callerView.compounddate();
+
+        console.log(thumb);
+        var message = $.ajax({
+                              url: "/downscalling/",
+                              type: 'POST',
+                              data: {
+                                  tile: tile, compounddate: compounddate,
+                                  sill3: sill3, range3: range3, nugget3: nugget3,
+                                  sill4: sill4, range4: range4, nugget4: nugget4,
+                                  sill6: sill6, range6: range6, nugget6: nugget6,
+                                  sill7: sill7, range7: range7, nugget7: nugget7,
+                            },
+                              dataType: 'json',
+                              async: false
+                            }).responseText;
+
+        var s = jQuery.parseJSON(message);
+        alert(s.result);
+        console.log(s);
     },
     hide_form: function(){
         $("#scalling_form").hide();
@@ -235,11 +276,15 @@ var MonthlySAD = Toolbar.extend({
         console.log("==== setting_report_data ====");
 
         this.setting_report_data();
-        this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, callerView: this});
+        this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, url_send: '/range_report/', callerView: this});
         this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.down_scalling = new DownScalling({callerView: this});
         this.visibility = false;
         this.selected = false;
+    },
+    compounddate: function(){
+        var date = moment(new Date(this.report.escape('str'))).format('YYYYMM');
+        return date;
     },
     setting_report_data: function(){
         var date    = new Date();
@@ -352,7 +397,7 @@ var Baseline = Toolbar.extend({
         this.callerView = this.options.callerView;
         this.report = this.options.report
 //        this.setting_report_data();
-        this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, callerView: this});
+        this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, url_send: '/baseline_report/', callerView: this});
         this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.visibility = false;
         this.selected = false;

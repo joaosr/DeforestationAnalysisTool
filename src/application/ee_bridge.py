@@ -1513,6 +1513,55 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
 
     return result_final
 
+def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
+    ENDMEMBERS = [[ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], # GV
+                  [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], # NPV
+                  [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], # Soil
+                  [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]]; # Cloud
+
+    cloudThresh = [10, 5] # % 0-100 byte
+    bufferSize  = 10
+
+    start_date = '2005-06-01'
+    end_date = '2005-07-31'
+
+    landsat = EELandsat(start_date, end_date, sensor)
+
+    bbox = [-74.0, -18.0, -44.0, 5.0]
+
+    image = landsat.find_map_image(bbox)
+
+    unmixed = image.select([0,1,2,3,4,5]).unmix(ENDMEMBERS).max(0).multiply(100).byte()
+
+    cloudMask1 = unmixed.select(3).gte(cloudThresh[0])
+    isCloud    = cloudMask1.eq(1)
+    baseline1 = cloudMask1.mask(isCloud)
+
+    kernel = ee.Kernel.circle(bufferSize, 'pixels')
+
+    buffered = cloudMask1.convolve(kernel)
+    buffered = (buffered.add(cloudMask1)).gt(0)
+
+    cloudMask2 = buffered.eq(1).And(unmixed.select([3]).gte(cloudThresh[1]))
+    isCloud = cloudMask2.eq(1)
+    baseline2 = cloudMask2.mask(isCloud)
+
+    baseline2_features = cloudMask2.getMapId()
+
+    assetid = "{'mapid': "+baseline2_features['mapid']+", 'token': "+baseline2_features['token']+"}"
+
+    r = Report.all().filter('start =',  start_date).filter('end =', end_date)
+    r = q.fetch(1)
+    if r:
+       r[0].assetid = assetid
+       r.put()
+       return 'Baseline updated.'
+    else:
+       r = Report(start=start_date, end=end_date, assetid=assetid)
+       r.put()
+       return 'Baseline created.'
+
+
 def get_modis_location(cell):
     inclusions_filter = ee.Filter.eq('cell', cell);
 

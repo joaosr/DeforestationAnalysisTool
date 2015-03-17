@@ -627,3 +627,59 @@ class ImagePicker(db.Model):
             return 'Could not save imagens.'
 
 
+
+class Downscalling(db.Model):
+    """ images selected by user """
+
+    added_on     = db.DateTimeProperty(auto_now_add=True)
+    added_by     = db.UserProperty()
+    report       = db.ReferenceProperty(Report)
+    cell         = db.StringProperty(required=True)
+    region       = db.TextProperty(required=True)
+    compounddate = db.StringProperty(required=True)
+    band         = db.IntegerProperty(required=True)
+    model        = db.StringProperty(required=True)
+    sill         = db.IntegerProperty(required=True)
+    range        = db.IntegerProperty(required=True)
+    nugget       = db.IntegerProperty(required=True)
+
+    def as_dict(self):
+        return {
+                'id': str(self.key()),
+                'key': str(self.key()),
+                'cell': self.cell,
+                'region': json.loads(self.region),
+                'compounddate': self.compounddate,
+                'band': self.band,
+                'model': self.model,
+                'sill': self.sill,
+                'range': self.range,
+                'nugget': self.nugget,
+                'added_on': timestamp(self.added_on),
+                'added_by': str(self.added_by.nickname())
+        }
+
+
+
+    def as_json(self):
+        return json.dumps(self.as_dict())
+
+
+
+    def save(self):
+        q = Downscalling.all().filter('compounddate =', self.compounddate).filter('cell =', self.cell).filter('band =', self.band)
+        r = q.fetch(1)
+
+        try:
+            if r:
+               r[0].sill   = self.sill
+               r[0].range  = self.range
+               r[0].nugget = self.nugget
+               r[0].put()
+            else:
+               self.put()
+
+            return 'Values saved.'
+        except:
+            return 'Could not save values.'
+

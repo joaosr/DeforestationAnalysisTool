@@ -27,11 +27,11 @@ from application.time_utils import timestamp, past_month_range
 
 from decorators import login_required, admin_required
 #from forms import ExampleForm
-from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location
+from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location, create_baseline
 
 from app import app
 
-from models import Report, User, Error, ImagePicker
+from models import Report, User, Error, ImagePicker, Downscalling
 from google.appengine.api import memcache, users
 #from google.appengine.ext.db import Key
 
@@ -264,8 +264,6 @@ def warmup():
     """
     return ''
 import re
-import urllib2
-import urllib
 FT_TABLE_DOWNSCALLING = '17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 
 @app.route('/range_report/', methods=['POST', 'GET'])
@@ -304,10 +302,9 @@ def tiles_sensor(sensor=None):
 
 import ee
 
-@app.route('/downscalling', methods=['POST', 'GET'])
+@app.route('/downscalling/', methods=['POST', 'GET'])
 @app.route('/downscalling/<tile>/')
 def downscalling(tile=None):
-    result = []
 
     if request.method == 'POST':
        range3 = request.form.get('range3')
@@ -324,7 +321,77 @@ def downscalling(tile=None):
        nugget4 = request.form.get('nugget4')
        nugget6 = request.form.get('nugget6')
        nugget7 = request.form.get('nugget7')
+
+       cell = request.form.get('tile')
+       cell = cell.upper()
+
+       location = get_modis_location(cell.lower())
+
+       compounddate = request.form.get('compounddate')
+
+       report = Report.current()
+
+       model = 'exponential'
+
+       downscalling3 = Downscalling(report=report,
+                                 added_by= users.get_current_user(),
+                                 cell=str(cell),
+                                 region=location,
+                                 compounddate=str(compounddate),
+                                 band=3,
+                                 model=model,
+                                 sill=long(sill3),
+                                 range=long(range3),
+                                 nugget=long(nugget3)
+                                 )
+       message1 = downscalling3.save()
+
+       downscalling4 = Downscalling(report=report,
+                                 added_by= users.get_current_user(),
+                                 cell=str(cell),
+                                 region=location,
+                                 compounddate=str(compounddate),
+                                 band=4,
+                                 model=model,
+                                 sill=long(sill4),
+                                 range=long(range4),
+                                 nugget=long(nugget4)
+                                 )
+       message2 = downscalling4.save()
+
+       downscalling6 = Downscalling(report=report,
+                                 added_by= users.get_current_user(),
+                                 cell=str(cell),
+                                 region=location,
+                                 compounddate=str(compounddate),
+                                 band=6,
+                                 model=model,
+                                 sill=long(sill6),
+                                 range=long(range6),
+                                 nugget=long(nugget6)
+                                 )
+       message3 = downscalling6.save()
+
+       downscalling7 = Downscalling(report=report,
+                                 added_by= users.get_current_user(),
+                                 cell=str(cell),
+                                 region=location,
+                                 compounddate=str(compounddate),
+                                 band=7,
+                                 model=model,
+                                 sill=long(sill7),
+                                 range=long(range7),
+                                 nugget=long(nugget7)
+                                 )
+       message4 = downscalling7.save()
+
+       if message1 == message2 == message3 == message4:
+           return jsonify({'result': message1})
+       else:
+           return jsonify({'result': 'Could not save values.'})
+
     else:
+        result = []
         if tile:
             filter_fc = ee.Filter.eq('Cell', tile.upper())
             fc        = ee.FeatureCollection('ft:17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo').filter(filter_fc)
@@ -386,43 +453,6 @@ def picker(tile=None):
        imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=str(day), location=location, compounddate=str(compounddate))
        return jsonify({'result': imagePicker.save()})
 
-
-       #logging.info("hello" + str(request.form.keys()))
-       #logging.info("json"  + str(json.dumps(request.form.keys())))
-       """
-       reports = Report.current().as_dict()
-       date = time.gmtime(reports['start'] / 1000)
-
-       #rowid = ""
-       cell = request.args.get('cell','')
-       logging.info("cell: " + str(cell))
-
-       selected_days = request.form.keys()
-       #logging.info("days: " + str(selected_days))
-       selected_days.sort()
-       #logging.info("days: " + str(selected_days))
-       selected_days = selected_days[:-1]
-       #logging.info("days: " + str(selected_days))
-       day = ""
-       for selected_day in selected_days:
-          day += selected_day[14:].lstrip('0') + ","
-          logging.info("day: " + str(day))
-       #logging.info("days: " + str(day))
-       day = day[:-1]
-       #logging.info("day: " + str(day))
-
-       year = time.strftime("%Y", date)
-       logging.info("year: " + str(year))
-       month = int(time.strftime("%m", date))
-       #logging.info("month: " + str(month))
-       #Location = ""
-       compounddate = str(year) + str(month).zfill(2)
-       #logging.info("compounddate: " + str(compounddate))
-       #added_on = ""
-
-       #return request.form['check-2013-01-01']
-       return request.datai"""
-
     else:
        #cell = request.args.get('cell', '')
        reports = Report.current().as_dict()
@@ -437,64 +467,15 @@ def picker(tile=None):
           return jsonify({'result': results})
        else:
           return jsonify({'result': []})
-          #result = {'thumbid': '', 'token': ''}
-          #return render_template('picker.html', result=result)
 
-from google.appengine.api import urlfetch
-@app.route('/new_access_fusion_tables/', methods=['POST', 'GET'])
-def new_access_fusion_tables():
-    url_pattern = 'https://accounts.google.com/o/oauth2/auth'
-    client_id = '1020234688983-a45r3i5uvpber4t21cmlqh9mrl951p3v.apps.googleusercontent.com'
-    redirect_uri = 'http://localhost:8080/callbackOauth2/'
-    scope = 'https://www.googleapis.com/auth/fusiontables'
-    url = '%s?client_id=%s&redirect_uri=%s&scope=%s&response_type=code' % (url_pattern, client_id, redirect_uri, scope)
 
-    return redirect(url)
+@app.route('/baseline_report/', methods=['POST', 'GET'])
+def baseline_report():
 
-@app.route('/callbackOauth2/', methods=['POST', 'GET'])
-def callbackOauth2():
-    client_id = '1020234688983-a45r3i5uvpber4t21cmlqh9mrl951p3v.apps.googleusercontent.com'
-    client_secret = 'o0p27QRNfMhCGYsIF3awrLuO'
-    redirect_uri = 'http://localhost:8080/callbackOauth2/'
-    scope = 'https://www.googleapis.com/auth/fusiontables'
-    auth_code = request.args.get('code')
+    if request.method == 'POST':
+        date_period = request.form.get('range_picker').split(' to ')
+        result      = create_baseline(date_period[0], date_period[1], EELandsat.LANDSAT5)
+        return jsonify({'result': result})
+    else:
+        return jsonify({'result': 'Other method'})
 
-    data= urllib.urlencode({
-         'code': auth_code,
-         'client_id': client_id,
-         'client_secret': client_secret,
-         'redirect_uri': redirect_uri,
-         'grant_type': 'authorization_code'
-       })
-
-    req = urllib2.Request(
-       url='https://accounts.google.com/o/oauth2/token',
-       data=data)
-
-    request_open = urllib2.urlopen(req)
-    response = request_open.read()
-    tokens = json.loads(response)
-
-    logging.info("============ Request data =============")
-    logging.info(tokens)
-
-    access_token = tokens['access_token']
-    refresh_token = ''
-    try:
-      refresh_token = tokens['refresh_token']
-    except:
-      pass
-
-    req = urllib2.Request(
-      url='https://www.googleapis.com/fusiontables/v2/query?%s' % \
-         (urllib.urlencode({'access_token': access_token,#access_token,
-                            'sql': "SELECT * FROM 1VPNcpgPM8rPs8dQ6g-9Fmei9aJIydJAjZys3XuxN WHERE cell = '%s' AND year = '%s' AND month = '%s'" % ('h11v10', '2012', '12')})))
-
-    request_open = urllib2.urlopen(req)
-    response = request_open.read()
-    result   = json.loads(response)
-
-    logging.info("============ Request data =============")
-    logging.info(tokens)
-    logging.info(result)
-    return jsonify({'result': 'success'})
