@@ -1520,9 +1520,6 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
                   [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], # Soil
                   [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]]; # Cloud
 
-    cloudThresh = [10, 5] # % 0-100 byte
-    bufferSize  = 10
-
     start_date = '2005-06-01'
     end_date = '2005-07-31'
 
@@ -1533,7 +1530,7 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     image = landsat.find_map_image(bbox)
 
     ## SMA ===========================================================================
-    unmixed = image.select([0,1,2,3,4,5]).unmix(ENDMEMBERS).max(0).multiply(100).byte()
+    unmixed = image.select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
 
     ## NDFI calc =====================================================================
     clamped = unmixed.max(0)
@@ -1545,6 +1542,9 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     ndfi = raw_ndfi.multiply(100).add(100).byte()
 
     ## Cloud mask ====================================================================
+    cloudThresh = [0.15, 0.07] # % 0-1
+    bufferSize  = 10 #pixels
+
     cloudMask1 = unmixed.select(3).gte(cloudThresh[0])
     #isCloud    = cloudMask1.eq(1)
     #baseline1 = cloudMask1.mask(isCloud)
@@ -1566,7 +1566,9 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     classification = classification.where(summed.lte(0.15), 4) #Water
     classification = classification.where(cloudMask2.eq(1), 5) #Cloud
 
-    feature = classification.getMapId()
+    feature = classification.getMapId({
+                                       'bands': 'nd'
+                                      })
 
     assetid = "{'mapid': "+feature['mapid']+", 'token': "+feature['token']+"}"
 

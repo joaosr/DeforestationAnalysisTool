@@ -1,5 +1,5 @@
-application: sad-ee
-version: sadplustest 
+application: sadplustest
+version: v01 
 runtime: python27
 api_version: 1
 threadsafe: no
