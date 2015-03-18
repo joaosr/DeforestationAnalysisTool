@@ -17,6 +17,7 @@ import time
 import ee
 import settings
 import logging
+from application.models import Report
 # A multiplier to convert square meters to square kilometers.
 METER2_TO_KM2 = 1.0/(1000*1000)
 
@@ -1531,11 +1532,22 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
 
     image = landsat.find_map_image(bbox)
 
+    ## SMA ===========================================================================
     unmixed = image.select([0,1,2,3,4,5]).unmix(ENDMEMBERS).max(0).multiply(100).byte()
 
+    ## NDFI calc =====================================================================
+    clamped = unmixed.max(0)
+    summed = clamped.expression('b(0) + b(1) + b(2) + b(3)')
+    gv_shade = clamped.select(0).divide(summed)
+
+    npv_plus_soil = clamped.select(1).add(clamped.select(2))
+    raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
+    ndfi = raw_ndfi.multiply(100).add(100).byte()
+
+    ## Cloud mask ====================================================================
     cloudMask1 = unmixed.select(3).gte(cloudThresh[0])
-    isCloud    = cloudMask1.eq(1)
-    baseline1 = cloudMask1.mask(isCloud)
+    #isCloud    = cloudMask1.eq(1)
+    #baseline1 = cloudMask1.mask(isCloud)
 
     kernel = ee.Kernel.circle(bufferSize, 'pixels')
 
@@ -1543,14 +1555,22 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     buffered = (buffered.add(cloudMask1)).gt(0)
 
     cloudMask2 = buffered.eq(1).And(unmixed.select([3]).gte(cloudThresh[1]))
-    isCloud = cloudMask2.eq(1)
-    baseline2 = cloudMask2.mask(isCloud)
+    #isCloud = cloudMask2.eq(1)
+    #baseline2 = cloudMask2.mask(isCloud)
 
-    baseline2_features = cloudMask2.getMapId()
+    ## Classification =================================================================
+    classification = ndfi.multiply(0)
+    classification = classification.where(ndfi.gte(175), 1) #Forest
+    classification = classification.where(ndfi.gte(165).And(ndfi.lte(174)), 2) #Degradation
+    classification = classification.where(ndfi.lte(164), 3) #Deforestation
+    classification = classification.where(summed.lte(0.15), 4) #Water
+    classification = classification.where(cloudMask2.eq(1), 5) #Cloud
 
-    assetid = "{'mapid': "+baseline2_features['mapid']+", 'token': "+baseline2_features['token']+"}"
+    feature = classification.getMapId()
 
-    r = Report.all().filter('start =',  start_date).filter('end =', end_date)
+    assetid = "{'mapid': "+feature['mapid']+", 'token': "+feature['token']+"}"
+
+    q = Report.all().filter('start =',  start_date).filter('end =', end_date)
     r = q.fetch(1)
     if r:
        r[0].assetid = assetid
