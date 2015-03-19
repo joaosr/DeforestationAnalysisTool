@@ -2,14 +2,25 @@
 
 import datetime
 import logging
-import time
 import os
-import simplejson as json
+import re
 from shutil import copyfile
 import sys
+import time
 
+from google.appengine.api import memcache, users
 from google.appengine.api import urlfetch
-from google.appengine.api import users
+
+from app import app
+from application import settings
+from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location, create_baseline
+from application.models import Baseline
+from application.time_utils import timestamp, past_month_range
+from decorators import login_required, admin_required
+import ee
+from models import Report, User, Error, ImagePicker, Downscalling
+import simplejson as json
+
 
 sys.modules['ssl'] = None
 
@@ -23,19 +34,12 @@ except:
   flask = zipimport.zipimporter('packages/flask.zip').load_module('flask')
   wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
 
-from application.time_utils import timestamp, past_month_range
 
-from decorators import login_required, admin_required
 #from forms import ExampleForm
-from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location, create_baseline
 
-from app import app
 
-from models import Report, User, Error, ImagePicker, Downscalling
-from google.appengine.api import memcache, users
 #from google.appengine.ext.db import Key
 
-from application import settings
 
 def default_maps():
     maps = []
@@ -263,7 +267,6 @@ def warmup():
 
     """
     return ''
-import re
 FT_TABLE_DOWNSCALLING = '17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 
 @app.route('/range_report/', methods=['POST', 'GET'])
@@ -300,7 +303,6 @@ def tiles_sensor(sensor=None):
 
     return jsonify({'result': tile_array})
 
-import ee
 
 @app.route('/downscalling/', methods=['POST', 'GET'])
 @app.route('/downscalling/<tile>/')
@@ -415,18 +417,7 @@ def downscalling(tile=None):
 @app.route('/picker/', methods=['POST', 'GET'])
 @app.route('/picker/<tile>/')
 def picker(tile=None):
-    """
-    cell = request.args.get('cell','')
-    scene = 'MOD09GA/MOD09GA_005_2010_01_01'
-    bands = 'sur_refl_b01,sur_refl_b04,sur_refl_b03'
-    gain = 0.1
-    if scene:
-       result = get_modis_thumbnail(scene, cell, bands, gain)
-    else:
-       result = {'thumbid': '', 'token': ''}
-    return render_template('picker.html', **result)
-    """
-
+    
     if request.method == 'POST':
        logging.info(request.form.get('thumb'))
 
@@ -467,6 +458,11 @@ def picker(tile=None):
           return jsonify({'result': results})
        else:
           return jsonify({'result': []})
+
+@app.route('/baseline_list/')
+def baseline_list():
+    result = Baseline.all_formated()
+    return jsonify({'result': result})
 
 
 @app.route('/baseline_report/', methods=['POST', 'GET'])

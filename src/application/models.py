@@ -683,3 +683,73 @@ class Downscalling(db.Model):
         except:
             return 'Could not save values.'
 
+
+class Baseline(db.Model):
+    """ images selected by user """
+
+    added_on = db.DateTimeProperty(auto_now_add=True)
+    added_by = db.UserProperty(required=True)
+    start    = db.DateProperty(required=True)
+    end      = db.DateProperty(required=True)
+    mapid    = db.StringProperty(required=True)
+    token    = db.StringProperty(required=True)
+
+    # some stats
+    degradation = db.FloatProperty(default=0.0)
+    deforestation = db.FloatProperty(default=0.0)
+
+    def as_dict(self):
+        return {
+                'id': str(self.key()),
+                'key': str(self.key()),
+                'start': self.start,
+                'end': self.end(),
+                'mapid': self.mapid,
+                'token': self.token,
+                'added_on': timestamp(self.added_on),
+                'added_by': str(self.added_by.nickname())
+        }
+
+
+
+    def as_json(self):
+        return json.dumps(self.as_dict())
+
+    @staticmethod
+    def all_formated():
+        result = []
+        q = Baseline.all().order('-start')
+        r = q.fetch(10)
+        
+        if r:
+            for i in range(len(r)):
+                result.append({
+                               'id':         r[i].mapid,
+                               'token':      r[i].token,
+                               'type':       'xyz',
+                               'visibility': True,
+                               'description':  str(r[i].start)+' to '+str(r[i].end),
+                               'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
+                               })
+            return result
+        else:
+            return None
+            
+
+    def save(self):
+        q = Baseline.all().filter('start =', self.start).filter('end =', self.end)
+        r = q.fetch(1)
+
+        try:
+            if r:
+               r[0].mapid   = self.mapid
+               r[0].token  = self.token
+               r[0].put()
+               return 'Baseline updated.'
+            else:
+               self.put()
+               return 'Baseline created.'
+
+            
+        except:
+            return 'Could not save baseline.'

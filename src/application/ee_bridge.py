@@ -11,13 +11,18 @@
 
 
 import datetime
+import logging
 import re
 import time
 
+from google.appengine.api import users
+from yaml import tokens
+
+from application.models import Report, Baseline
 import ee
 import settings
-import logging
-from application.models import Report
+
+
 # A multiplier to convert square meters to square kilometers.
 METER2_TO_KM2 = 1.0/(1000*1000)
 
@@ -282,14 +287,14 @@ class EELandsat(object):
         else:
            return None
 
-    def find_map_collection(self, bounds=None, version=-1):
+    def find_map_collection(self, bounds=None):
 
         if bounds:
             bbox = ee.Geometry.Rectangle(float(bounds[0]), float(bounds[1]), float(bounds[2]), float(bounds[3]))
-            collection = ee.ImageCollection.load(self.sensor, version)
-            collection = collection.filterBounds(bbox).filterDate(self.start, self.end)
+            collection = ee.ImageCollection(self.sensor)
+            collection = collection.filterDate(self.start, self.end).filterBounds(bbox)
         else:
-            collection = ee.ImageCollection.load(self.sensor, version)
+            collection = ee.ImageCollection(self.sensor)
             collection = collection.filterDate(self.start, self.end)
 
         collection_size = len(collection.getInfo().get('features'))
@@ -297,7 +302,7 @@ class EELandsat(object):
         logging.info("==========>>> Collections: "+str(collection_size))
 
         if collection_size != 0:
-           return collection.map(ee.Algorithms.LandsatTOA)
+           return collection
         else:
            return None
 
@@ -1515,22 +1520,43 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
     return result_final
 
 def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
-    ENDMEMBERS = [[ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], # GV
-                  [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], # NPV
-                  [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], # Soil
-                  [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]]; # Cloud
+    ENDMEMBERS = [
+                  [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
+                  [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
+                  [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], #SOIL
+                  [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
+                 ]
 
-    start_date = '2005-06-01'
-    end_date = '2005-07-31'
+    start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
+    end_date = datetime.datetime.strptime(end_date,"%d/%b/%Y")
 
-    landsat = EELandsat(start_date, end_date, sensor)
+    image_L5 = EELandsat(start_date, end_date, EELandsat.LANDSAT5)
+    
+    image_L7 = EELandsat(start_date, end_date, EELandsat.LANDSAT7)
 
     bbox = [-74.0, -18.0, -44.0, 5.0]
 
-    image = landsat.find_map_image(bbox)
+    #bounder = ee.Geometry.Rectangle(-74.0, -18.0, -44.0, 5.0)
 
+    #collection = ee.ImageCollection('L5_L1T_SR').filterDate(start_date, end_date).filterBounds(bounder)
+
+    #image = collection.mosaic()
+    
+    image_L5 = image_L5.find_map_image(bbox)
+    
+    
+    image = ''
+    
+    if image_L5:
+        image = image_L5
+    else:
+        image_L7 = image_L7.find_map_image(bbox)        
+        if image_L7:
+           image = image_L7 
+
+    
     ## SMA ===========================================================================
-    unmixed = image.select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
+    unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
 
     ## NDFI calc =====================================================================
     clamped = unmixed.max(0)
@@ -1565,23 +1591,18 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     classification = classification.where(ndfi.lte(164), 3) #Deforestation
     classification = classification.where(summed.lte(0.15), 4) #Water
     classification = classification.where(cloudMask2.eq(1), 5) #Cloud
+    #logging.info(classification)
+    
+    feature = ee.Image(classification).getMapId({
+                              'bands': 'nd'
+                              })
 
-    feature = classification.getMapId({
-                                       'bands': 'nd'
-                                      })
+    mapid = feature['mapid']
+    token = feature['token']
 
-    assetid = "{'mapid': "+feature['mapid']+", 'token': "+feature['token']+"}"
-
-    q = Report.all().filter('start =',  start_date).filter('end =', end_date)
-    r = q.fetch(1)
-    if r:
-       r[0].assetid = assetid
-       r.put()
-       return 'Baseline updated.'
-    else:
-       r = Report(start=start_date, end=end_date, assetid=assetid)
-       r.put()
-       return 'Baseline created.'
+    baseline = Baseline(added_by= users.get_current_user(), start= start_date.date(), end=end_date.date(), mapid=mapid, token=token)
+    
+    return baseline.save()
 
 
 def get_modis_location(cell):
@@ -1596,7 +1617,6 @@ def get_modis_location(cell):
     location = inclusions.getInfo()['geometry']['coordinates']
 
     return str(location)
-
 
 
 def get_modis_thumbnail(image_id, cell, bands='sur_refl_b05,sur_refl_b04,sur_refl_b03', gain=[2.0,2.0,2.0]):

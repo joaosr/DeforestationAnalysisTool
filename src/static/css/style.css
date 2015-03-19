@@ -752,6 +752,29 @@ header #tools #baseline #baseline_content #range_select #range_picker {
   background: url("") repeat 0 0;
 }
 
+#header #tools #baseline #baseline_content #baseline_list {
+  margin: 0 20px 0 20px;
+  padding: 16px 14px 11px 20px;
+}
+#header #tools #baseline #baseline_content #baseline_list a#baseline_list_select {
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: white;
+  text-shadow: 0 1px black;
+  padding: 3px 3px 3px 3px;
+  text-decoration: none;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog {
+  position: absolute;
+  width: 700px;
+  height: 718px;
+  padding: 40px 30px 30px 30px;
+  top: 60px;
+  left: 0px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 22, 23, 1);
+  color: rgba(221, 222, 200, 1);
+  display: none;
+}
 #header #tools #baseline #baseline_content #image_picker {
   margin: 0 20px 0 20px;
   padding: 16px 14px 11px 20px;

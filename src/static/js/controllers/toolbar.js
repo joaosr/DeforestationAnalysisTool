@@ -390,7 +390,8 @@ var Baseline = Toolbar.extend({
     el: $("#baseline"),
     events:{
         'click #baseline_select': 'visibility_change',
-        'click #baseline_check':  'selected'
+        'click #baseline_check':  'selected',
+        'click #baseline_list_select': 'show_baseline_list'
     },
     initialize: function(){
         _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change');
@@ -401,6 +402,38 @@ var Baseline = Toolbar.extend({
         this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.visibility = false;
         this.selected = false;
+        this.baselines = new LayerCollection();
+        this.baselines.url = 'baseline_list/';
+        this.baselines.fetch({
+            parse : function(result){
+                return result.result;
+            }
+        });
+    },
+    show_baseline_list: function(e){
+    	if(e) e.preventDefault();
+        if(this.layer_editor_baseline === undefined) {
+            //console.log(this.layer_editor);
+            this.layer_editor_baseline = new LayerEditorBaseline({
+                parent: this.$('#baseline_list'),
+                layers: this.baselines
+            });
+        }
+
+
+        if(this.layer_editor_baseline.showing) {
+            this.layer_editor_baseline.close();            
+        } else {
+            this.layer_editor_baseline.layers = this.baselines;
+            var that = this;
+            this.layer_editor_baseline.layers.each(function(m){
+                if(!m.get('visibility')){
+                    that.layer_editor_baseline.layers.remove(m);
+                }
+            });
+            this.trigger('show_baseline_list');
+            this.layer_editor_baseline.show();
+        }
     },
     setting_report_data: function(){
         var date    = new Date();
