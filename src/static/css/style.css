@@ -760,20 +760,75 @@ header #tools #baseline #baseline_content #range_select #range_picker {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
   text-shadow: 0 1px black;
-  padding: 3px 3px 3px 3px;
+  padding: 22px 20px 23px 20px;
   text-decoration: none;
 }
-#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog {
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog{
   position: absolute;
-  width: 700px;
-  height: 718px;
-  padding: 40px 30px 30px 30px;
+  width: 740px;
+  max-height: 254px;
+  min-height: 150px;
+  padding: 10px 10px 10px 10px;
   top: 60px;
   left: 0px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(22, 22, 23, 1);
-  color: rgba(221, 222, 200, 1);
+  z-index: 20;
   display: none;
+  border-top: none;
+  border-left: 1px solid rgba(0, 0, 0, 0.4);
+  border-right: 1px solid rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#EBEBEB), to(#D1D1D1));
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog .jspVerticalBar{
+  right: 13px;
+}
+
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul{
+  position: relative;  
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li{
+  width: 100%;
+  font-size: 13px;
+  color: #626262;
+  padding: 13.5px 0 13.5px 23px;
+  /*margin-left: 18px;*/
+  border-top: 1px solid #FBFBFB;
+  border-bottom: 1px solid #CFCFCF;
+  background: url("/static/img/tick_white.png") no-repeat 6px 16px;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li:first-child{
+  border-top: none;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li:last-child{
+  border-bottom: none;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li.selected{
+  background: url("/static/img/tick_white_selected.png") no-repeat 6px 16px;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li.moving{
+  background-color: #E7E7E7;
+  box-shadow: 0 0 3px 3px rgba(0, 0, 0, 0.1);
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li:hover a{
+  color: #333333;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li.sortable a{
+  background: url("/static/img/bkg_layers_drag.png") no-repeat 90% 5px;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li a{
+  display: block;
+  width: 100%;
+  padding-right: 20px;
+  font: normal 13px "Helvetica Neue";
+  color: #666666;
+  text-shadow: 0 1px white;
+  text-decoration: none;
+}
+#header #tools #baseline #baseline_content #baseline_list #layer_baseline_dialog ul li a:hover{
+  color: #333333;
 }
 #header #tools #baseline #baseline_content #image_picker {
   margin: 0 20px 0 20px;

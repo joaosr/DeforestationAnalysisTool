@@ -144,7 +144,7 @@ var LayerEditor = Backbone.View.extend({
          this.el.find('ul').html('');
          var that = this;
          layers.raster_layers().each(function(m){
-            if(m.get('visibility')){
+            if(m.get('visibility') && m.get('type') !== 'baseline'){
                 that.addLayer(m);
             }
          });
@@ -202,6 +202,7 @@ var LayerEditorBaseline = Backbone.View.extend({
           }
         });
         this.layers.trigger('reset');
+        this.bind('change_layers', function(){self.addLayers(self.layers)});
     },
 
     // reorder layers in map
@@ -233,18 +234,18 @@ var LayerEditorBaseline = Backbone.View.extend({
             this.item_view_map[view.id] = view;
         }
     },
-
+    
     addLayers: function(layers) {
          this.el.find('ul').html('');
+         console.log("Add Now!!!!!!!");
          var that = this;
          layers.raster_layers().each(function(m){
-            if(m.get('visibility')){
+            if(m.get('visibility') || m.get('type') == 'baseline'){
                 that.addLayer(m);
             }
          });
     },
-
-    show: function(pos, side) {   
+    show: function(pos, side) {       	
         this.el.show();//fadeIn();
         this.showing = true;
     },

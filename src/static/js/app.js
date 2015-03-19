@@ -141,7 +141,7 @@ $(function() {
         },
 
         init_ui: function() {
-            this.main_operations = new MainOperations({report: this.active_report});
+            this.main_operations = new MainOperations({report: this.active_report, mapview: this.map});
 //            this.selection_toolbar = new ReportToolbar({report:this.active_report});
             this.polygon_tools = new PolygonToolbar();
             this.overview = new Overview({report: this.active_report});
@@ -629,6 +629,7 @@ $(function() {
             // init the map
             this.map.map.setCenter(this.amazon_bounds.getCenter());
             this.map.layers.reset(this.available_layers.models);
+            
 
             add_rgb_layers(this.map.layers, this.gridstack, this.active_report.get('id'));
             this.map.layers.trigger('reset');

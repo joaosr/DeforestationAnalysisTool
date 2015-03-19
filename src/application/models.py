@@ -144,9 +144,10 @@ class Report(db.Model):
            if r[0].finished:
               r = Report(start=start_date, end=end_date, assetid=assetid)
               r.put()
-              return 'New period of analyse saved!'
+              return {'message': 'New period of analyse saved!', 'data': None}
+          
            else:
-              return 'Last period not finalized!'
+              return {'message': 'Last period not finalized!', 'data': None}
 
 
     def base_map(self):
@@ -694,10 +695,6 @@ class Baseline(db.Model):
     mapid    = db.StringProperty(required=True)
     token    = db.StringProperty(required=True)
 
-    # some stats
-    degradation = db.FloatProperty(default=0.0)
-    deforestation = db.FloatProperty(default=0.0)
-
     def as_dict(self):
         return {
                 'id': str(self.key()),
@@ -726,7 +723,7 @@ class Baseline(db.Model):
                 result.append({
                                'id':         r[i].mapid,
                                'token':      r[i].token,
-                               'type':       'xyz',
+                               'type':       'baseline',
                                'visibility': True,
                                'description':  str(r[i].start)+' to '+str(r[i].end),
                                'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
@@ -745,10 +742,28 @@ class Baseline(db.Model):
                r[0].mapid   = self.mapid
                r[0].token  = self.token
                r[0].put()
-               return 'Baseline updated.'
+               return {'message': 'Baseline updated.', 
+                       'data': {
+                                    'id':         r[0].mapid,
+                                    'token':      r[0].token,
+                                    'type':       'baseline',
+                                    'visibility': True,
+                                    'description':  str(r[0].start)+' to '+str(r[0].end),
+                                    'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
+                                   }
+                       }
             else:
                self.put()
-               return 'Baseline created.'
+               return {'message': 'Baseline created.', 
+                       'data': {
+                                    'id':         self.mapid,
+                                    'token':      self.token,
+                                    'type':       'baseline',
+                                    'visibility': True,
+                                    'description':  str(self.start)+' to '+str(self.end),
+                                    'url': 'https://earthengine.googleapis.com/map/'+self.mapid+'/{Z}/{X}/{Y}?token='+self.token
+                                   }
+                       }
 
             
         except:

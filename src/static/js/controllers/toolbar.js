@@ -109,6 +109,7 @@ var ReportToolbar = Toolbar.extend({
        this.start_date = moment(new Date(start)).format("DD/MMM/YYYY");
        var end = this.report.escape('str_end');
        this.end_date = moment(new Date(end)).format("DD/MMM/YYYY");
+       this.data_request = null;
 
        this.$("#range_picker").attr("value", this.start_date+' to '+this.end_date).html();
        this.visibility_picker_range = false;
@@ -119,20 +120,33 @@ var ReportToolbar = Toolbar.extend({
             separator: ' to ',
             showShortcuts: false}).bind('datepicker-change', this.update_range_date);
     },
-    send_date_report: function(){
+    send_date_report: function(e){
+    	if(e) e.preventDefault();
+    	
         var date_picker = this.$("#range_picker").val();
         console.log(date_picker);
-        var message = $.ajax({
-                              url: this.url_send,
-                              type: 'POST',
-                              data: {range_picker: date_picker},
-                              dataType: 'json',
-                              async: false,
-                            }).responseText;
+        this.$("#loading_range_picker").show();
+        var that = this;
+        var request = $.ajax({
+                            url: this.url_send,
+                            type: 'POST',
+                            data: {range_picker: date_picker},
+                            dataType: 'json',
+                            async: true,
+                            success:function(d) {
+                            	  that.$("#loading_range_picker").hide();
+                    	          alert(d.result.message);
+                                  console.log(d);
+                                  that.data_request = d.result.data;
+                                  that.trigger('send_success');
+                                  console.log(that.data_request);
+                                  return d; 
+                            },
+                          }).responseText;
 
-        var s = jQuery.parseJSON(message);
-        alert(s.result);
-        console.log(s);
+        //var s = jQuery.parseJSON(message);
+        //alert(s.result);
+        //console.log(s);
     },
     update_range_date: function(evt, obj){
         var dates = obj.value.split(' to ');
@@ -160,7 +174,9 @@ var ImagePicker = Toolbar.extend({
     change_sensor: function(sensor){
         this.thumbsView.change_sensor(sensor);
     },
-    send_images: function(){
+    send_images: function(e){
+    	if(e) e.preventDefault();
+    	
         var thumb = this.$("#thumb").val();
         var tile = this.$("#tile").val();
         console.log(thumb);
@@ -177,7 +193,8 @@ var ImagePicker = Toolbar.extend({
         console.log(s);
     },
     visibility_change: function(e){
-
+    	if(e) e.preventDefault();
+    	
         if(this.visibility){
           this.$("#picker_form").hide();
           //$(this.el).css("background", "");
@@ -186,6 +203,7 @@ var ImagePicker = Toolbar.extend({
           //$(this.el).css("background", 'url("static/img/bkg_image_picker_over.png") no-repeat -1px 0');
           this.$("#picker_form").show();
           this.visibility = true;
+          this.trigger('visibility_change');
           this.callerView.callback(this);
         }
     }
@@ -204,7 +222,9 @@ var DownScalling = Toolbar.extend({
         this.downScalling = new SelectParameters({collection: parameters});
         this.visibility = false;
     },
-     send_downscalling: function(){
+     send_downscalling: function(e){
+    	 if(e) e.preventDefault();
+    	 
         var sill3 = this.$("#sill3").val();
         var range3 = this.$("#range3").val();
         var nugget3 = this.$("#nugget3").val();
@@ -396,24 +416,22 @@ var Baseline = Toolbar.extend({
     initialize: function(){
         _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change');
         this.callerView = this.options.callerView;
-        this.report = this.options.report
+        this.report     = this.options.report;
+        this.map        = this.options.mapview; 
 //        this.setting_report_data();
         this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, url_send: '/baseline_report/', callerView: this});
-        this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
+        this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});        
         this.visibility = false;
         this.selected = false;
         this.baselines = new LayerCollection();
         this.baselines.url = 'baseline_list/';
-        this.baselines.fetch({
-            parse : function(result){
-                return result.result;
-            }
-        });
+        this.baselines.fetch();
+        var that = this;
+        this.report_tool_bar.bind('send_success', function(){that.baselines.add(that.report_tool_bar.data_request)});
     },
     show_baseline_list: function(e){
     	if(e) e.preventDefault();
         if(this.layer_editor_baseline === undefined) {
-            //console.log(this.layer_editor);
             this.layer_editor_baseline = new LayerEditorBaseline({
                 parent: this.$('#baseline_list'),
                 layers: this.baselines
@@ -422,15 +440,36 @@ var Baseline = Toolbar.extend({
 
 
         if(this.layer_editor_baseline.showing) {
-            this.layer_editor_baseline.close();            
+            this.layer_editor_baseline.close(); 
+            this.$("#baseline_list_select").css({
+                "color": "white",
+                "text-shadow": "0 1px black",
+                "background": "none",
+               });
         } else {
+        	console.log(this.baselines);
             this.layer_editor_baseline.layers = this.baselines;
+            this.layer_editor_baseline.trigger('change_layers');
             var that = this;
+            this.baselines.each(function(layer){
+                      var layer_map = that.map.layers.get(layer.get('id'));
+                      if(layer_map){
+                    	  //Already exist
+                      }else{
+                    	  that.map.layers.add(layer);
+                      }
+            });
+            
             this.layer_editor_baseline.layers.each(function(m){
                 if(!m.get('visibility')){
                     that.layer_editor_baseline.layers.remove(m);
                 }
             });
+            this.$("#baseline_list_select").css({
+            	                                "color": "rgb(21, 2, 2)",
+            	                                "text-shadow": "0 1px white",
+            	                                "background": "-webkit-gradient(linear, 50% 0%, 50% 100%, from(#E0E0E0), to(#EBEBEB))",
+            	                               });
             this.trigger('show_baseline_list');
             this.layer_editor_baseline.show();
         }
@@ -481,7 +520,8 @@ var Baseline = Toolbar.extend({
     show_image_picker: function(){
         if(!this.image_picker.visibility){
           this.image_picker.visibility_change();
-        }
+          this.image_picker.bind('visibility_change', this.show_baseline_list(null));
+        }        
     },
     visibility_change: function(){
         if(this.visibility){
@@ -545,7 +585,7 @@ var MainOperations = Backbone.View.extend({
     initialize: function(){
         _.bindAll(this, 'hide_message_tools', 'hide_monthly_sad', 'show_monthly_sad', 'hide_baseline', 'show_baseline', 'hide_time_series', 'show_time_series', 'hide_all', 'show_all','callback');
         this.monthly_sad = new MonthlySAD({report: this.options.report, callerView: this});
-        this.baseline    = new Baseline({report: this.options.report, callerView: this});
+        this.baseline    = new Baseline({report: this.options.report, callerView: this, mapview: this.options.mapview});
         this.time_series = new TimeSeries({callerView: this});
         this.operation_selected = false;
         this.MESSAGE_ALERT = 1;

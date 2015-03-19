@@ -37,7 +37,7 @@ var MapView = Backbone.View.extend({
        //google.maps.event.addListener(this.map, 'idle', this.tilesloaded);
        this.projector = new Projector(this.map);
        this.projector.draw = this.ready;
-       this.layers = new LayerCollection();
+       this.layers = new LayerCollection();       
        this.signals_on = true;
        this.layer_dialog_pos= this.options.layer_dialog_pos || 'top';
 
@@ -164,7 +164,7 @@ var MapView = Backbone.View.extend({
         }
     },
     open_google_maps_base_layer_editor: function(e) {
-            if(e) e.preventDefault();
+            if(e) e.preventDefault();            
             if(this.layer_editor_base === undefined) {
                 this.layer_editor_base = new LayerEditorGoogleMaps({
                     parent: this.el,
@@ -192,7 +192,7 @@ var MapView = Backbone.View.extend({
             }
     },
     open_layer_editor: function(e) {
-            if(e) e.preventDefault();
+            if(e) e.preventDefault();            
             if(this.layer_editor === undefined) {
                 //console.log(this.layer_editor);
                 this.layer_editor = new LayerEditor({

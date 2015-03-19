@@ -133,7 +133,7 @@ var NDFILayer = Backbone.View.extend({
 
         if(map_layer){
           if(map_layer.get_enabled()){
-            this.ndfimap.set({sensor: 'modis'});
+            //this.ndfimap.set({sensor: 'modis'});
             this.token = this.ndfimap.get('token');
             this.mapid = this.ndfimap.get('mapid');
           }
@@ -142,7 +142,7 @@ var NDFILayer = Backbone.View.extend({
         map_layer = this.mapview.layers.get_by_name(this.map_layer_L5.get('description'));
         if(map_layer){
           if(map_layer.get_enabled()){
-            this.ndfimap.set({sensor: 'landsat5'});
+            //this.ndfimap.set({sensor: 'landsat5'});
             this.token = this.ndfimap_L5.get('token');
             this.mapid = this.ndfimap_L5.get('mapid');
            }
@@ -152,7 +152,7 @@ var NDFILayer = Backbone.View.extend({
 
         if(map_layer){
           if(map_layer.get_enabled()){
-            this.ndfimap.set({sensor: 'landsat5'});
+            //this.ndfimap.set({sensor: 'landsat5'});
             this.token = this.ndfimap_L7.get('token');
             this.mapid = this.ndfimap_L7.get('mapid');
            }

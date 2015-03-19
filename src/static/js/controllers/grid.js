@@ -144,8 +144,7 @@ var Grid = Backbone.View.extend({
             var pos = that.el.position();
             var cellview = new CellView({model: c});
             that.el.append(cellview.render(p.x, p.y, marginx + (c.get('x') - srcx)*wc, marginy + (c.get('y') - srcy)*wh, wc, wh).el);
-            cellview.bind('enter', that.cell_selected);
-            console.log('More one cell.');
+            cellview.bind('enter', that.cell_selected);            
         });
         var cell_bounds = this.bounds();
         this.set_visible_zone(cell_bounds);
