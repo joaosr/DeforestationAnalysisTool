@@ -5,22 +5,23 @@ App Engine datastore models
 
 """
 
+import ast
+from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 import logging
 import operator
+
 from google.appengine.ext import db
 from google.appengine.ext import deferred
 
-from datetime import datetime, date
-from dateutil.relativedelta import relativedelta
-
 from application import settings
+import ee
+from ft import FT
+from kml import path_to_kml
+from mercator import Mercator
 import simplejson as json
 from time_utils import timestamp
-from mercator import Mercator
 
-from ft import FT
-
-from kml import path_to_kml
 
 CELL_BLACK_LIST = ['1_4_0', '1_0_4', '1_1_4', '1_4_4']
 
@@ -91,6 +92,38 @@ class Report(db.Model):
         if r:
             return r[0]
         return None
+    
+    @staticmethod
+    def all_period():
+        q = Report.all().order('-assetid')
+        r = q.fetch(200)
+        
+        if r:
+            result = []
+            for i in range(len(r)):
+                result.append({
+                               'id': str(r[i].key()),
+                               'fusion_tables_id': str(r[i].key().id()),
+                               'start': timestamp(r[i].start),
+                               'end': timestamp(r[i].end or date.today()),
+                               'finished': r[i].finished,
+                               'cells_finished': r[i].cells_finished(),
+                               'type': 'report',
+                               'visibility': True,
+                               'total_cells': r[i].total_cells,
+                               'str': r[i].start.strftime("%Y-%b-%d"),
+                               'str_end': (r[i].end or date.today()).strftime("%Y-%b-%d"),
+                               'assetid': r[i].assetid,
+                               'deforestation': r[i].deforestation,
+                               'degradation': r[i].degradation
+                              })
+                
+            return {'message': 'All reports', 'data': result}
+        
+        return {'message': 'Nothing', 'data': None}
+    
+    
+    
     def cells_finished(self):
         return Cell.all().filter('report =', self).filter('done =', True).count()
 
@@ -609,7 +642,46 @@ class ImagePicker(db.Model):
     def as_json(self):
         return json.dumps(self.as_dict())
 
+    @staticmethod
+    def find_by_compounddate_period(start, end):
+        q = ImagePicker.all().filter('compounddate >=', start).filter('compounddate <=', end)
+        r = q.fetch(10)
+        if r:
+            return r
+        else:
+            return None
 
+    @staticmethod
+    def find_by_compounddate(compounddate):
+        q = ImagePicker.all().filter('compounddate =', compounddate)
+        r = q.fetch(10)
+        if r:
+            return r
+        else:
+            return None
+        
+    @staticmethod
+    def return_feature_collection(r):
+        feature_collection = []
+        
+        if r:
+                for i in range(len(r)):
+                    location = r[i].location
+                    polygon = ast.literal_eval(location)
+                    geometry = ee.Geometry.Polygon(polygon)
+                    properties = {'cell': r[i].cell,
+                                  'compounddate': r[i].compounddate,
+                                  'day': r[i].day,
+                                  'month': r[i].month,
+                                  'year': r[i].year
+                                 }
+                    feature = ee.Feature(geometry, properties)
+                    feature_collection.append(feature)
+                
+                return ee.FeatureCollection(feature_collection)
+        
+        else:
+            return None
 
     def save(self):
         q = ImagePicker.all().filter('compounddate =', self.compounddate).filter('cell =', self.cell)
@@ -665,7 +737,39 @@ class Downscalling(db.Model):
     def as_json(self):
         return json.dumps(self.as_dict())
 
-
+    @staticmethod
+    def find_by_compounddate(compounddate):
+        q = Downscalling.all().filter('compounddate =', compounddate)
+        r = q.fetch(40)
+        if r:
+            return r
+        else:
+            return None
+    
+    @staticmethod
+    def return_feature_collection(r):
+        feature_collection = []
+        
+        if r:
+                for i in range(len(r)):
+                    region = r[i].region
+                    polygon = ast.literal_eval(region)
+                    geometry = ee.Geometry.Polygon(polygon)
+                    properties = {'Band': r[i].band,
+                                  'Cell': r[i].cell,
+                                  'Compounddate': int(r[i].compounddate),
+                                  'Model': r[i].model,
+                                  'Nugget': r[i].nugget,
+                                  'Range': r[i].range,
+                                  'Sill': r[i].sill,
+                                 }
+                    feature = ee.Feature(geometry, properties)
+                    feature_collection.append(feature)
+                
+                return ee.FeatureCollection(feature_collection)
+        
+        else:
+            return None
 
     def save(self):
         q = Downscalling.all().filter('compounddate =', self.compounddate).filter('cell =', self.cell).filter('band =', self.band)
@@ -690,6 +794,7 @@ class Baseline(db.Model):
 
     added_on = db.DateTimeProperty(auto_now_add=True)
     added_by = db.UserProperty(required=True)
+    name     = db.StringProperty(required=True)
     start    = db.DateProperty(required=True)
     end      = db.DateProperty(required=True)
     mapid    = db.StringProperty(required=True)
@@ -721,11 +826,11 @@ class Baseline(db.Model):
         if r:
             for i in range(len(r)):
                 result.append({
-                               'id':         r[i].mapid,
-                               'token':      r[i].token,
-                               'type':       'baseline',
-                               'visibility': True,
-                               'description':  str(r[i].start)+' to '+str(r[i].end),
+                               'id':          r[i].mapid,
+                               'token':       r[i].token,
+                               'type':        'baseline',
+                               'visibility':  True,
+                               'description': r[i].name,
                                'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
                                })
             return result
@@ -748,7 +853,7 @@ class Baseline(db.Model):
                                     'token':      r[0].token,
                                     'type':       'baseline',
                                     'visibility': True,
-                                    'description':  str(r[0].start)+' to '+str(r[0].end),
+                                    'description':  self.name,
                                     'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
                                    }
                        }
@@ -760,7 +865,7 @@ class Baseline(db.Model):
                                     'token':      self.token,
                                     'type':       'baseline',
                                     'visibility': True,
-                                    'description':  str(self.start)+' to '+str(self.end),
+                                    'description':  self.name,
                                     'url': 'https://earthengine.googleapis.com/map/'+self.mapid+'/{Z}/{X}/{Y}?token='+self.token
                                    }
                        }

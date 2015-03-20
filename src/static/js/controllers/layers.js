@@ -41,6 +41,37 @@ var LayerView = Backbone.View.extend({
     }
 });
 
+var ReporView = LayerView.extend({
+	initialize: function() {
+        _.bindAll(this, 'render', 'click', 'changed');
+        this.model.bind('change', this.changed);
+    },
+    render: function() {
+    	var el = $(this.el);
+        this.id = 'report_' + this.model.escape('id');
+        var name = this.model.escape('assetid')
+        if(name == 'null'){
+        	name = "LAST PERIOD"
+        }
+        
+        el.html("<a href='#'>" + name + "</a>");
+        el.attr('id', this.id);
+        this.changed();
+        //el.addClass('sortable');                        
+        return this;
+    },
+    changed: function() {
+        var enabled = this.model.enabled;
+        if(!enabled) {
+            //this.trigger('disable', this);
+            $(this.el).removeClass('selected');
+        } else {
+            $(this.el).addClass('selected');
+            this.trigger('enable_report');
+        }
+    }
+});
+
 var SwitchLayerView = LayerView.extend({
 
     initialize: function() {
@@ -96,7 +127,7 @@ var LayerEditor = Backbone.View.extend({
           items: '.sortable',
           axis: 'y',
           cursor: 'pointer',
-          stop:function(event,ui){
+          stop: function(event,ui){
             $(ui.item).removeClass('moving');
             //
             //DONT CALL THIS FUNCTION ON beforeStop event, it will crash :D
@@ -149,7 +180,7 @@ var LayerEditor = Backbone.View.extend({
             }
          });
     },
-
+    
     show: function(pos, side) {
         /*if(side == 'center') {
             this.el.css({top: pos.top - 110, left: pos.left - this.el.width()});
@@ -175,7 +206,94 @@ var LayerEditorBaseline = Backbone.View.extend({
     template: _.template($('#baseline-layers').html()),
 
     initialize: function() {
-        _.bindAll(this, 'show', 'addLayer', 'addLayers', 'sortLayers', 'addLayer');
+        _.bindAll(this, 'show', 'addLayer', 'addLayers', 'sortLayers');
+        var self = this;
+
+        this.item_view_map = {};
+        this.layers = this.options.layers;
+        this.el = $(this.template());
+        this.options.parent.append(this.el);
+        this.addLayers(this.layers);
+        this.el.find('ul').jScrollPane({autoReinitialise:true});
+
+        this.el.find('ul, div.jspPane').sortable({
+          revert: false,
+          items: '.sortable',
+          axis: 'y',
+          cursor: 'pointer',
+          stop:function(event,ui){
+            $(ui.item).removeClass('moving');
+            //
+            //DONT CALL THIS FUNCTION ON beforeStop event, it will crash :D
+            //
+            self.sortLayers();
+          },
+          start:function(event,ui){
+            $(ui.item).addClass('moving');
+          }
+        });
+        this.layers.trigger('reset');
+        this.bind('change_layers', function(){self.addLayers(self.layers)});
+    },    
+    // reorder layers in map
+    sortLayers: function() {
+        var self = this;
+        var new_order_list = [];
+        // sort layers
+        this.el.find('ul').find('li').each(function(idx, item) {
+            var id = $(item).attr('id');
+            var view = self.item_view_map[id];
+            self.layers.remove(view.model);
+            new_order_list.push(view.model);
+        });
+        _(new_order_list).each(function(l) {
+            self.layers.add(l);
+        });
+        this.layers.trigger('reset');
+    },
+
+    addLayer: function(layer) {
+        if(!layer.hidden) {
+            var ul = this.el.find('ul');
+            if(layer.get('color') !== undefined) {
+                var view = new SwitchLayerView({model: layer});
+            } else {
+                var view = new LayerView({model: layer});
+            }
+            ul.append(view.render().el);
+            this.item_view_map[view.id] = view;
+        }
+    },    
+    addLayers: function(layers) {
+         this.el.find('ul').html('');
+         console.log("Add Now!!!!!!!");
+         var that = this;
+         layers.raster_layers().each(function(m){
+            if(m.get('visibility') || m.get('type') == 'baseline'){
+                that.addLayer(m);
+            }
+         });         
+    },
+    show: function(pos, side) {       	
+        this.el.show();//fadeIn();
+        this.showing = true;
+    },
+
+    close: function() {
+        this.el.hide();//fadeOut(0.1);
+        this.showing = false;
+    }
+
+});
+
+var LayerEditorReports = Backbone.View.extend({
+
+    showing: false,
+
+    template: _.template($('#reports-layers').html()),
+        
+    initialize: function() {
+        _.bindAll(this, 'show', 'addLayer', 'addLayers', 'sortLayers', 'deselect_layers');
         var self = this;
 
         this.item_view_map = {};
@@ -225,22 +343,30 @@ var LayerEditorBaseline = Backbone.View.extend({
     addLayer: function(layer) {
         if(!layer.hidden) {
             var ul = this.el.find('ul');
-            if(layer.get('color') !== undefined) {
-                var view = new SwitchLayerView({model: layer});
-            } else {
-                var view = new LayerView({model: layer});
-            }
+            layer.bind('change', this.deselect_layers);
+            var view = new ReporView({model: layer});
+            var that = this;
+            view.bind('enable_report', function(){that.trigger('enable_report')})
             ul.append(view.render().el);
             this.item_view_map[view.id] = view;
+        }        
+    },
+    deselect_layers: function(changed) {
+        //console.log("CHANING" + changed.get('description'));
+        if(changed.enabled) {
+            this.layers.each(function(layer) {
+                if(layer.enabled && layer !== changed) {
+                    //console.log("disabling " + layer.get('description'));
+                    layer.set_enabled(false);
+                }
+            });
         }
     },
-    
     addLayers: function(layers) {
-         this.el.find('ul').html('');
-         console.log("Add Now!!!!!!!");
+         this.el.find('ul').html('');         
          var that = this;
-         layers.raster_layers().each(function(m){
-            if(m.get('visibility') || m.get('type') == 'baseline'){
+         layers.each(function(m){
+            if(m.get('visibility') || m.get('type') == 'reports'){
                 that.addLayer(m);
             }
          });

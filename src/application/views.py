@@ -464,6 +464,11 @@ def baseline_list():
     result = Baseline.all_formated()
     return jsonify({'result': result})
 
+@app.route('/reports_list/')
+def reports_list():
+    result = Report.all_period()
+    return jsonify(result)
+
 
 @app.route('/baseline_report/', methods=['POST', 'GET'])
 def baseline_report():

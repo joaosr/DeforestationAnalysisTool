@@ -148,6 +148,14 @@ var ReportToolbar = Toolbar.extend({
         //alert(s.result);
         //console.log(s);
     },
+    set_range_date_input: function(report){
+    	var start = report.escape('str');
+        var start_date = moment(new Date(start)).format("DD/MMM/YYYY");
+        var end = report.escape('str_end');
+        var end_date = moment(new Date(end)).format("DD/MMM/YYYY");        
+
+        this.$("#range_picker").attr("value", start_date+' to '+end_date).html();
+    },
     update_range_date: function(evt, obj){
         var dates = obj.value.split(' to ');
         console.log(dates[0]+' - '+dates[1]);
@@ -287,10 +295,11 @@ var MonthlySAD = Toolbar.extend({
     el: $("#monthly_sad"),
     events: {
         'click #monthly_sad_select': 'visibility_change',
-        'click #sad_check': 'selected'
+        'click #sad_check': 'selected',
+        'click #sad_list_select': 'show_reports_list'
     },
     initialize: function(){
-        _.bindAll(this, 'visibility_change', 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'hide_down_scalling', 'show_down_scalling');
+        _.bindAll(this, 'visibility_change', 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'hide_down_scalling', 'show_down_scalling', 'reload_report');
         this.callerView = this.options.callerView;
         this.report = this.options.report
         console.log("==== setting_report_data ====");
@@ -301,10 +310,66 @@ var MonthlySAD = Toolbar.extend({
         this.down_scalling = new DownScalling({callerView: this});
         this.visibility = false;
         this.selected = false;
+        this.reports = new ReportsCollection();
+        this.reports.url = 'reports_list/';
+        this.reports.fetch();
+        var that = this;
+        this.report_tool_bar.bind('send_success', function(){that.reports.add(that.report_tool_bar.data_request)});
     },
     compounddate: function(){
         var date = moment(new Date(this.report.escape('str'))).format('YYYYMM');
         return date;
+    },
+    show_reports_list: function(e){
+    	if(e) e.preventDefault();
+        if(this.layer_editor_reports === undefined) {
+            this.layer_editor_reports = new LayerEditorReports({
+                parent: this.$('#sad_list'),
+                layers: this.reports
+            });
+            this.layer_editor_reports.bind('enable_report', this.reload_report)
+        }
+
+
+        if(this.layer_editor_reports.showing) {
+            this.layer_editor_reports.close(); 
+            this.$("#sad_list_select").css({
+                "color": "white",
+                "text-shadow": "0 1px black",
+                "background": "none",
+               });
+        } else {
+        	console.log(this.reports);
+            this.layer_editor_reports.layers = this.reports;
+            this.layer_editor_reports.trigger('change_layers');
+            var that = this;
+            /*this.reports.each(function(layer){
+                      var layer_map = that.map.layers.get(layer.get('id'));
+                      if(layer_map){
+                    	  //Already exist
+                      }else{
+                    	  that.map.layers.add(layer);
+                      }
+            });*/
+            
+            this.layer_editor_reports.layers.each(function(m){
+                if(!m.get('visibility')){
+                    that.layer_editor_reports.layers.remove(m);
+                }
+            });
+            this.$("#sad_list_select").css({
+            	                                "color": "rgb(21, 2, 2)",
+            	                                "text-shadow": "0 1px white",
+            	                                "background": "-webkit-gradient(linear, 50% 0%, 50% 100%, from(#E0E0E0), to(#EBEBEB))",
+            	                               });
+            this.trigger('show_reports_list');
+            this.layer_editor_reports.show();
+        }
+    },
+    reload_report: function(){
+    	this.report = this.reports.get_report_enabled();
+    	this.report_tool_bar.set_range_date_input(this.report);
+    	console.log(this.report);
     },
     setting_report_data: function(){
         var date    = new Date();
@@ -314,8 +379,8 @@ var MonthlySAD = Toolbar.extend({
         var current_month     = date.getMonth();
         var current_month_sad = date_sad.getMonth();
 
-        var current_year     = date.getYear();
-        var current_year_sad = date_sad.getYear();
+        var current_year     = date.getFullYear();
+        var current_year_sad = date_sad.getFullYear();
 
         var month_diference = current_month - current_month_sad;
         var year_diference  = current_year  - current_year_sad;
@@ -324,6 +389,10 @@ var MonthlySAD = Toolbar.extend({
             var new_start = moment(new Date(current_year, current_month_sad + 1, 1)).format("DD-MM-YYYY");
             var new_end   = moment(new Date(current_year, current_month_sad + 1, 0)).format("DD-MM-YYYY");
             console.log("Nem start: "+new_start);
+            console.log(this.report);
+            console.log(new_start);
+            console.log(new_end);
+            
             this.report.set('str', new_start);
             this.report.set('str_end', new_end);
         }

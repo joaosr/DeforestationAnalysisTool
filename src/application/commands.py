@@ -53,13 +53,14 @@ def fix_report():
         x.put()
     return "thank you, john"
 
-@app.route('/_ah/cmd/create_report', methods=('POST',))
-def show_tables():
+@app.route('/_ah/cmd/create_report', methods=['POST', 'GET'])
+def create_tables():
     """ creates a report for specified month """
 
     month = request.args.get('month','')
     year = request.args.get('year','')
     day= request.args.get('day','')
+    
 
     if not month or not year:
         abort(400)
@@ -74,7 +75,8 @@ def show_tables():
     if assetid and month and year and day:
         r.end = date(year=int(year), month=int(month), day=int(day))
         r.assetid = assetid
-        r.finished = True
+        if assetid != 'null':
+           r.finished = True
         r.put()
         deferred.defer(update_report_stats, str(r.key()))
 

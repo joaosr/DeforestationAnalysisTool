@@ -43,6 +43,7 @@
   <script src="{{url_for('static',filename='js/controllers/error.js')}}"></script>
   <!-- report -->
   <script src="{{url_for("static", filename="js/models/report.js")}}"></script>
+  <script src="{{url_for("static", filename="js/models/reports.js")}}"></script>
 
   <!-- map layers -->
   <script src="{{url_for("static", filename="js/controllers/draw_tool.js")}}"></script>
@@ -279,6 +280,13 @@
    {% if user.is_admin() %}
    {% include "_user_admin.html" %}
    {% endif %}
+
+   <script type="text/template" id="reports-layers">
+        <div id="layer_reports_dialog" class="hidden">
+            <ul>
+            </ul>
+        </div>
+   </script>
 
    <script type="text/template" id="baseline-layers">
         <div id="layer_baseline_dialog" class="hidden">

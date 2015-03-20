@@ -10,6 +10,7 @@
 # pylint: disable-msg=g-illegal-space
 
 
+import ast
 import datetime
 import logging
 import re
@@ -18,7 +19,7 @@ import time
 from google.appengine.api import users
 from yaml import tokens
 
-from application.models import Report, Baseline
+from application.models import Report, Baseline, ImagePicker, Downscalling
 import ee
 import settings
 
@@ -978,9 +979,8 @@ class NDFI(object):
     def _ndfi_change(self, asset_id, sensor):
         # Constants.
         CLASSIFICATION_OFFSET = MAX_NDFI + 1
-
-	DEFORESTATION_THRES_MAX = -20
-	DEGRADATION_THRES_MAX = -5
+        DEFORESTATION_THRES_MAX = -20
+        DEGRADATION_THRES_MAX = -5
         # Get base NDFIs.
         work_month = self._getMidMonth(self.work_period['start'],
                                        self.work_period['end'])
@@ -988,31 +988,31 @@ class NDFI(object):
                                      self.work_period['end'])
         baseline = self._paint_edited_deforestation(
             asset_id, work_month, work_year)
-
-       # Get ndfi images to make the difference.
+        
+        # Get ndfi images to make the difference.
         ndfi0 = self._NDFI_image(self.last_period, sensor, True)
         ndfi1 = self._NDFI_image(self.work_period, sensor)
-
+        
         # Basic difference.
         diff = ndfi1.subtract(ndfi0)
-
+        
         raw_result = diff#.multiply(0)
-
-	# Classification rules
+        
+        # Classification rules
         deforest = diff.lte(DEFORESTATION_THRES_MAX)
-	degradat = diff.lte(DEGRADATION_THRES_MAX).And(deforest.neq(1))
-	#forest   = diff.gt(DEGRADATION_THRES_MAX)
-
-	raw_result = raw_result.where(deforest.eq(1), CLASSIFICATION_OFFSET + CLS_DEFORESTED)
-	raw_result = raw_result.where(degradat.eq(1), CLASSIFICATION_OFFSET + CLS_DEGRADED)
-	#raw_result = raw_result.where(forest.eq(1), CLASSIFICATION_OFFSET + CLS_FOREST)
-	#raw_result = baseline.where(out_shifted_baseline, CLS_BASELINE)
-
+        degradat = diff.lte(DEGRADATION_THRES_MAX).And(deforest.neq(1))
+        #forest   = diff.gt(DEGRADATION_THRES_MAX)
+        
+        raw_result = raw_result.where(deforest.eq(1), CLASSIFICATION_OFFSET + CLS_DEFORESTED)
+        raw_result = raw_result.where(degradat.eq(1), CLASSIFICATION_OFFSET + CLS_DEGRADED)
+        #raw_result = raw_result.where(forest.eq(1), CLASSIFICATION_OFFSET + CLS_FOREST)
+        #raw_result = baseline.where(out_shifted_baseline, CLS_BASELINE)
+        
         # Unclassify previously unclassified pixels and small forests.
-	#cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
-	#raw_result = raw_result.where(1, CLS_CLOUD)
-	result = raw_result
-
+        #cloud_mask = ndfi1.neq(CLS_UNCLASSIFIED)
+        #raw_result = raw_result.where(1, CLS_CLOUD)
+        result = raw_result
+        
         return result.byte().addBands(baseline)
 
     def _ndfi_delta(self, asset_id, sensor):
@@ -1054,7 +1054,7 @@ class NDFI(object):
         baseline = self._paint_edited_deforestation(
             asset_id, work_month, work_year)
 
-       # Get ndfi images to make the difference.
+        # Get ndfi images to make the difference.
         ndfi0 = self._NDFI_image(self.last_period, sensor, True)
         ndfi1 = self._NDFI_image(self.work_period, sensor)
 
@@ -1301,8 +1301,16 @@ class NDFI(object):
         work_month = self._getMidMonth(period['start'], period['end'])
         work_year = self._getMidYear(period['start'], period['end'])
         date = '%04d%02d' % (work_year, work_month)
-        krig_filter = ee.Filter.eq('Compounddate', int(date))
-        params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
+        downscalling = Downscalling.find_by_compounddate(date)
+        feature_collection = Downscalling.return_feature_collection(downscalling)
+        params = ''
+        
+        if feature_collection:
+            params = feature_collection
+        else:
+            krig_filter = ee.Filter.eq('Compounddate', int(date))
+            params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
+        
         mosaic = self._make_mosaic(period, long_span)
         return ee.Algorithms.SAD.KrigeModis(mosaic, params)
 
@@ -1348,35 +1356,57 @@ class NDFI(object):
           10. sur_refl_b02_250m
           11. num_observations_250m
         """
+        inclusions = ''
 
-        # Calculate the time span.
+        
         if long_span:
-          start_time = period['end'] - LONG_SPAN_SIZE_MS
-          end_time = period['end']
-          start_month = time.gmtime(start_time / 1000).tm_mon
-          start_year = time.gmtime(start_time / 1000).tm_year
-          end_month = time.gmtime(end_time / 1000).tm_mon
-          end_year = time.gmtime(end_time / 1000).tm_year
-          start = '%04d%02d' % (start_year, start_month)
-          end = '%04d%02d' % (end_year, end_month)
-          inclusions_filter = ee.Filter.And(
-              ee.Filter.gte('compounddate', start),
-              ee.Filter.lte('compounddate', end))
+            # Calculate the time span.
+            start_time = period['end'] - LONG_SPAN_SIZE_MS
+            end_time = period['end']
+            start_month = time.gmtime(start_time / 1000).tm_mon
+            start_year = time.gmtime(start_time / 1000).tm_year
+            end_month = time.gmtime(end_time / 1000).tm_mon
+            end_year = time.gmtime(end_time / 1000).tm_year
+            start = '%04d%02d' % (start_year, start_month)
+            end = '%04d%02d' % (end_year, end_month)
+            image_picker = ImagePicker.find_by_compounddate_period(start, end)
+            feature_collection = ImagePicker.return_feature_collection(image_picker)
+            
+            # Prepare the inclusions table.
+            if feature_collection:
+                inclusions = feature_collection
+            else:
+                inclusions_filter = ee.Filter.And(
+                                       ee.Filter.gte('compounddate', start),
+                                       ee.Filter.lte('compounddate', end))
+                # Prepare the inclusions table.
+                inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
+                inclusions = inclusions.filter(inclusions_filter)
+                
         else:
-          start_time = period['start']
-          end_time = period['end']
-          month = self._getMidMonth(start_time, end_time)
-          year = self._getMidYear(start_time, end_time)
-          inclusions_filter = ee.Filter.eq(
-              'compounddate', '%04d%02d' % (year, month))
+            # Calculate the time span.
+            start_time = period['start']
+            end_time = period['end']
+            month = self._getMidMonth(start_time, end_time)
+            year = self._getMidYear(start_time, end_time)
+            compounddate = '%04d%02d' % (year, month)
+            image_picker = ImagePicker.find_by_compounddate(compounddate)
+            feature_collection = ImagePicker.return_feature_collection(image_picker)
+            
+            # Prepare the inclusions table.
+            if feature_collection:
+                inclusions = feature_collection
+            else:
+                inclusions_filter = ee.Filter.eq(
+                'compounddate', compounddate)
+                inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
+                inclusions = inclusions.filter(inclusions_filter)
 
         # Prepare source image collections.
         modis_ga = ee.ImageCollection('MODIS/MOD09GA').filterDate(start_time, end_time)
         modis_gq = ee.ImageCollection('MODIS/MOD09GQ').filterDate(start_time, end_time)
 
-        # Prepare the inclusions table.
-        inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
-        inclusions = inclusions.filter(inclusions_filter)
+        
 
         object1 = ee.call(
           'SAD/com.google.earthengine.examples.sad.MakeMosaic',
@@ -1543,16 +1573,19 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     #image = collection.mosaic()
     
     image_L5 = image_L5.find_map_image(bbox)
+    sensor = ''
     
     
     image = ''
     
     if image_L5:
         image = image_L5
+        sensor = EELandsat.LANDSAT5
     else:
         image_L7 = image_L7.find_map_image(bbox)        
         if image_L7:
-           image = image_L7 
+           image = image_L7
+           sensor = EELandsat.LANDSAT7 
 
     
     ## SMA ===========================================================================
@@ -1572,17 +1605,13 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     bufferSize  = 10 #pixels
 
     cloudMask1 = unmixed.select(3).gte(cloudThresh[0])
-    #isCloud    = cloudMask1.eq(1)
-    #baseline1 = cloudMask1.mask(isCloud)
-
+ 
     kernel = ee.Kernel.circle(bufferSize, 'pixels')
 
     buffered = cloudMask1.convolve(kernel)
     buffered = (buffered.add(cloudMask1)).gt(0)
 
     cloudMask2 = buffered.eq(1).And(unmixed.select([3]).gte(cloudThresh[1]))
-    #isCloud = cloudMask2.eq(1)
-    #baseline2 = cloudMask2.mask(isCloud)
 
     ## Classification =================================================================
     classification = ndfi.multiply(0)
@@ -1591,16 +1620,17 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     classification = classification.where(ndfi.lte(164), 3) #Deforestation
     classification = classification.where(summed.lte(0.15), 4) #Water
     classification = classification.where(cloudMask2.eq(1), 5) #Cloud
-    #logging.info(classification)
     
     feature = ee.Image(classification).getMapId({
-                              'bands': 'nd'
+                              'bands': 'nd', 
+                              'palette': '000000,00994d,00ffff,ffff00,0000ff,666666'                            
                               })
 
     mapid = feature['mapid']
     token = feature['token']
+    name = 'BASELINE/'+sensor+'/'+start_date.strftime("%Y-%b-%d")+' to '+end_date.date().strftime("%Y-%b-%d")
 
-    baseline = Baseline(added_by= users.get_current_user(), start= start_date.date(), end=end_date.date(), mapid=mapid, token=token)
+    baseline = Baseline(added_by= users.get_current_user(), name=name, start= start_date.date(), end=end_date.date(), mapid=mapid, token=token)
     
     return baseline.save()
 
