@@ -82,6 +82,28 @@ def create_tables():
 
     return r.as_json()
 
+@app.route('/_ah/cmd/create_cell', methods=['POST', 'GET'])
+def create_tables_cell():
+    """ creates a report for specified month """
+       
+    z = request.args.get('z','')
+    x = request.args.get('x','')
+    y  = request.args.get('y','')
+    
+    parent_id =  request.args.get('parent_id','')
+    
+    assetid = request.args.get('assetid','')
+    
+    report = Report.find_by_assetid(assetid)
+
+    if not z or not x or not y:
+        abort(400)
+        
+    
+    r = Cell(z=z, x=x, y=y, parent_id=parent_id, assetid=assetid, report=report)
+    r.put()
+
+    return r.as_json() 
 
 
 @app.route('/_ah/cmd/cron/update_cells_ndfi', methods=('GET',))

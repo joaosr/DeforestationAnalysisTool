@@ -94,6 +94,14 @@ class Report(db.Model):
         return None
     
     @staticmethod
+    def find_by_assetid(assetid):
+        q = Report.all().filter('asssetid =', assetid)
+        r = q.fetch(1)
+        if r:
+            return r[0]
+        return None
+    
+    @staticmethod
     def all_period():
         q = Report.all().order('-assetid')
         r = q.fetch(200)

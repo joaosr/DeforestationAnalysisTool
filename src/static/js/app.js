@@ -123,8 +123,8 @@ $(function() {
         ),
 
         initialize:function() {
-            _.bindAll(this, 'to_cell', 'start', 'select_mode', 'work_mode', 'change_report', 'compare_view', 'update_map_layers', 'cell_done', 'go_back', 'open_notes', 'change_cell', 'close_report', 'open_settings');
-
+            _.bindAll(this, 'to_cell', 'start', 'select_mode', 'work_mode', 'change_report', 'compare_view', 'update_map_layers', 'cell_done', 'go_back', 'open_notes', 'change_cell', 'close_report', 'open_settings', 'reload_report');
+            
             window.loading.loading("Imazon:initialize");
             this.reports = new ReportCollection();
             this.report_base = new ReportCollection();
@@ -142,6 +142,7 @@ $(function() {
 
         init_ui: function() {
             this.main_operations = new MainOperations({report: this.active_report, mapview: this.map});
+            this.main_operations.bind('sad_change', this.reload_report);
 //            this.selection_toolbar = new ReportToolbar({report:this.active_report});
             this.polygon_tools = new PolygonToolbar();
             this.overview = new Overview({report: this.active_report});
@@ -169,7 +170,11 @@ $(function() {
             });
 
         },
-
+        reload_report: function(){
+        	console.log(this.main_operations.report);   
+        	console.log("============ Report Reload ================");
+                                   
+        },
         change_cell: function(low, high) {
             var cell = this.gridstack.current_cell;
             cell.set({
@@ -488,12 +493,9 @@ $(function() {
 
 
         // entering on work mode
-        work_mode: function(x, y, z) {
-            //this.selection_toolbar.hide();
-            //this.imagePicker.hide();
-            //this.downscalling.hide();
-            this.main_operations.hide_all();
-            this.map.hide_sad_info();
+        work_mode: function(x, y, z) {                       
+            this.map.show_sad_info(this.report_base.models[0], z);
+            this.main_operations.listen_zoon(z);
             this.polygon_tools.show();
             this.ndfi_layer.show();
             this.map.show_zoom_control();
@@ -538,16 +540,15 @@ $(function() {
         	//this.get_status_layer_map('one');
             var p = this.gridstack.current_cell.parent_cell();
             this.to_cell(p.get('z'), p.get('x'), p.get('y'));
-            router.navigate('cell/' +  p.get('z') + "/" + p.get('x') + "/" + p.get('y'));
-            this.change_grid_level();
+            router.navigate('cell/' +  p.get('z') + "/" + p.get('x') + "/" + p.get('y'));            
         },
 
         // entering on select_mode
-        select_mode: function() {
+        select_mode: function(x, y, z) {
             this.map.hide_zoom_control();
-            this.map.show_sad_info(this.report_base.models[0]);
+            this.map.show_sad_info(this.report_base.models[0], z);
+            this.main_operations.listen_zoon(z);
             this.compare_view('one');
-            this.main_operations.show_all();
             this.polygon_tools.hide();
             this.ndfi_layer.hide();
             this.overview.select_mode();
@@ -559,29 +560,7 @@ $(function() {
                 delete this.editing_router;
             }
         },
-        change_grid_level: function(){
-           var cell  = this.gridstack.current_cell;
-           var bound = this.gridstack.bound();
-           var level = cell.get('z');
-           //this.map.reload_layers(level, bound);
-           if(level == '0'){
-            // this.selection_toolbar.show();
-            // this.imagePicker.show();
-            // this.downscalling.show();
-
-             this.map.hide_sad_info();
-           }
-           else if(level == '1'){
-              //this.selection_toolbar.hide();
-              // this.downscalling.hide();
-             this.main_operations.hide_monthly_sad();
-           }
-           else if(level == '2'){
-
-             console.log('3º Nivel');
-           }
-        },
-
+        
         show_messagem: function(){
 
         },
@@ -609,8 +588,7 @@ $(function() {
             this.gridstack.grid.bind('enter_cell', function(cell) {
                 if(cell.get('z') == '1' && !self.main_operations.operation_selected){
                     alert("One operation must be selected in Toolbar");
-                }else{
-                    self.change_grid_level();
+                }else{                    
                     self.gridstack.grid.trigger('cell_click', cell);
                     self.overview.on_cell(cell.get('x'), cell.get('y'), cell.get('z'));
                     router.navigate('cell/' +  cell.get('z') + "/" + cell.get('x') + "/" + cell.get('y'));
@@ -619,9 +597,6 @@ $(function() {
             router.bind('route:cell', this.to_cell);
             this.gridstack.bind('select_mode', this.select_mode);
             this.gridstack.bind('work_mode', this.work_mode);
-//            this.gridstack.bind('select_mode', this.change_grid_level());
-//            this.gridstack.bind('work_mode', this.change_grid_level();
-
 
             // init interface elements
             this.init_ui();

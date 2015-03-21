@@ -329,7 +329,7 @@ var GridStack = Backbone.View.extend({
 
             });
             this.set_cells(cells);
-            this.trigger('select_mode');
+            this.trigger('select_mode', x, y, z);
             self.mapview.tile_info('');
         } else {
             this.grid.set_visible_zone(cell_bounds);

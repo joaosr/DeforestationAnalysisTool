@@ -369,7 +369,7 @@ var MonthlySAD = Toolbar.extend({
     reload_report: function(){
     	this.report = this.reports.get_report_enabled();
     	this.report_tool_bar.set_range_date_input(this.report);
-    	console.log(this.report);
+    	this.trigger('report_change');    	
     },
     setting_report_data: function(){
         var date    = new Date();
@@ -456,6 +456,13 @@ var MonthlySAD = Toolbar.extend({
         if(!this.down_scalling.visibility){
           this.down_scalling.visibility_change();
         }
+    },
+    show_selected: function(){
+    	if(this.selected){
+    		this.el.show();
+    	}else{
+    		this.el.hide();
+    	}
     },
     visibility_change: function(){
         if(this.visibility){
@@ -592,6 +599,13 @@ var Baseline = Toolbar.extend({
           this.image_picker.bind('visibility_change', this.show_baseline_list(null));
         }        
     },
+    show_selected: function(){
+    	if(this.selected){
+    		this.el.show();    		
+    	}else{
+    		this.el.hide();
+    	}
+    },
     visibility_change: function(){
         if(this.visibility){
             $(this.el).css("background-color", "rgba(0, 0, 0, 0)");
@@ -630,6 +644,13 @@ var TimeSeries = Toolbar.extend({
         this.selected = false;
         document.getElementById('time_series_check').checked = false;
     },
+    show_selected: function(){
+    	if(this.selected){
+    		this.el.show();
+    	}else{
+    		this.el.hide();
+    	}
+    },
     visibility_change: function(){
         if(this.visibility){
             $(this.el).css("background-color", "rgba(0, 0, 0, 0)");
@@ -652,15 +673,32 @@ var MainOperations = Backbone.View.extend({
         'click #hide_message_tools': 'hide_message_tools'
     },
     initialize: function(){
-        _.bindAll(this, 'hide_message_tools', 'hide_monthly_sad', 'show_monthly_sad', 'hide_baseline', 'show_baseline', 'hide_time_series', 'show_time_series', 'hide_all', 'show_all','callback');
-        this.monthly_sad = new MonthlySAD({report: this.options.report, callerView: this});
-        this.baseline    = new Baseline({report: this.options.report, callerView: this, mapview: this.options.mapview});
+        _.bindAll(this, 'hide_message_tools', 'hide_monthly_sad', 'show_monthly_sad', 'hide_baseline', 'show_baseline', 'hide_time_series', 'show_time_series', 'hide_all', 'show_all','callback', 'sad_report_change');
+        this.report = this.options.report
+        this.monthly_sad = new MonthlySAD({report: this.report, callerView: this});
+        this.baseline    = new Baseline({report: this.report, callerView: this, mapview: this.options.mapview});
         this.time_series = new TimeSeries({callerView: this});
         this.operation_selected = false;
         this.MESSAGE_ALERT = 1;
         this.MESSAGE_ERROR = 2;
         this.MESSAGE_SUCCESS = 3;
-
+        this.monthly_sad.bind('report_change', this.sad_report_change);
+    },
+    sad_report_change: function(){
+    	this.report = this.monthly_sad.report; 
+    	this.trigger('sad_change')
+    },
+    listen_zoon: function(zoom){
+    	if(zoom == '0'){
+    		this.show_all();    		
+    	}else if(zoom == '1'){
+    		this.monthly_sad.show_selected();
+    		this.baseline.show_selected();
+    		this.time_series.show_selected();
+    	}else if(zoom == '2'){
+    	    this.hide_all();
+    	}
+    	
     },
     callback_selected: function(view){
         this.operation_selected = true;
@@ -724,7 +762,6 @@ var MainOperations = Backbone.View.extend({
           this.time_series.visibility_change();
         }
     },
-
     hide_all: function(){
         this.monthly_sad.hide();
         this.baseline.hide();
