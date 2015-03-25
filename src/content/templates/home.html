@@ -26,6 +26,9 @@
 
   <!-- image-picker -->
   <script src="{{url_for('static',filename='js/libs/image-picker.js')}}"></script>
+  
+  <!-- pikaday -->
+  <script src="{{url_for('static',filename='js/libs/pikaday.js')}}"></script>
 
   <!-- pixel operations library -->
   <script type="text/javascript" src="{{url_for("static", filename="js/pixel_ops.js")}}"></script>
@@ -70,11 +73,10 @@
 
 
   <!-- picker -->
-  <script src="{{url_for("static",filename="js/picker.js")}}"></script>
+  <script src="{{url_for('static',filename='js/picker.js')}}"></script>
 
   <!-- downscalling -->
-  <script src="{{url_for("static",filename="js/downscalling.js")}}"></script>
-
+  <script src="{{url_for('static',filename='js/downscalling.js')}}"></script>
 
   <!-- toolbar -->
   <script src="{{url_for('static',filename='js/controllers/toolbar.js')}}"></script>
@@ -294,6 +296,27 @@
             </ul>
         </div>
    </script>
+   
+   <script type="text/template" id="editor-baseline-image-picker">
+        <div id="editor_baseline_image_picker" class="hidden">
+               <p id="cell_name"></p>
+
+               <div id="content">
+                   <div id="period">
+                       <label for="period_start">from:</label>
+                       <input type="text" id="period_start">
+
+                       <label for="period_start">to:</label>   
+                       <input type="text" id="period_end"> 
+                   </div>
+
+                   <ul id="cloud_cover">
+                   
+                   </ul>
+               </div>
+        	
+        </div>
+   </script>
 
    <script type="text/template" id="layer-editor">
         <div id="layer_editor_dialog" class="hidden">
@@ -335,6 +358,7 @@
                     print(added_by.split('@')[0]);
             %></h3>
         </div>
+        <button class="setting_baseline" type="button">Setting Baseline</button>
       </div>
     </script>
 

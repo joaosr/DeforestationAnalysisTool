@@ -909,6 +909,7 @@ header #tools #baseline #baseline_content #range_select #range_picker {
 #header #tools #baseline #baseline_content #image_picker {
   margin: 0 20px 0 20px;
   padding: 16px 14px 11px 20px;
+  display: none;
 }
 #header #tools #baseline #baseline_content #image_picker a#picker_select {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
@@ -978,6 +979,38 @@ text-shadow: #000000 0px 1px 0px;
     max-height: 600px;
     max-width: 700px;
     margin-top: 20px;
+}
+#header #tools #baseline #editor_baseline_image_picker{
+  display: block;
+  position: absolute;
+  left: 10px;
+  padding: 20px 20px 20px 20px;
+  margin-top: 59px;
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#EBEBEB), to(#D1D1D1));
+  border-radius: 4px;
+  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+  color: #3D3D3D;
+  text-shadow: 0 1px #FFFFFF;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 1);
+}
+
+#header #tools #baseline #editor_baseline_image_picker #cell_name{  
+  text-align: center;
+  margin-bottom: 20px;
+}
+#header #tools #baseline #editor_baseline_image_picker #content{
+  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+  color: #575757;
+  text-shadow: 0 1px #FFFFFF;
+}
+#header #tools #baseline #editor_baseline_image_picker #content #period {  
+  padding: 10px 0 20px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 1);  
+}
+#header #tools #baseline #editor_baseline_image_picker #content #cloud_cover {  
+  padding: 20px 0 10px 0;    
 }
 #header #tools #time_series{
   margin: 0 20px 0 100px;
@@ -1944,8 +1977,8 @@ body, html {
 #map_info{
     position: absolute;
     display: None;
-    top: 21px;
-    left: 40px;
+    top: 100px;
+    left: 20px;
     width: 300px;
     height: 50px;
     background-color: rgba(20, 21, 22, 0.8);
@@ -1983,6 +2016,9 @@ body, html {
   height: 10px;
   margin: -5px 0 0 0;
   background: url("../img/cellinfo_arrow.png") no-repeat 0 0;
+}
+#grid .cell .cell_wrapper_info .setting_baseline {
+	display: none;
 }
 #grid .cell .cell_wrapper_info h3 {
   display: block;

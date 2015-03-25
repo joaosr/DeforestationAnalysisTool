@@ -1,24 +1,26 @@
 # encoding: utf-8
 
+from datetime import datetime, date
 import logging
 import random
-import simplejson as json
 import time
-from datetime import datetime, date
-from app import app
-from flask import render_template, flash, url_for, redirect, abort, request, make_response
-from application.time_utils import timestamp
+
+from google.appengine.api import memcache
 from google.appengine.ext import deferred
 from google.appengine.ext.db import Key
-from google.appengine.api import memcache
 
+from app import app
 from application import settings
-from ft import FT
-
-from time_utils import month_range
-from application.models import Report, Cell, StatsStore, FustionTablesNames
 from application.constants import amazon_bounds
+from application.ee_bridge import Stats
+from application.models import Report, Cell, StatsStore, FustionTablesNames, CellGrid, \
+    Tile
+from application.time_utils import timestamp
 from ee_bridge import NDFI
+from flask import render_template, flash, url_for, redirect, abort, request, make_response
+from ft import FT
+import simplejson as json
+from time_utils import month_range
 
 
 @app.route('/_ah/cmd/create_table')
@@ -102,6 +104,32 @@ def create_tables_cell():
     
     r = Cell(z=z, x=x, y=y, parent_id=parent_id, assetid=assetid, report=report)
     r.put()
+
+    return r.as_json()
+
+@app.route('/_ah/cmd/create_cell_grid', methods=['POST', 'GET'])
+def create_tables_cell_grid():
+    """ creates a report for specified month """
+       
+    name = request.args.get('name','')
+    geo = request.args.get('geo','')    
+        
+    r = CellGrid(name=name, geo=geo)
+    r.save()
+
+    return r.as_json()
+
+@app.route('/_ah/cmd/create_tiles', methods=['POST', 'GET'])
+def create_tables_tiles():
+    """ creates a report for specified month """
+       
+    sensor = request.args.get('sensor','')
+    name = request.args.get('name','')
+    cell = request.args.get('cell', '')
+    geo = request.args.get('geo','')    
+        
+    r = Tile(sensor=sensor, name=name, cells=[cell] ,geo=geo)
+    r.save()
 
     return r.as_json() 
 
@@ -204,7 +232,6 @@ tables_map = dict(x[:2] for x in tables)
 # ==================================================
 #
 
-from application.ee_bridge import Stats
 @app.route('/_ah/cmd/update_report_stats/<report_id>', methods=('GET',))
 def update_report_stats_view(report_id):
     deferred.defer(update_report_stats, report_id)

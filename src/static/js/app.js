@@ -597,9 +597,14 @@ $(function() {
             router.bind('route:cell', this.to_cell);
             this.gridstack.bind('select_mode', this.select_mode);
             this.gridstack.bind('work_mode', this.work_mode);
+            
+            
 
             // init interface elements
             this.init_ui();
+            
+            this.gridstack.grid.bind('show_cell_popup', this.main_operations.baseline.setting_baseline_popup);
+            this.gridstack.grid.bind('hide_cell_popup', this.main_operations.baseline.setting_baseline_popup);
 
             // init the map
             this.map.map.setCenter(this.amazon_bounds.getCenter());

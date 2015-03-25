@@ -486,17 +486,17 @@ var Baseline = Toolbar.extend({
     el: $("#baseline"),
     events:{
         'click #baseline_select': 'visibility_change',
-        'click #baseline_check':  'selected',
+        'click #baseline_check':  'selected',        
         'click #baseline_list_select': 'show_baseline_list'
     },
     initialize: function(){
-        _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change');
+        _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change', 'setting_baseline_popup', 'show_imagepicker_search');
         this.callerView = this.options.callerView;
         this.report     = this.options.report;
         this.map        = this.options.mapview; 
 //        this.setting_report_data();
         this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, url_send: '/baseline_report/', callerView: this});
-        this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});        
+        //this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});        
         this.visibility = false;
         this.selected = false;
         this.baselines = new LayerCollection();
@@ -562,6 +562,48 @@ var Baseline = Toolbar.extend({
         this.report.set('str_end', new_end);
 
     },
+    setting_baseline_popup: function(popup, grid){
+    	if(this.selected && grid.model.get('z') == '2'){
+    		//popup.append( "<p>Test</p>" );
+    		var setting_baseline = popup.find('.setting_baseline');
+    		setting_baseline.show();
+    		var that = this;
+    		setting_baseline.click(function(e) {
+    			if(e)e.preventDefault();
+    			that.show_imagepicker_search(grid, e);
+			});
+    		
+    	}else{
+    		var setting_baseline = popup.find('.setting_baseline')
+    		setting_baseline.hide();
+    	}
+    },
+    show_imagepicker_search: function(grid, e) {
+    	if(e){
+    		e.preventDefault();
+    		if(this.editor_baseline_imagepicker !== undefined) {
+    			this.editor_baseline_imagepicker = undefined;
+            }
+    	}
+    	
+    	if(this.editor_baseline_imagepicker === undefined) {
+            this.editor_baseline_imagepicker = new EditorBaselineImagePicker({
+                parent: this.el,  
+                grid: grid
+            });
+        }
+    	
+    	if(this.editor_baseline_imagepicker.showing) {
+            this.editor_baseline_imagepicker.close();             
+        } else {
+        	console.log(this.baselines);            
+            
+            var that = this;
+            
+            this.trigger('show_imagepicker_search');
+            this.editor_baseline_imagepicker.show();
+        }
+	},
     selected: function(){
         this.selected = document.getElementById('baseline_check').checked;
         this.callerView.callback_selected(this);
@@ -574,9 +616,10 @@ var Baseline = Toolbar.extend({
         if(view === this.report_tool_bar && this.report_tool_bar.visibility){
             this.hide_image_picker();
         }
+        /*
         else if(view === this.image_picker && this.image_picker.visibility){
             this.hide_report_tool_bar();
-        }
+        }*/
     },
     hide_report_tool_bar: function(){
         if(this.report_tool_bar.visibility){
@@ -601,7 +644,8 @@ var Baseline = Toolbar.extend({
     },
     show_selected: function(){
     	if(this.selected){
-    		this.el.show();    		
+    		this.$("#baseline_content").css("left", "50px");
+    		this.el.show();
     	}else{
     		this.el.hide();
     	}
@@ -623,6 +667,7 @@ var Baseline = Toolbar.extend({
 
     }
 });
+
 
 var TimeSeries = Toolbar.extend({
     el: $("#time_series"),
@@ -646,7 +691,7 @@ var TimeSeries = Toolbar.extend({
     },
     show_selected: function(){
     	if(this.selected){
-    		this.el.show();
+    		this.el.show();    		
     	}else{
     		this.el.hide();
     	}

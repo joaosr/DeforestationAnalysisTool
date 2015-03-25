@@ -325,10 +325,10 @@ class EELandsat(object):
             'gain': PREVIEW_GAIN
         }))
 
-    def mapid_landsat_oito(self, start, end):
+    def mapid_landsat8(self, start, end):
         MAP_IMAGE_BANDS = ['B4', 'B3', 'B2']
         PREVIEW_GAIN = 500
-        return _get_raw_mapid(_get_landsat_oito(start, end).mosaic().getMapId({
+        return _get_raw_mapid(_get_landsat8(start, end).mosaic().getMapId({
             'bands': ','.join(MAP_IMAGE_BANDS),
             'gain': PREVIEW_GAIN
         }))
@@ -344,18 +344,32 @@ class SMA(object):
     MODIS_T1    = 'SMA T1 (MODIS)'
     SENSORS     = [LANDSAT5_T0, LANDSAT5_T1, LANDSAT7_T0, LANDSAT7_T1, LANDSAT8_T0, LANDSAT8_T1, MODIS_T0, MODIS_T1]
 
-    def __init__(self, work_period, last_period, map_image):
+    def __init__(self, last_period, work_period, map_image):
         self.last_period = dict(start=last_period[0], end=last_period[1])
         self.work_period = dict(start=work_period[0], end=work_period[1])
         self.map_image   = map_image
         self.name_sensor = re.findall(r'\((.*?)\)', map_image)[0]
 
         if 'T0' in self.map_image:
+            self.start_time = datetime.datetime.fromtimestamp(self.last_period['start'] / 1e3).strftime("%Y-%m-%d")
+            self.start_time = datetime.datetime.strptime(self.start_time, "%Y-%m-%d")
+            self.end_time   = datetime.datetime.fromtimestamp(self.last_period['end'] / 1e3).strftime("%Y-%m-%d")
+            self.end_time = datetime.datetime.strptime(self.end_time, "%Y-%m-%d")
+            """
             self.start_time = self.last_period['start']
-            self.end_time   = self.last_period['end']
+            self.end_time = self.last_period['end']
+            """ 
         elif 'T1' in self.map_image:
+            self.start_time = datetime.datetime.fromtimestamp(self.work_period['start'] / 1e3).strftime("%Y-%m-%d")
+            self.start_time = datetime.datetime.strptime(self.start_time, "%Y-%m-%d")
+            self.end_time   = datetime.datetime.fromtimestamp(self.work_period['end'] / 1e3).strftime("%Y-%m-%d")
+            self.end_time = datetime.datetime.strptime(self.end_time, "%Y-%m-%d")
+            """
             self.start_time = self.work_period['start']
-            self.end_time   = self.work_period['end']
+            self.end_time = self.work_period['end']
+            """            
+            
+        #logging.info(self.start_time.strftime("%Y-%m-%d")+' === TIME === '+self.end_time.strftime("%Y-%m-%d"))
 
     @staticmethod
     def from_class(map_image):
@@ -1823,7 +1837,7 @@ def _get_landsat_toa(start_time, end_time, version=-1):
     collection = collection.filterDate(start_time, end_time)
     return collection.map(ee.Algorithms.LandsatTOA)
 
-def _get_landsat_oito(start_time, end_time, version=-1):
+def _get_landsat8(start_time, end_time, version=-1):
     collection = ee.ImageCollection.load('LC8_L1T', version)
     collection = collection.filterDate(start_time, end_time)
     return collection.map(ee.Algorithms.LandsatTOA)

@@ -21,6 +21,7 @@ from kml import path_to_kml
 from mercator import Mercator
 import simplejson as json
 from time_utils import timestamp
+from google.appengine.api.validation import Repeated
 
 
 CELL_BLACK_LIST = ['1_4_0', '1_0_4', '1_1_4', '1_4_4']
@@ -457,6 +458,114 @@ class Cell(db.Model):
         # spcify lon, lat
         #return [[[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]]
         return {"type":"Polygon", "coordinates": [[ (sw[1], sw[0]), (sw[1], ne[0]), (ne[1], ne[0]), (ne[1], sw[0]) ]]}
+    
+class CellGrid(db.Model):     
+    name = db.StringProperty(required=True)
+    parent_name = db.StringProperty()        
+    last_change_on = db.DateTimeProperty(auto_now=True)
+    geo = db.TextProperty(required=True)
+    
+    def as_dict(self):
+        return {
+                #'id': str(self.ID),
+                'name': self.name,
+                'parent_name': self.parent_name,
+                'geo': self.geo
+        }
+    
+    def as_json(self):
+        return json.dumps(self.as_dict())
+
+    def save(self):
+        z, x, y = self.name.split('_')
+        z_parent = str(int(z) - 1)
+        x_parent = int(x)/5
+        y_parent = int(y)/5
+        self.parent_name = str(z_parent)+'_'+str(x_parent)+'_'+str(y_parent) 
+         
+        q = CellGrid.all().filter('name =', self.name)
+        r = q.fetch(1)
+
+        try:
+            if r:
+               r[0].geo         = self.geo   
+               r[0].parent_name = self.parent_name                        
+               r[0].put()
+               return 'Cell updated.'  
+            else:
+               self.put()
+               return 'Cell saved.'
+
+            
+        except:
+            return 'Could not save cell.'
+        
+class Tile(db.Model):
+    sensor = db.StringProperty(required=True)
+    name = db.StringProperty(required=True)
+    cells = db.StringListProperty(required=True)
+    last_change_on = db.DateTimeProperty(auto_now=True)
+    geo = db.TextProperty(required=True)
+    
+    def as_dict(self):
+        return {
+                #'id': str(self.ID),
+                'sensor': self.sensor,
+                'name': self.name,
+                'cells': self.cells,
+                'geo': self.geo
+        }
+    
+    def as_json(self):
+        return json.dumps(self.as_dict())
+    
+    @staticmethod
+    def find_by_cell_name(cell_name):
+        q = Tile.all().filter('cells =', cell_name)
+        r = q.fetch(10)
+        if r:
+            tiles = {}
+            for i in range(len(r)):
+                tiles.update({'tile'+str(i): r[i].as_dict()})
+            return tiles
+        else:
+            return None
+            
+                
+    
+    def save(self):  
+        q = Tile.all().filter('name =', self.name)
+        r = q.fetch(1)
+        
+        try:
+            if r:
+                print r[0].cells
+                
+                b1 = []
+                for i in self.cells:
+                    if i in r[0].cells:
+                        b1.append(i)
+                        
+                if b1 != []:
+                    for i in b1:
+                        self.cells.remove(i)
+                
+                    for i in self.cells:
+                        r[0].cells.append(i) 
+                
+                r[0].sensor = self.sensor
+                r[0].geo    = self.geo   
+                r[0].put()
+                
+                return 'Cell updated.' 
+            else:
+                self.put()
+                return 'Cell saved.'
+
+            
+        except:
+            return 'Could not save cell.'
+
 
 class Area(db.Model):
     """ area selected by user """

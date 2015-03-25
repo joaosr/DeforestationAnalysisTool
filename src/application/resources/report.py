@@ -1,25 +1,5 @@
 # encoding: utf-8
 
-import logging
-from application.models import Report, Cell, Area, Note, CELL_BLACK_LIST, User
-from application.ee_bridge import NDFI, EELandsat
-from resource import Resource
-from flask import Response, request, jsonify, abort
-from datetime import date
-from application.time_utils import date_from_julian
-
-import simplejson as json
-from application.time_utils import timestamp
-
-from application.constants import amazon_bounds
-from application import settings
-
-from google.appengine.ext.db import Key
-from google.appengine.api import users
-
-from google.appengine.api import memcache
-import logging
-
 """
 class NDFIMapApi(Resource):
      resource to get ndfi map access data
@@ -41,6 +21,27 @@ class NDFIMapApi(Resource):
             memcache.add(key=cache_key, value=data, time=3600)
         return jsonify(data)
 """
+
+from datetime import date
+import datetime
+import logging
+import logging
+
+from google.appengine.api import memcache
+from google.appengine.api import users
+from google.appengine.ext.db import Key
+
+from application import settings
+from application.constants import amazon_bounds
+from application.ee_bridge import NDFI, EELandsat
+from application.models import Report, Cell, Area, Note, CELL_BLACK_LIST, User
+from application.time_utils import date_from_julian
+from application.time_utils import timestamp
+from flask import Response, request, jsonify, abort
+from resource import Resource
+import simplejson as json
+
+
 class NDFIMapApi(Resource):
     """ resource to get ndfi map access data """
 
@@ -203,7 +204,7 @@ class CellAPI(Resource):
         cell = Cell.get_or_default(r, x, y, z)
         bounds = cell.bounds(amazon_bounds)
         bounds = "%f,%f,%f,%f" % (bounds[1][1], bounds[1][0], bounds[0][1], bounds[0][0])
-        ee = EELandsat()
+        ee = EELandsat(timestamp(r.start), datetime.datetime.now())
         d = ee.list(bounds=bounds)
         data = {}
         if len(d) >= 1:

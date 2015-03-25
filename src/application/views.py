@@ -14,7 +14,7 @@ from google.appengine.api import urlfetch
 from app import app
 from application import settings
 from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location, create_baseline
-from application.models import Baseline
+from application.models import Baseline, Tile
 from application.time_utils import timestamp, past_month_range
 from decorators import login_required, admin_required
 import ee
@@ -53,14 +53,20 @@ def default_maps():
     d = landsat.mapid(timestamp(r.start), datetime.datetime.now())
     maps.append({'data' :d, 'info': 'LANDSAT/LE7_L1T'})
 
-    d = landsat.mapid_landsat_oito(timestamp(r.start), datetime.datetime.now())
+    d = landsat.mapid_landsat8(timestamp(r.start), datetime.datetime.now())
     maps.append({'data':d, 'info': 'LANDSAT/LC8_L1T'})
 
     assetid = r.previous().as_dict().get('assetid')
     logging.info("Assetid :"+str(assetid))
 
+    
+
     d = ndfi.smaid()
     if d: maps.append({'data': d, 'info': 'SMA'})
+    sma = SMA(past_month_range(r.start), r.range(), SMA.LANDSAT7_T1)
+    bbox = [-74.0, -18.0, -44.0, 5.0]    
+    d = sma.find_mapid_from_sensor(bbox)
+    if d: maps.append({'data': d, 'info': SMA.LANDSAT7_T1})
     d = ndfi.rgb1id()
     if d: maps.append({'data': d, 'info': 'RGB'})
     d = ndfi.ndfi0id('modis')
@@ -479,4 +485,13 @@ def baseline_report():
         return jsonify({'result': result})
     else:
         return jsonify({'result': 'Other method'})
+    
+@app.route('/baseline_search_tiles/', methods=['POST', 'GET'])
+def baseline_search_tiles():
+    if request.method == 'POST':
+        cell_name   = request.form.get('cell_name')
+        result = Tile.find_by_cell_name(cell_name)
+        return jsonify({'tiles': result})
+    
+        
 

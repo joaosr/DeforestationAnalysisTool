@@ -199,6 +199,147 @@ var LayerEditor = Backbone.View.extend({
 
 });
 
+var EditorBaselineImagePicker = Backbone.View.extend({
+
+    showing: false,
+
+    template: _.template($('#editor-baseline-image-picker').html()),
+
+    initialize: function() {
+        _.bindAll(this, 'show', 'addTile', 'addTiles', 'sortLayers');
+        var self = this;
+        this.el = $(this.template());
+        
+        var picker_start = new Pikaday(
+        	    {
+        	        field: document.getElementById('#period_start'),
+        	        firstDay: 1,
+        	        minDate: new Date('2000-01-01'),
+        	        maxDate: new Date('2020-12-31'),
+        	        yearRange: [2000,2020]
+        	    });
+        
+        var picker_end = new Pikaday(
+        	    {
+        	        field: document.getElementById('#period_end'),
+        	        firstDay: 1,
+        	        minDate: new Date('2000-01-01'),
+        	        maxDate: new Date('2020-12-31'),
+        	        yearRange: [2000,2020]
+        	    });
+        
+        this.grid = this.options.grid;
+        var cell_name = ":: Cell "+this.grid.model.get('z')+"/"+this.grid.model.get('x')+"/"+this.grid.model.get('y')+" ::";        
+        this.el.find("#cell_name").html(cell_name);
+        cell_name = this.grid.model.get('z')+"_"+this.grid.model.get('x')+"_"+this.grid.model.get('y');
+        
+        var request = $.ajax({
+                              url: "baseline_search_tiles/",
+                              type: 'POST',
+                              data: {cell_name: cell_name},
+                              dataType: 'json',
+                              async: true,
+                              success:function(d) {
+                            	      console.log(d);
+                            	      self.addTiles(d.tiles);
+                            	      /*
+            	                      that.$("#loading_range_picker").hide();
+    	                              alert(d.result.message);
+					                  console.log(d);
+					                  that.data_request = d.result.data;
+					                  that.trigger('send_success');
+					                  console.log(that.data_request);
+					                  */
+					                  return d; 
+                              },
+                            }).responseText;
+        
+        this.options.parent.append(this.el);
+        //this.el.find('#editor_baseline_image_picker').append("");
+        /*
+        this.item_view_map = {};
+        this.layers = this.options.layers;
+        this.el = $(this.template());
+        
+        this.options.parent.append(this.el);
+        this.addTiles(this.layers);
+        this.el.find('ul').jScrollPane({autoReinitialise:true});
+
+        this.el.find('ul, div.jspPane').sortable({
+          revert: false,
+          items: '.sortable',
+          axis: 'y',
+          cursor: 'pointer',
+          stop:function(event,ui){
+            $(ui.item).removeClass('moving');
+            //
+            //DONT CALL THIS FUNCTION ON beforeStop event, it will crash :D
+            //
+            self.sortLayers();
+          },
+          start:function(event,ui){
+            $(ui.item).addClass('moving');
+          }
+        });
+        
+        this.bind('change_layers', function(){self.addTiles(self.layers)});
+        */        
+    },    
+    // reorder layers in map
+    sortLayers: function() {
+        var self = this;
+        var new_order_list = [];
+        // sort layers
+        this.el.find('ul').find('li').each(function(idx, item) {
+            var id = $(item).attr('id');
+            var view = self.item_view_map[id];
+            self.layers.remove(view.model);
+            new_order_list.push(view.model);
+        });
+        _(new_order_list).each(function(l) {
+            self.layers.add(l);
+        });
+        this.layers.trigger('reset');
+    },
+
+    addTile: function(tile) {
+        //if(!layer.hidden) {
+            var ul = this.el.find('ul#cloud_cover');
+            console.log(tile);        
+            ul.html("<li><p>"+tile['name']+": <input type='text'></p></li>");
+            //append(view.render().el);
+            
+        //}
+    },    
+    addTiles: function(tiles) {
+    	if(tiles){
+         this.el.find('ul#cloud_cover').html('');         
+         var that = this;         
+         
+         for(var tile in tiles){
+        	 this.addTile(tiles[tile]);
+         }
+        } 
+         /*
+         layers.raster_layers().each(function(m){
+            if(m.get('visibility') || m.get('type') == 'baseline'){
+                that.addTile(m);
+            }
+         });*/         
+    },
+    show: function(pos, side) {       	
+        this.el.show();//fadeIn();
+        this.showing = true;
+    },
+
+    close: function() {
+        this.el.hide();//fadeOut(0.1);
+        this.showing = false;
+    }
+
+});
+
+
 var LayerEditorBaseline = Backbone.View.extend({
 
     showing: false,

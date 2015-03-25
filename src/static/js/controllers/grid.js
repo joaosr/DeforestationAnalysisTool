@@ -11,8 +11,8 @@ var CellView = Backbone.View.extend({
 
     events:  {
         'mouseover': 'onmouseover',
-        'mouseout': 'onmouseout',
-        'click': 'onclick'
+        'mouseout': 'onmouseout'
+        //'click #cell': 'onclick'
     },
 
     initialize: function() {
@@ -50,7 +50,13 @@ var CellView = Backbone.View.extend({
         } else {
             cell.style['background-color'] = "rgba(0, 0, 0, 0.8)";
         }
-        $(cell).append(this.template(this.model.toJSON())).addClass('cell');
+        var that = this;
+        $(cell).append(this.template(this.model.toJSON())).addClass('cell').attr('id', 'cell').click(function(e) {
+        	if(e.target.id === "cell"){
+        		that.onclick(e);	
+        	}
+        	
+		});
         return this;
     },
 
@@ -71,6 +77,7 @@ var CellView = Backbone.View.extend({
         el.css({'z-index': 9});
         el.css({'border-size': border_size/2});
         el[0].style['background-color'] = "rgba(0, 0, 0, 0)";
+        this.trigger('show_cell_popup', popup);
     },
 
     onmouseout: function() {
@@ -94,6 +101,7 @@ var CellView = Backbone.View.extend({
     },
 
     onclick: function(e) {
+    	if(e) e.preventDefault();
         this.trigger('enter', this.model);
     }
 });
@@ -142,7 +150,10 @@ var Grid = Backbone.View.extend({
 
         this.cells.each(function(c) {
             var pos = that.el.position();
-            var cellview = new CellView({model: c});
+            var cellview = new CellView({model: c});            
+            cellview.bind('show_cell_popup', function(popup) {
+            	that.trigger('show_cell_popup', popup, this);
+			});            
             that.el.append(cellview.render(p.x, p.y, marginx + (c.get('x') - srcx)*wc, marginy + (c.get('y') - srcy)*wh, wc, wh).el);
             cellview.bind('enter', that.cell_selected);            
         });
