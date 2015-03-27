@@ -20,6 +20,8 @@ from decorators import login_required, admin_required
 import ee
 from models import Report, User, Error, ImagePicker, Downscalling
 import simplejson as json
+from application.api import landstat
+#from chardet.test import result
 
 
 sys.modules['ssl'] = None
@@ -493,5 +495,25 @@ def baseline_search_tiles():
         result = Tile.find_by_cell_name(cell_name)
         return jsonify({'tiles': result})
     
+@app.route('/imagepicker_baseline/', methods=['POST', 'GET'])
+def imagepicker_baseline():    
+       
+    if request.method == 'POST' and request.form.get('list_cloud_percent') and request.form.get('date_start') and request.form.get('date_end'):
+        
+
+        date_start         = request.form.get('date_start')
+        date_end           = request.form.get('date_end')
+        date_start = datetime.datetime.strptime(date_start,"%d/%b/%Y")
+        date_end = datetime.datetime.strptime(date_end,"%d/%b/%Y")
+        
+        list_cloud_percent = request.form.get('list_cloud_percent')
+        list_cloud_percent = json.loads(list_cloud_percent)
+        
+        landstat = EELandsat(date_start, date_end)
+        result = landstat.get_thumbs(list_cloud_percent)
+                
+        return jsonify({'result': result})
+    else:     
+        return jsonify({'result': None})
         
 

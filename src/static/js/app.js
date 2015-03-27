@@ -603,8 +603,8 @@ $(function() {
             // init interface elements
             this.init_ui();
             
-            this.gridstack.grid.bind('show_cell_popup', this.main_operations.baseline.setting_baseline_popup);
-            this.gridstack.grid.bind('hide_cell_popup', this.main_operations.baseline.setting_baseline_popup);
+            this.gridstack.grid.bind('show_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);
+            this.gridstack.grid.bind('hide_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);
 
             // init the map
             this.map.map.setCenter(this.amazon_bounds.getCenter());

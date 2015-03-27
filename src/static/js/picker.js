@@ -19,7 +19,7 @@ var ThumbView = Backbone.View.extend({
         $(this.el).attr('data-img-label', this.model.get('date')).html();
         $(this.el).attr('data-img-src', 'https://earthengine.googleapis.com/api/thumb?thumbid='+this.model.get('thumb')+'&token='+this.model.get('token')).html(this.model.get("date"));
         $(this.el).attr('value', this.model.get('date')).html();
-        return this;
+        return this;thumbs
     }
 });
 
@@ -30,7 +30,9 @@ var ThumbsView = Backbone.View.extend({
         console.log("Aqui");
         this.collection = new Thumbs();
         this.collection.bind('reset', this.addAll());
-        this.tilesView = new TilesView({el: this.options.tile_el, sensor: 'modis', callerView: this});
+        if(this.options.tile_el){
+           this.tilesView = new TilesView({el: this.options.tile_el, sensor: 'modis', callerView: this});
+        }
     },
     callback: function(){
        $(this.el).empty();

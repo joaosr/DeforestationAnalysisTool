@@ -19,7 +19,7 @@ import time
 from google.appengine.api import users
 from yaml import tokens
 
-from application.models import Report, Baseline, ImagePicker, Downscalling
+from application.models import Report, Baseline, ImagePicker, Downscalling, Tile
 import ee
 import settings
 
@@ -233,7 +233,7 @@ class EELandsat(object):
         elif map_image == EELandsat.LANDSAT7:
             return ['B3', 'B2', 'B1']
         elif map_image == EELandsat.LANDSAT8:
-            return ['band_3', 'band_1', 'band_0']
+            return ['B4', 'B3', 'B2']
 
     def find_mapid_from_sensor(self, bound=None):
         PREVIEW_GAIN = 500
@@ -250,34 +250,41 @@ class EELandsat(object):
         else:
            return _get_raw_mapid(None)
 
-    def get_thumbs(self, map_image, bounds):
-        thumbs_info = []
-        MAX_ERROR_METERS = 30.0
-        bbox = ee.Geometry(ee.Geometry.Rectangle(bounds[0], bounds[1], bounds[2], bounds[3]))
+    def get_thumbs(self, tiles, bounds=None):
+        results = {}
 
-        feature = ee.Feature(bbox)
-        region = feature.bounds(MAX_ERROR_METERS)
-        reprojected = ee.data.getValue({'json': region.serialize()})['geometry']['coordinates']
+        for tile in tiles:
+            MAX_ERROR_METERS = 30.0
+            thumbs_info = []
+            tile = tile.replace("_","/")
+            cloud_cover = tiles[tiles.keys()[0]]
+            region = Tile.find_geo_region(tile)
+            region = ee.Geometry.Polygon(region)
+    
+            feature = ee.Feature(region)
+            region = feature.bounds(MAX_ERROR_METERS)
+            reprojected = ee.data.getValue({'json': feature.serialize()})['geometry']['coordinates']
+    
+            collection = self.find_image_tile(tile, cloud_cover)
+    
+            images = collection.getInfo().get('features')
+    
+            for i in range(len(images)):
+                map_image = images[i].get('id').split('/')[0]
+                logging.info(map_image)
+                result = ee.data.getThumbId({
+                    'image': ee.Image(images[i].get('id')).serialize(False),
+                    'bands': ','.join(EELandsat.get_image_bands(map_image)),
+                    'region': reprojected                              
+                })
+    
+                date = images[i].get('properties').get('DATE_ACQUIRED') 
+    
+                thumbs_info.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date, 'map_image': map_image})
+                
+            results[tile] = thumbs_info
 
-        collection = self.find_map_collection(map_image, bounds)
-
-        images = collection.getInfo().get('features')
-
-        for i in range(len(images)):
-            result = ee.data.getThumbId({
-                'image': ee.Image(images[i].get('id')).serialize(False),
-                'bands': EELandsat.get_image_bands(map_image),
-                'region': reprojected,
-                'gain': [2.0, 2.0, 2.0]
-            })
-
-            imageId = images[i].get('id')
-            imageIdSplit = imageId.split('_')
-            date = imageIdSplit[4]+'-'+imageIdSplit[3]+'-'+imageIdSplit[2]
-
-            thumbs_info.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date, 'map_image': map_image})
-
-        return thumbs_info
+        return results
 
     def find_map_image(self, bounds=None):
 
@@ -287,6 +294,30 @@ class EELandsat(object):
            return image.mosaic()
         else:
            return None
+       
+    def find_image_tile(self, tile, cloud_cover=30):        
+        wrs_path =  tile.split('/')[0];
+        wrs_row =  tile.split('/')[1];
+                 
+        collection = ee.ImageCollection(EELandsat.LANDSAT8).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end).filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
+        
+        collection_size = len(collection.getInfo().get('features'))        
+        
+        if collection_size == 0:
+            collection = ee.ImageCollection(EELandsat.LANDSAT7).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end).filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
+        else:
+            return collection
+        
+        collection_size = len(collection.getInfo().get('features'))        
+         
+        if collection_size == 0: 
+            collection = ee.ImageCollection(EELandsat.LANDSAT5).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end).filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
+        else:
+            return collection   
+                
+        return collection  
+        
+        
 
     def find_map_collection(self, bounds=None):
 

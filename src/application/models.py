@@ -530,6 +530,15 @@ class Tile(db.Model):
             return tiles
         else:
             return None
+        
+    @staticmethod
+    def find_geo_region(name):
+        q = Tile.all().filter('name =', name)
+        r = q.fetch(1)
+        if r:             
+            return  ast.literal_eval(r[0].geo) 
+        else:
+            return None
             
                 
     
@@ -539,20 +548,12 @@ class Tile(db.Model):
         
         try:
             if r:
-                print r[0].cells
-                
-                b1 = []
-                for i in self.cells:
-                    if i in r[0].cells:
-                        b1.append(i)
-                        
-                if b1 != []:
-                    for i in b1:
-                        self.cells.remove(i)
-                
-                    for i in self.cells:
-                        r[0].cells.append(i) 
-                
+                logging.info(type(self.cells))
+                logging.info(type(r[0].cells))
+                for cell in self.cells: 
+                    if cell not in r[0].cells:
+                        r[0].cells.append(cell)
+                                
                 r[0].sensor = self.sensor
                 r[0].geo    = self.geo   
                 r[0].put()

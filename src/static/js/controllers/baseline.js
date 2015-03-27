@@ -1,3 +1,276 @@
+var Period = Backbone.View.extend({
+    //el: $("#range_select"),
+    events: {
+        'click #submit_date_picker': 'send_date_report'
+    },
+    initialize: function() {
+       _.bindAll(this, 'update_range_date', 'render');
+       this.report     = this.options.report;
+       this.callerView = this.options.callerView;
+       //this.$("#report-date").html(this.report.escape('str'));
+       //this.$("#report-date-end").html(this.report.escape('str_end'));
+       var start = this.report.escape('str');
+       this.start_date = moment(new Date(start)).format("DD/MMM/YYYY");
+       var end = this.report.escape('str_end');
+       this.end_date = moment(new Date(end)).format("DD/MMM/YYYY");
+       this.data_request = null;
+
+       this.$("#range_picker").attr("value", this.start_date+' to '+this.end_date).html();
+       this.visibility_picker_range = false;
+       this.url_send = this.options.url_send;
+
+       this.$("#range_picker").dateRangePicker({
+            format: 'DD/MMM/YYYY',
+            separator: ' to ',
+            showShortcuts: false}).bind('datepicker-change', this.update_range_date);
+    },
+    send_date_report: function(e){
+    	if(e) e.preventDefault();
+    	
+        var date_picker = this.$("#range_picker").val();
+        console.log(date_picker);
+        this.$("#loading_range_picker").show();
+        var that = this;
+        var request = $.ajax({
+                            url: this.url_send,
+                            type: 'POST',
+                            data: {range_picker: date_picker},
+                            dataType: 'json',
+                            async: true,
+                            success:function(d) {
+                            	  that.$("#loading_range_picker").hide();
+                    	          alert(d.result.message);
+                                  console.log(d);
+                                  that.data_request = d.result.data;
+                                  that.trigger('send_success');
+                                  console.log(that.data_request);
+                                  return d; 
+                            },
+                          }).responseText;
+
+        //var s = jQuery.parseJSON(message);
+        //alert(s.result);
+        //console.log(s);
+    },
+    set_range_date_input: function(report){
+    	var start = report.escape('str');
+        var start_date = moment(new Date(start)).format("DD/MMM/YYYY");
+        var end = report.escape('str_end');
+        var end_date = moment(new Date(end)).format("DD/MMM/YYYY");        
+
+        this.$("#range_picker").attr("value", start_date+' to '+end_date).html();
+    },
+    update_range_date: function(evt, obj){
+        var dates = obj.value.split(' to ');
+        console.log(dates[0]+' - '+dates[1]);
+        this.start_date = dates[0];
+        this.end_date = dates[1];
+    },
+    render: function(){
+        return this;
+    },
+    show: function() {
+        this.el.show();
+    },
+
+    hide: function() {
+        this.el.hide();
+    }
+});
+
+var EditorBaselineImagePicker = Backbone.View.extend({
+
+    showing: false,
+
+    template: _.template($('#editor-baseline-image-picker').html()),
+
+    initialize: function() {
+        _.bindAll(this, 'show', 'addTile', 'addTiles', 'sortLayers', 'search_image_tiles', 'addThumbs');
+        var self = this;
+        this.el = $(this.template());                
+        
+        this.grid = this.options.grid;
+        var cell_name = ":: Cell "+this.grid.model.get('z')+"/"+this.grid.model.get('x')+"/"+this.grid.model.get('y')+" ::";        
+        this.el.find("#cell_name").html(cell_name);
+        cell_name = this.grid.model.get('z')+"_"+this.grid.model.get('x')+"_"+this.grid.model.get('y');
+        
+        this.list_tiles_name = [];
+        this.date_start = "";
+    	this.date_end = "";
+    	this.list_cloud_percent = {};
+        
+        
+        var request = $.ajax({
+                              url: "baseline_search_tiles/",
+                              type: 'POST',
+                              data: {cell_name: cell_name},
+                              dataType: 'json',
+                              async: true,
+                              success:function(d) {
+                            	      console.log(d.tiles);
+                            	      self.addTiles(d.tiles);
+      
+					                  return d; 
+                              },
+                            }).responseText;
+        
+        this.$('a.close_editor').click(function(e) {
+			self.close();
+		});
+        
+        this.$('a.close_image_picker').click(function(e) {
+			self.close();
+		});
+        
+        this.$('a.open_image_picker').click(function(e) {
+        	if(e) e.preventDefault();
+			self.search_image_tiles(e);
+		});
+        
+        this.options.parent.append(this.el);
+                
+        
+        var date_start = moment().subtract(31, 'days').calendar();
+        
+        var date_end   = new Date();
+        
+        var picker_start = new Pikaday(
+        	    {
+        	        field: this.$("#period_start")[0],
+        	        format: 'DD/MMM/YYYY',
+        	        minDate: new Date('1985-01-01'),
+        	        maxDate: new Date(date_start),   
+        	        yearRange: [1985, date_end.getFullYear()]
+        	    });
+        
+        var picker_end = new Pikaday(
+        	    {
+        	        field: this.$("#period_end")[0],
+        	        format: 'DD/MMM/YYYY',
+        	        minDate: new Date('1985-01-01'),
+        	        maxDate: date_end,
+        	        yearRange: [1985, date_end.getFullYear()]
+        	    });
+        
+       this.cloud_percent_list_ids = [];
+        
+ 
+    },    
+    search_image_tiles: function(e){    	    	
+    	this.date_start = this.$("#period_start").val();
+    	this.date_end = this.$("#period_end").val();
+    	this.list_cloud_percent = {};
+    	var lack_percent = false;
+    	var request = "";
+    	var self = this;
+    	
+    	for(var i = 0; i < this.list_tiles_name.length; i++){
+    		var tile_name = this.list_tiles_name[i];
+    		var percent   = this.$("#cloud_cover_"+tile_name).val();
+    		
+    		if(percent === "0"){
+    		    lack_percent = true;	
+    		}
+    		
+    		this.list_cloud_percent[tile_name] = percent;
+    		 
+    	}
+    	
+    	if(this.date_start === "" || this.date_end === ""){
+    		alert("Some period are none.");
+    	}else if(lack_percent){
+    		alert("Some percentes cloud are none.");    		
+    	}else{
+    		console.log(this.date_start);
+        	console.log(this.date_end);
+        	console.log(this.list_cloud_percent);
+        	this.$("#image_picker_baseline").show();
+        	request = $.ajax({
+                              url: "/imagepicker_baseline/",
+                              type: 'POST',
+                              data: {date_start: this.date_start,  date_end: this.date_end, list_cloud_percent: JSON.stringify(this.list_cloud_percent)},
+                              dataType: 'json',
+                              async: true,
+                              success: function(d) {			                	          
+			        	                  console.log(d.result);
+			        	                  self.addThumbs(d.result);
+			                              return d; 
+                              },
+                            }).responseText;
+    	}
+    	
+    	
+    	
+    },
+    addThumbs: function(thumbs_tiles) {
+    	this.$("#thumbs_baseline").empty();
+        this.$("#thumbs_baseline").attr('disabled', false);
+    	
+    	
+    	for(var thumbs in thumbs_tiles){      	        
+    		this.$("#thumbs_baseline").append('<optgroup label="'+thumbs.replace("/","_")+'" id="thumbs_'+thumbs.replace("/","_")+'"></optgroup>');
+    		var thumbsView = new ThumbsView({el: this.$("#thumbs_"+thumbs.replace("/","_"))});
+       		thumbsView.collection = new Thumbs(thumbs_tiles[thumbs]);
+         	thumbsView.render();
+        }
+    	
+        this.$("#thumbs_baseline").imagepicker({show_label: true, hide_select: true});
+        this.el.find('ul.thumbnails.image_picker_selector ul').jScrollPane({autoReinitialise:true});
+    	
+	},
+    // reorder layers in map
+    sortLayers: function() {
+        var self = this;
+        var new_order_list = [];
+        // sort layers
+        this.el.find('ul').find('li').each(function(idx, item) {
+            var id = $(item).attr('id');
+            var view = self.item_view_map[id];
+            self.layers.remove(view.model);
+            new_order_list.push(view.model);
+        });
+        _(new_order_list).each(function(l) {
+            self.layers.add(l);
+        });
+        this.layers.trigger('reset');
+    },
+
+    addTile: function(tile) {
+            var ul = this.el.find('ul#cloud_cover');
+            console.log(tile);        
+            
+            var tile_name = tile['name'].replace("/", "_");
+            
+            this.list_tiles_name.push(tile_name);
+            
+            ul.append('<li><p>'+tile['name']+': <input type="number" id="cloud_cover_'+tile_name+'" value="0" min="0" max="100"></p></li>');
+            
+    },    
+    addTiles: function(tiles) {
+    	if(tiles){
+         this.el.find('ul#cloud_cover').html('');         
+         var that = this;         
+         
+         for(var tile in tiles){
+        	 console.log(tiles[tile]);
+        	 this.addTile(tiles[tile]);
+         }
+        } 
+      
+    },
+    show: function(pos, side) {       	
+        this.el.show();//fadeIn();
+        this.showing = true;
+    },
+
+    close: function() {
+        this.el.hide();//fadeOut(0.1);
+        this.showing = false;
+    }
+
+});
+
+
 var Baseline = Backbone.View.extend({
     el: $("#baseline"),
     events:{
@@ -6,12 +279,12 @@ var Baseline = Backbone.View.extend({
         'click #baseline_list_select': 'show_baseline_list'
     },
     initialize: function(){
-        _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change', 'setting_baseline_popup', 'show_image_picker_search');
+        _.bindAll(this, 'callback', 'hide_report_tool_bar', 'show_report_tool_bar', 'hide_image_picker', 'show_image_picker', 'visibility_change', 'setting_baseline_popup', 'show_imagepicker_search');
         this.callerView = this.options.callerView;
         this.report     = this.options.report;
         this.map        = this.options.mapview; 
 //        this.setting_report_data();
-        this.report_tool_bar = new ReportToolbar({el: this.$("#range_select"), report: this.report, url_send: '/baseline_report/', callerView: this});
+        this.report_tool_bar = new Period({el: this.$("#range_select"), report: this.report, url_send: '/baseline_report/', callerView: this});
         //this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});        
         this.visibility = false;
         this.selected = false;
@@ -20,6 +293,7 @@ var Baseline = Backbone.View.extend({
         this.baselines.fetch();
         var that = this;
         this.report_tool_bar.bind('send_success', function(){that.baselines.add(that.report_tool_bar.data_request)});
+        this.item_view_imagepicker = {};
     },
     show_baseline_list: function(e){
     	if(e) e.preventDefault();
@@ -81,12 +355,12 @@ var Baseline = Backbone.View.extend({
     setting_baseline_popup: function(popup, grid){
     	if(this.selected && grid.model.get('z') == '2'){
     		//popup.append( "<p>Test</p>" );
-    		var setting_baseline = popup.find('.setting_baseline')
+    		var setting_baseline = popup.find('.setting_baseline');
     		setting_baseline.show();
     		var that = this;
     		setting_baseline.click(function(e) {
     			if(e)e.preventDefault();
-    			that.show_imagepicker_search(grid);
+    			that.show_imagepicker_search(grid, e);
 			});
     		
     	}else{
@@ -94,20 +368,32 @@ var Baseline = Backbone.View.extend({
     		setting_baseline.hide();
     	}
     },
-    show_imagepicker_search: function(grid) {
+    show_imagepicker_search: function(grid, e) {
+    	if(e)e.preventDefault();
     	
-    	if(this.editor_baseline_imagepicker === undefined) {
-            this.editor_baseline_imagepicker = new EditorBaselineImagePicker({
-                parent: this.$('#baseline_list')                
+    	var cell_name = grid.model.get('z')+"_"+grid.model.get('x')+"_"+grid.model.get('y');
+    	
+    	this.editor_baseline_imagepicker = this.item_view_imagepicker[cell_name]; 
+    	
+    	if(this.editor_baseline_imagepicker === undefined){
+    		this.editor_baseline_imagepicker = new EditorBaselineImagePicker({
+                parent: this.el,  
+                grid: grid
             });
-        }
+    		
+    		this.item_view_imagepicker[cell_name] = this.editor_baseline_imagepicker;
+    	}
+    	
+    	/*if(this.editor_baseline_imagepicker === undefined) {
+            
+        }*/
     	
     	if(this.editor_baseline_imagepicker.showing) {
-            this.editor_baseline_imagepicker.close();             
+            //this.editor_baseline_imagepicker.close();             
         } else {
         	console.log(this.baselines);            
             
-            //var that = this;
+            var that = this;
             
             this.trigger('show_imagepicker_search');
             this.editor_baseline_imagepicker.show();
@@ -158,6 +444,13 @@ var Baseline = Backbone.View.extend({
     	}else{
     		this.el.hide();
     	}
+    },
+    show: function() {
+        this.el.show();
+    },
+
+    hide: function() {
+        this.el.hide();
     },
     visibility_change: function(){
         if(this.visibility){
