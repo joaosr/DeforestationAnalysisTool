@@ -586,13 +586,40 @@ $(function() {
 
             // bindings
             this.gridstack.grid.bind('enter_cell', function(cell) {
-                if(cell.get('z') == '1' && !self.main_operations.operation_selected){
-                    alert("One operation must be selected in Toolbar");
-                }else{                    
-                    self.gridstack.grid.trigger('cell_click', cell);
+            	var cell_name = cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y')
+            	var enter_cell = false;
+            	
+            	if(cell.get('z') == '1'){
+            		if(!self.main_operations.operation_selected){
+            			alert("One operation must be selected in Toolbar");
+            		}
+            		else{
+            			enter_cell = true;
+            		}
+            	}
+            	else if(cell.get('z') == '2'){
+                    if(self.main_operations.baseline.selected){
+                    	if(self.main_operations.baseline.cell_done(cell_name)){
+                    		enter_cell = true;
+                    	}
+                    	else{
+                    		alert("There is not baseline for this cell.");
+                    	}
+            		}
+                    else{
+                    	enter_cell = true;
+            		}            		
+            	}
+            	  	
+            	
+                
+                
+                if(enter_cell){
+                	self.gridstack.grid.trigger('cell_click', cell);
                     self.overview.on_cell(cell.get('x'), cell.get('y'), cell.get('z'));
                     router.navigate('cell/' +  cell.get('z') + "/" + cell.get('x') + "/" + cell.get('y'));
                 }
+            	            	
             });
             router.bind('route:cell', this.to_cell);
             this.gridstack.bind('select_mode', this.select_mode);

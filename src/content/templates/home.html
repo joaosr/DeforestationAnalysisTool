@@ -6,6 +6,7 @@
     <link href="{{url_for('static', filename='css/style.css')}}" rel="stylesheet" type="text/css"/>
     <link href="{{url_for('static', filename='css/daterangepicker.css')}}" rel="stylesheet" type="text/css"/>
     <link href="{{url_for('static', filename='css/pikaday.css')}}" rel="stylesheet" type="text/css"/>
+    <link href="{{url_for('static', filename='css/jquery.datetimepicker.css')}}" rel="stylesheet" type="text/css"/>
 {% endblock %}
 
 {% block js_files %}
@@ -30,6 +31,9 @@
   
   <!-- pikaday -->
   <script src="{{url_for('static',filename='js/libs/pikaday.js')}}"></script>
+  
+  <!-- jquery datetimepicker -->
+  <script src="{{url_for('static',filename='js/libs/jquery.datetimepicker.js')}}"></script>
 
   <!-- pixel operations library -->
   <script type="text/javascript" src="{{url_for("static", filename="js/pixel_ops.js")}}"></script>
@@ -81,6 +85,9 @@
 
   <!-- baseline -->
   <script src="{{url_for('static',filename='js/controllers/baseline.js')}}"></script>
+  
+  <!-- time series -->
+  <script src="{{url_for('static',filename='js/controllers/time_series.js')}}"></script>
 
   <!-- toolbar -->
   <script src="{{url_for('static',filename='js/controllers/toolbar.js')}}"></script>
@@ -301,6 +308,13 @@
         </div>
    </script>
    
+   <script type="text/template" id="time-series-layers">
+        <div id="layer_time_series_dialog" class="hidden">
+            <ul>
+            </ul>
+        </div>
+   </script>
+   
    <script type="text/template" id="editor-baseline-image-picker">
         <div id="editor_baseline_image_picker_outer" class="hidden">
         <div id="editor_image_picker" class="hidden">
@@ -323,7 +337,7 @@
                            
                    </ul>
                </div>
-               <a class="open_image_picker" href="#">go</a>
+               <button id="open_image_picker">Image Picker</button>&nbsp;&nbsp;&nbsp;<button id="genarete_baseline" disabled>Baseline</button>
         	
         </div>
 
@@ -331,11 +345,13 @@
                <a class="close_image_picker" href="#">close</a>                                  
 
                <div id="content">
+                      <img id="loading_image_picker" src="/static/img/loading_bar.gif" style="display: block; margin-left: auto; margin-right: auto;">
                       <select id="thumbs_baseline" name="thumb" class="image-picker show-labels show-html" multiple="multiple" style="display:none"> 
                       </select> 
                       
                </div>
-        	
+        	   
+               <button id="send_image_picker">go</button>
         </div>
 
        </div>

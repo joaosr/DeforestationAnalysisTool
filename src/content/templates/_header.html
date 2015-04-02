@@ -236,6 +236,22 @@
             </span>
             <span id="time_series">
                 <input type="checkbox" id="time_series_check"><a class="button" href="#" id="time_series_select"> <h3>Time Series</h3></a>
+                <div id="time_series_content">
+                    <span id="date_range">
+                         <button id="date_range_select">Date range</button>
+                         <div id="form_date_range">
+                             <input type="text" id="date_timepicker_start" size="15">&nbsp;&nbsp;&nbsp;
+                             <input type="text" id="date_timepicker_end" size="15">
+                             <span><input id="submit_date_picker" type="submit" value="ok"></span>
+                             <span><img id="loading_range_picker" src="/static/img/loading2.gif" style="width: 20px; height: 20px; display: none; float: right; margin-left: 10px;"></span>
+                         </div>
+                    </span> <!-- date_range -->
+                    
+                    <span id="time_series_historical_results">
+                    	<a class="button" href="#" id="time_series_historical_results_select">Historical results</a>
+                        
+                    </span>
+                </div>
             </span>
 
             <div id="work_toolbar" class="hidden">

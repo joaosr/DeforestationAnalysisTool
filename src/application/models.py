@@ -475,6 +475,15 @@ class CellGrid(db.Model):
     
     def as_json(self):
         return json.dumps(self.as_dict())
+    
+    @staticmethod
+    def find_by_name(name):
+        q = CellGrid.all().filter("name =", name)
+        r = q.fetch(1)
+        if r:
+            return r[0] 
+        else:
+            return None
 
     def save(self):
         z, x, y = self.name.split('_')
@@ -488,13 +497,13 @@ class CellGrid(db.Model):
 
         try:
             if r:
-               r[0].geo         = self.geo   
-               r[0].parent_name = self.parent_name                        
-               r[0].put()
-               return 'Cell updated.'  
+                r[0].geo         = self.geo   
+                r[0].parent_name = self.parent_name                        
+                r[0].put()
+                return 'Cell updated.'  
             else:
-               self.put()
-               return 'Cell saved.'
+                self.put()
+                return 'Cell saved.'
 
             
         except:
@@ -530,6 +539,18 @@ class Tile(db.Model):
             return tiles
         else:
             return None
+        
+    @staticmethod
+    def find_tiles_by_sensor(sensor):
+        q = Tile.all().filter('sensor =', sensor)
+        r = q.fetch(500)
+        if r:
+            tiles = []
+            for i in range(len(r)):
+                tiles.append(r[i].name)
+            return tiles
+        else:
+            return []
         
     @staticmethod
     def find_geo_region(name):
@@ -730,10 +751,11 @@ class ImagePicker(db.Model):
     added_on = db.DateTimeProperty(auto_now_add=True)
     added_by = db.UserProperty()
     report = db.ReferenceProperty(Report)
+    sensor = db.StringProperty(required=True)
     cell = db.StringProperty(required=True)
     year = db.StringProperty(required=True)
     month = db.StringProperty(required=True)
-    day = db.StringProperty(required=True)
+    day = db.StringListProperty(required=True)
     location = db.TextProperty(required=True)
     compounddate = db.StringProperty(required=True)
 
@@ -768,6 +790,24 @@ class ImagePicker(db.Model):
             return r
         else:
             return None
+        
+    @staticmethod
+    def find_by_period(start_compounddate, end_compounddate, tile):
+        q = ImagePicker.all().filter('compounddate >=', start_compounddate).filter('compounddate <=', end_compounddate).filter("cell =", tile)
+        r = q.fetch(10)
+        if r:
+            result = {}
+            for i in range(len(r)):
+                for j in range(len(r[i].day)): 
+                    date = r[i].year+'-'+r[i].month+'-'+r[i].day[j]
+                    sensor = r[i].sensor
+                    result[date] = sensor
+                
+            return result
+        else:
+            return None
+        
+     
 
     @staticmethod
     def find_by_compounddate(compounddate):
@@ -789,7 +829,7 @@ class ImagePicker(db.Model):
                     geometry = ee.Geometry.Polygon(polygon)
                     properties = {'cell': r[i].cell,
                                   'compounddate': r[i].compounddate,
-                                  'day': r[i].day,
+                                  'day': ','.join(r[i].day),
                                   'month': r[i].month,
                                   'year': r[i].year
                                  }
@@ -807,11 +847,13 @@ class ImagePicker(db.Model):
 
         try:
             if r:
-               r[0].day = self.day
-               logging.info(self.compounddate+' <<<<<=====>>>>> '+self.cell)
-               r[0].put()
+                #r[0].day = self.day
+                for day in self.day: 
+                    if day not in r[0].day:
+                        r[0].day.append(day)               
+                r[0].put()
             else:
-               self.put()
+                self.put()
 
             return 'Images saved.'
         except:
@@ -895,12 +937,12 @@ class Downscalling(db.Model):
 
         try:
             if r:
-               r[0].sill   = self.sill
-               r[0].range  = self.range
-               r[0].nugget = self.nugget
-               r[0].put()
+                r[0].sill   = self.sill
+                r[0].range  = self.range
+                r[0].nugget = self.nugget
+                r[0].put()
             else:
-               self.put()
+                self.put()
 
             return 'Values saved.'
         except:
@@ -913,8 +955,9 @@ class Baseline(db.Model):
     added_on = db.DateTimeProperty(auto_now_add=True)
     added_by = db.UserProperty(required=True)
     name     = db.StringProperty(required=True)
+    cell     = db.ReferenceProperty(CellGrid)
     start    = db.DateProperty(required=True)
-    end      = db.DateProperty(required=True)
+    end      = db.DateProperty()
     mapid    = db.StringProperty(required=True)
     token    = db.StringProperty(required=True)
 
@@ -957,7 +1000,99 @@ class Baseline(db.Model):
             
 
     def save(self):
-        q = Baseline.all().filter('start =', self.start).filter('end =', self.end)
+        q = ''
+        if self.end:
+            q = Baseline.all().filter('start =', self.start).filter('end =', self.end)
+        else:
+            q = Baseline.all().filter('start =', self.start)
+            
+        r = q.fetch(1)
+
+        try:
+            if r:
+                r[0].mapid   = self.mapid
+                r[0].token  = self.token
+                r[0].put()
+                return {'message': 'Baseline updated.', 
+                       'data': {
+                                    'id':          r[0].mapid,
+                                    'token':       r[0].token,
+                                    'type':        'baseline',
+                                    'visibility':  True,
+                                    'description': self.name,
+                                    'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
+                                   }
+                       }
+            else:
+                self.put()
+                return {'message': 'Baseline created.', 
+                       'data': {
+                                    'id':          self.mapid,
+                                    'token':       self.token,
+                                    'type':        'baseline',
+                                    'visibility':  True,
+                                    'description': self.name,
+                                    'url': 'https://earthengine.googleapis.com/map/'+self.mapid+'/{Z}/{X}/{Y}?token='+self.token
+                                   }
+                       }
+
+            
+        except:
+            return 'Could not save baseline.'
+
+
+
+class TimeSeries(db.Model):
+    """ images selected by user """
+
+    added_on = db.DateTimeProperty(auto_now_add=True)
+    added_by = db.UserProperty(required=True)
+    name     = db.StringProperty(required=True)
+    start    = db.DateProperty(required=True)
+    end      = db.DateProperty(required=True)
+    mapid    = db.StringProperty(required=True)
+    token    = db.StringProperty(required=True)
+
+    def as_dict(self):
+        return {
+                'id': str(self.key()),
+                'key': str(self.key()),
+                'start': self.start,
+                'end': self.end(),
+                'mapid': self.mapid,
+                'token': self.token,
+                'added_on': timestamp(self.added_on),
+                'added_by': str(self.added_by.nickname())
+        }
+
+
+
+    def as_json(self):
+        return json.dumps(self.as_dict())
+
+    @staticmethod
+    def all_formated():
+        result = []
+        q = TimeSeries.all().order('-start')
+        r = q.fetch(10)
+        
+        if r:
+            for i in range(len(r)):
+                result.append({
+                               'id':          r[i].mapid,
+                               'token':       r[i].token,
+                               'type':        'time_series',
+                               'visibility':  True,
+                               'description': r[i].name,
+                               'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
+                               })
+            return result
+        else:
+            return None
+            
+
+    def save(self):
+        q = TimeSeries.all().filter('start =', self.start).filter('end =', self.end)
         r = q.fetch(1)
 
         try:
@@ -965,11 +1100,11 @@ class Baseline(db.Model):
                r[0].mapid   = self.mapid
                r[0].token  = self.token
                r[0].put()
-               return {'message': 'Baseline updated.', 
+               return {'message': 'Time series updated.', 
                        'data': {
                                     'id':         r[0].mapid,
                                     'token':      r[0].token,
-                                    'type':       'baseline',
+                                    'type':       'time_series',
                                     'visibility': True,
                                     'description':  self.name,
                                     'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
@@ -977,11 +1112,11 @@ class Baseline(db.Model):
                        }
             else:
                self.put()
-               return {'message': 'Baseline created.', 
+               return {'message': 'Time series created.', 
                        'data': {
                                     'id':         self.mapid,
                                     'token':      self.token,
-                                    'type':       'baseline',
+                                    'type':       'time_series',
                                     'visibility': True,
                                     'description':  self.name,
                                     'url': 'https://earthengine.googleapis.com/map/'+self.mapid+'/{Z}/{X}/{Y}?token='+self.token

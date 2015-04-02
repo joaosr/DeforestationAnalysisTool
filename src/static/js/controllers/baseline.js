@@ -1,3 +1,54 @@
+var ThumbBaseline = Backbone.Model.extend();
+
+var ThumbsBaseline = Backbone.Collection.extend({
+    model: ThumbBaseline,
+    parse: function(result){
+        console.log(result.result);
+        return result.result;
+    }
+});
+
+var ThumbViewBaseline = Backbone.View.extend({
+    tagName: "option",
+    initialize: function(){
+        _.bindAll(this, 'render');
+    },
+    render: function(){
+        console.log(this.model.get('thumb'));
+        $(this.el).attr('data-img-label', this.model.get('date')+' <br> '+this.model.get('map_image')).html();
+        $(this.el).attr('data-img-src', 'https://earthengine.googleapis.com/api/thumb?thumbid='+this.model.get('thumb')+'&token='+this.model.get('token')).html(this.model.get("date"));
+        $(this.el).attr('value', this.model.get('date')+'__'+this.model.get('tile')+'__'+this.model.get('map_image')).html();
+        $(this.el).attr('id', this.model.get('date')+'__'+this.model.get('tile')+'__'+this.model.get('map_image')).html();
+        return this;thumbs
+    }
+});
+
+var ThumbsViewBaseline = Backbone.View.extend({
+    el: $("#thumb"),
+    initialize: function(){
+        _.bindAll(this, 'addOne', 'addAll', 'render');
+        console.log("Aqui");
+        this.collection = new ThumbsBaseline();
+        this.collection.bind('reset', this.addAll());       
+    },    
+    //TODO 13/02/15 mudança na implementação do fluxo de uso do sistema, esse método pode não ser mais necessário
+    change_sensor: function(sensor){
+        this.tilesView.setSensor(sensor);
+    },
+    addOne: function(thumb){
+        console.log('mais aqui');
+        var thumbViewBaseline = new ThumbViewBaseline({model: thumb});
+        $(this.el).append(thumbViewBaseline.render().el);
+    },
+    addAll: function(){
+        console.log('Agora aqui');
+        this.collection.each(this.addOne);
+    },
+    render: function(){
+        this.addAll();
+    }
+});
+
 var Period = Backbone.View.extend({
     //el: $("#range_select"),
     events: {
@@ -85,15 +136,16 @@ var EditorBaselineImagePicker = Backbone.View.extend({
     template: _.template($('#editor-baseline-image-picker').html()),
 
     initialize: function() {
-        _.bindAll(this, 'show', 'addTile', 'addTiles', 'sortLayers', 'search_image_tiles', 'addThumbs');
+        _.bindAll(this, 'show', 'addTile', 'addTiles', 'sortLayers', 'search_image_tiles', 'addThumbs', 'send_image_picker');
         var self = this;
         this.el = $(this.template());                
         
         this.grid = this.options.grid;
         var cell_name = ":: Cell "+this.grid.model.get('z')+"/"+this.grid.model.get('x')+"/"+this.grid.model.get('y')+" ::";        
         this.el.find("#cell_name").html(cell_name);
-        cell_name = this.grid.model.get('z')+"_"+this.grid.model.get('x')+"_"+this.grid.model.get('y');
-        
+        this.cell_name = this.grid.model.get('z')+"_"+this.grid.model.get('x')+"_"+this.grid.model.get('y');
+        this.done = false;
+        this.baseline_response = null;
         this.list_tiles_name = [];
         this.date_start = "";
     	this.date_end = "";
@@ -103,7 +155,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
         var request = $.ajax({
                               url: "baseline_search_tiles/",
                               type: 'POST',
-                              data: {cell_name: cell_name},
+                              data: {cell_name: this.cell_name},
                               dataType: 'json',
                               async: true,
                               success:function(d) {
@@ -122,9 +174,14 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			self.close();
 		});
         
-        this.$('a.open_image_picker').click(function(e) {
+        this.$('#open_image_picker').click(function(e) {
         	if(e) e.preventDefault();
 			self.search_image_tiles(e);
+		});
+        
+        this.$('#genarete_baseline').click(function(e) {
+        	if(e) e.preventDefault();
+			self.genarete_baseline(e);
 		});
         
         this.options.parent.append(this.el);
@@ -140,7 +197,11 @@ var EditorBaselineImagePicker = Backbone.View.extend({
         	        format: 'DD/MMM/YYYY',
         	        minDate: new Date('1985-01-01'),
         	        maxDate: new Date(date_start),   
-        	        yearRange: [1985, date_end.getFullYear()]
+        	        yearRange: [1985, date_end.getFullYear()],
+        	        onOpen: function() {
+        	        	this.setMaxDate(new Date(self.$("#period_end").val()));
+    				}
+        	    
         	    });
         
         var picker_end = new Pikaday(
@@ -149,8 +210,12 @@ var EditorBaselineImagePicker = Backbone.View.extend({
         	        format: 'DD/MMM/YYYY',
         	        minDate: new Date('1985-01-01'),
         	        maxDate: date_end,
-        	        yearRange: [1985, date_end.getFullYear()]
+        	        yearRange: [1985, date_end.getFullYear()],
+        	        onOpen: function() {
+           	        	this.setMinDate(new Date(self.$("#period_start").val()));
+    				}
         	    });
+        
         
        this.cloud_percent_list_ids = [];
         
@@ -185,6 +250,8 @@ var EditorBaselineImagePicker = Backbone.View.extend({
         	console.log(this.date_end);
         	console.log(this.list_cloud_percent);
         	this.$("#image_picker_baseline").show();
+        	this.$("#image_picker_baseline #loading_image_picker").show();
+        	
         	request = $.ajax({
                               url: "/imagepicker_baseline/",
                               type: 'POST',
@@ -193,30 +260,81 @@ var EditorBaselineImagePicker = Backbone.View.extend({
                               async: true,
                               success: function(d) {			                	          
 			        	                  console.log(d.result);
-			        	                  self.addThumbs(d.result);
+			        	                  self.$("#image_picker_baseline #loading_image_picker").hide();
+			        	                  self.$("#image_picker_baseline #send_image_picker").click(function(e) {
+			        	                  	     if(e) e.preventDefault();
+			        	          			     self.send_image_picker(e);
+			        	          		  });
+			        	                  self.addThumbs(d.result);				        	                  
 			                              return d; 
                               },
                             }).responseText;
+        	        	
     	}
     	
     	
     	
     },
+    genarete_baseline: function(e) {
+    	if(e) e.preventDefault();
+    	var date_start = this.$("#period_start").val();
+    	var date_end = this.$("#period_end").val();
+    	var self = this;
+    	request = $.ajax({
+            url: "/baseline_on_cell/",
+            type: 'POST',
+            data: {start_date: date_start, end_date: date_end, cell_name: this.cell_name},
+            dataType: 'json',
+            async: true,
+            success: function(d) {			                	          
+  	                  console.log(d.result);  	                                   	
+  	                  self.done = true;
+  	                  self.baseline_response = d.result.data;
+                      self.trigger('baseline_success');
+                      return d; 
+            },
+          }).responseText;
+	},
     addThumbs: function(thumbs_tiles) {
     	this.$("#thumbs_baseline").empty();
-        this.$("#thumbs_baseline").attr('disabled', false);
+    	this.$("ul.thumbnails.image_picker_selector").empty();    	
+        //this.$("ul.thumbnails.image_picker_selector").attr('disabled', false);
     	
     	
     	for(var thumbs in thumbs_tiles){      	        
     		this.$("#thumbs_baseline").append('<optgroup label="'+thumbs.replace("/","_")+'" id="thumbs_'+thumbs.replace("/","_")+'"></optgroup>');
-    		var thumbsView = new ThumbsView({el: this.$("#thumbs_"+thumbs.replace("/","_"))});
-       		thumbsView.collection = new Thumbs(thumbs_tiles[thumbs]);
-         	thumbsView.render();
+    		var thumbsViewBaseline = new ThumbsViewBaseline({el: this.$("#thumbs_"+thumbs.replace("/","_"))});
+       		thumbsViewBaseline.collection = new ThumbsBaseline(thumbs_tiles[thumbs]);
+         	thumbsViewBaseline.render();
         }
     	
         this.$("#thumbs_baseline").imagepicker({show_label: true, hide_select: true});
-        this.el.find('ul.thumbnails.image_picker_selector ul').jScrollPane({autoReinitialise:true});
+        this.$('ul.thumbnails.image_picker_selector ul').jScrollPane({autoReinitialise:true});
     	
+	},
+	send_image_picker: function(e) {
+        if(e) e.preventDefault();
+    	var self = this;
+        var thumbs_baseline = this.$("#thumbs_baseline").val();
+        
+        console.log(thumbs_baseline);
+        var message = $.ajax({
+                              url: "/imagepicker_baseline/",
+                              type: 'POST',
+                              data: {thumbs_baseline: thumbs_baseline.join()},
+                              dataType: 'json',
+                              async: true,
+                              success: function(d) {			                	          
+	        	                  console.log(d.result);
+	        	                  alert(d.result);
+	        	                  self.$('#genarete_baseline')[0].disabled = false	        	                     	                 
+	                              return d; 
+                            },
+                            }).responseText;
+
+        //var s = jQuery.parseJSON(message);
+        //alert(s.result);
+        //console.log(s);
 	},
     // reorder layers in map
     sortLayers: function() {
@@ -283,7 +401,7 @@ var Baseline = Backbone.View.extend({
         this.callerView = this.options.callerView;
         this.report     = this.options.report;
         this.map        = this.options.mapview; 
-//        this.setting_report_data();
+        //this.setting_report_data();
         this.report_tool_bar = new Period({el: this.$("#range_select"), report: this.report, url_send: '/baseline_report/', callerView: this});
         //this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});        
         this.visibility = false;
@@ -368,19 +486,29 @@ var Baseline = Backbone.View.extend({
     		setting_baseline.hide();
     	}
     },
+    cell_done: function(cell_name) {
+    	var item = this.item_view_imagepicker[cell_name]
+    	if(item){
+    		return item.done;
+    	}
+    	else{
+    		return false;
+    	}
+    	
+	},
     show_imagepicker_search: function(grid, e) {
     	if(e)e.preventDefault();
     	
     	var cell_name = grid.model.get('z')+"_"+grid.model.get('x')+"_"+grid.model.get('y');
     	
     	this.editor_baseline_imagepicker = this.item_view_imagepicker[cell_name]; 
-    	
+    	var that = this;
     	if(this.editor_baseline_imagepicker === undefined){
     		this.editor_baseline_imagepicker = new EditorBaselineImagePicker({
                 parent: this.el,  
                 grid: grid
             });
-    		
+    		this.editor_baseline_imagepicker.bind('baseline_success', function(){that.baselines.add(that.editor_baseline_imagepicker.baseline_response)});
     		this.item_view_imagepicker[cell_name] = this.editor_baseline_imagepicker;
     	}
     	

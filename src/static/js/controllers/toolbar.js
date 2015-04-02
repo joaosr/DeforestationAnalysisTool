@@ -482,49 +482,6 @@ var MonthlySAD = Toolbar.extend({
 
 });
 
-var TimeSeries = Toolbar.extend({
-    el: $("#time_series"),
-     events:{
-        'click #time_series_select': 'visibility_change',
-        'click #time_series_check': 'selected'
-    },
-    initialize: function(){
-        _.bindAll(this, 'visibility_change');
-        this.callerView = this.options.callerView;
-        this.visibility = false;
-        this.selected = false;
-    },
-    selected: function(){
-        this.selected = document.getElementById('time_series_check').checked;
-        this.callerView.callback_selected(this);
-    },
-    disable: function(){
-        this.selected = false;
-        document.getElementById('time_series_check').checked = false;
-    },
-    show_selected: function(){
-    	if(this.selected){
-    		this.el.show();    		
-    	}else{
-    		this.el.hide();
-    	}
-    },
-    visibility_change: function(){
-        if(this.visibility){
-            $(this.el).css("background-color", "rgba(0, 0, 0, 0)");
-            this.$("#time_series_select h3").css("color", "#999999");
-            this.visibility = false;
-        }
-        else{
-             $(this.el).css("background-color", "rgba(0, 0, 0, 1)");
-            this.$("#time_series_select h3").css("color", "white");
-            this.visibility = true;
-            this.callerView.callback(this);
-        }
-    }
-
-});
-
 var MainOperations = Backbone.View.extend({
     el: $("#tools"),
     events:{
@@ -535,7 +492,7 @@ var MainOperations = Backbone.View.extend({
         this.report = this.options.report
         this.monthly_sad = new MonthlySAD({report: this.report, callerView: this});
         this.baseline    = new Baseline({report: this.report, callerView: this, mapview: this.options.mapview});
-        this.time_series = new TimeSeries({callerView: this});
+        this.time_series = new TimeSeries({report: this.report, callerView: this, mapview: this.options.mapview});
         this.operation_selected = false;
         this.MESSAGE_ALERT = 1;
         this.MESSAGE_ERROR = 2;

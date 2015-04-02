@@ -16,6 +16,11 @@ indexes:
   - name: added_on
     direction: desc
 
+- kind: ImagePicker
+  properties:
+  - name: cell
+  - name: compounddate
+
 - kind: Report
   properties:
   - name: finished

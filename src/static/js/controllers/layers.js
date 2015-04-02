@@ -175,7 +175,7 @@ var LayerEditor = Backbone.View.extend({
          this.el.find('ul').html('');
          var that = this;
          layers.raster_layers().each(function(m){
-            if(m.get('visibility') && m.get('type') !== 'baseline'){
+            if(m.get('visibility') && m.get('type') !== 'baseline' && m.get('type') !== 'time_series'){
                 that.addLayer(m);
             }
          });
@@ -198,8 +198,6 @@ var LayerEditor = Backbone.View.extend({
     }
 
 });
-
-
 
 var LayerEditorBaseline = Backbone.View.extend({
 
