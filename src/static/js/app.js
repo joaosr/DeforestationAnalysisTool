@@ -432,9 +432,11 @@ $(function() {
                     m.map.setZoom(self.map.map.getZoom());
                     m.map.setCenter(self.map.map.getCenter());
                     self.map.bind('center_changed', m.set_center_silence);
+                    self.map.bind('zoom_changed', m.set_zoom_silence);
                     self.map.bind('click', m.close_layer_editor);
                     self.map.bind('open_layer_editor', m.close_layer_editor);
                     m.bind('center_changed', self.map.set_center_silence);
+                    m.bind('zoom_changed', self.map.set_zoom_silence);
                     m.bind('click', self.map.close_layer_editor);
                     m.bind('open_layer_editor', self.map.close_layer_editor);
                     m.layers.reset(self.available_layers.toJSON());
@@ -445,6 +447,7 @@ $(function() {
                     _.each(self.compare_maps, function(other) {
                         if(other !== m) {
                             m.bind('center_changed', other.set_center_silence);
+                            m.bind('zoom_changed', other.map.set_zoom_silence);
                             m.bind('click', other.close_layer_editor);
                             m.bind('open_layer_editor', other.close_layer_editor);
                         }
@@ -463,7 +466,9 @@ $(function() {
                 _.each(this.compare_maps, function(m) {
                     // unbind!
                     self.map.unbind('center_changed', m.set_center_silence);
+                    self.map.unbind('zoom_changed', m.set_zoom_silence);
                     m.unbind('center_changed', self.map.set_center_silence);
+                    m.unbind('zoom_changed', self.map.set_zoom_silence);
                     self.map.unbind('click', m.close_layer_editor);
                     m.unbind('click', self.map.close_layer_editor);
                     self.map.unbind('open_layer_editor', m.close_layer_editor);
@@ -472,6 +477,7 @@ $(function() {
                     _.each(self.compare_maps, function(other) {
                         if(other !== m) {
                             m.unbind('center_changed', other.set_center_silence);
+                            m.unbind('zoom_changed', other.set_zoom_silence);
                             m.unbind('click', other.close_layer_editor);
                             m.unbind('open_layer_editor', other.close_layer_editor);
                         }
@@ -493,30 +499,70 @@ $(function() {
 
 
         // entering on work mode
-        work_mode: function(x, y, z) {                       
+        work_mode: function(x, y, z) {
+        	var self = this;
             this.map.show_sad_info(this.report_base.models[0], z);
             this.main_operations.listen_zoon(z);
             this.polygon_tools.show();
-            this.ndfi_layer.show();
-            this.map.show_zoom_control();
-            this.map.show_layers_control();
-
+            
             //update slider with current cell values
             var cell = this.gridstack.current_cell;
-            this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
-            this.compare_view(cell.get('compare_view'));
-            //cell done!
-            this.overview.set_note_count(this.gridstack.current_cell.get('note_count'));
-            this.overview.set_ndfi(this.gridstack.current_cell.get('ndfi_change_value'));
-            this.cell_polygons.polygons.x = x;
-            this.cell_polygons.polygons.y = y;
-            this.cell_polygons.polygons.z = z;
-            this.cell_polygons.polygons.fetch();
+            console.log(cell);
+            
+            if(this.main_operations.sad.selected){
+            	this.ndfi_layer.show();
+            	this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
+            	this.compare_view(cell.get('compare_view'));
+            	
+            	this.map.show_zoom_control();
+                this.map.show_layers_control();
+                
+                //cell done!
+                this.overview.set_note_count(this.gridstack.current_cell.get('note_count'));
+                this.overview.set_ndfi(this.gridstack.current_cell.get('ndfi_change_value'));
+                this.cell_polygons.polygons.x = x;
+                this.cell_polygons.polygons.y = y;
+                this.cell_polygons.polygons.z = z;
+                this.cell_polygons.polygons.fetch();
 
-            this.editing_router = new EditingToolsRuoter({
-                app: this
-            });
-            this.get_status_layer_map(cell.get('compare_view'));
+                this.editing_router = new EditingToolsRuoter({
+                    app: this
+                });
+                this.get_status_layer_map(cell.get('compare_view'));
+            }
+            else if(this.main_operations.baseline.selected){
+            	this.compare_view(cell.get('compare_view'));
+                var response = this.main_operations.baseline.setting_baseline_layers(cell);
+         	    //cell = response['cell'];
+         	    console.log(response['cell']);
+         	    console.log(response['baseline']);
+         	    this.map.reset_layers_map('2', response['baseline'], 'baseline');
+         	    
+         	   _.each(this.compare_maps, function(m) {
+                   
+                   m.reset_layers_map('2', response['baseline'], 'baseline');
+                   add_rgb_layers(m.layers, self.gridstack, self.active_report.get('id'));
+                   m.layers.trigger('reset');
+         	   });
+         	   
+         	  this.map.show_zoom_control();
+              this.map.show_layers_control();
+              
+              this.editing_router = new EditingToolsRuoter({
+                  app: this
+              });
+              this.get_status_layer_map(cell.get('compare_view'));
+            }
+            
+            
+            
+            
+            
+            
+            
+            
+
+            
         },
 
         cell_done: function() {
@@ -590,17 +636,26 @@ $(function() {
             	var enter_cell = false;
             	
             	if(cell.get('z') == '1'){
-            		if(!self.main_operations.operation_selected){
-            			alert("One operation must be selected in Toolbar");
+            		if(self.main_operations.sad.selected){
+            			enter_cell = true;
+            			
+            		}else if(self.main_operations.baseline.selected){
+            			self.main_operations.baseline.baselines_cell(cell_name);
+            			enter_cell = true;
+            		}
+            		else if(self.main_operations.time_series.selected){
+            			enter_cell = true;
             		}
             		else{
-            			enter_cell = true;
+            			alert("One operation must be selected in Toolbar");
             		}
             	}
             	else if(cell.get('z') == '2'){
                     if(self.main_operations.baseline.selected){
                     	if(self.main_operations.baseline.cell_done(cell_name)){
-                    		enter_cell = true;
+                    	   
+                    	   enter_cell = true;
+                    	   
                     	}
                     	else{
                     		alert("There is not baseline for this cell.");
@@ -621,6 +676,7 @@ $(function() {
                 }
             	            	
             });
+            
             router.bind('route:cell', this.to_cell);
             this.gridstack.bind('select_mode', this.select_mode);
             this.gridstack.bind('work_mode', this.work_mode);

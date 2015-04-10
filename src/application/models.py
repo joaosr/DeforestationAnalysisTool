@@ -484,6 +484,15 @@ class CellGrid(db.Model):
             return r[0] 
         else:
             return None
+    
+    @staticmethod
+    def find_by_parent_name(parent_name):
+        q = CellGrid.all().filter("parent_name =", parent_name)
+        r = q.fetch(50)
+        if r:
+            return r 
+        else:
+            return None
 
     def save(self):
         z, x, y = self.name.split('_')
@@ -952,23 +961,31 @@ class Downscalling(db.Model):
 class Baseline(db.Model):
     """ images selected by user """
 
-    added_on = db.DateTimeProperty(auto_now_add=True)
-    added_by = db.UserProperty(required=True)
-    name     = db.StringProperty(required=True)
-    cell     = db.ReferenceProperty(CellGrid)
-    start    = db.DateProperty(required=True)
-    end      = db.DateProperty()
-    mapid    = db.StringProperty(required=True)
-    token    = db.StringProperty(required=True)
+    added_on     = db.DateTimeProperty(auto_now_add=True)
+    added_by     = db.UserProperty(required=True)
+    name         = db.StringProperty(required=True)
+    cell         = db.ReferenceProperty(CellGrid)
+    start        = db.DateProperty(required=True)
+    end          = db.DateProperty()
+    
+    @property
+    def image_picker(self):
+        result = []
+        start_compounddate = '%04d%02d' % (self.start.year, self.start.month)
+        end_compounddate   = '%04d%02d' % (self.end.year, self.end.month)
+        tiles = Tile.find_by_cell_name(self.cell)
+        for tile in tiles:
+            tile_name = tiles[tile]['name']
+            result.append(ImagePicker.find_by_period(start_compounddate, end_compounddate, tile_name))
+            
+        return result
 
     def as_dict(self):
         return {
                 'id': str(self.key()),
                 'key': str(self.key()),
                 'start': self.start,
-                'end': self.end(),
-                'mapid': self.mapid,
-                'token': self.token,
+                'end': self.end(),                
                 'added_on': timestamp(self.added_on),
                 'added_by': str(self.added_by.nickname())
         }
@@ -987,22 +1004,65 @@ class Baseline(db.Model):
         if r:
             for i in range(len(r)):
                 result.append({
-                               'id':          r[i].mapid,
-                               'token':       r[i].token,
+                               #'id':          r[i].mapid,
+                               #'token':       r[i].token,
                                'type':        'baseline',
                                'visibility':  True,
                                'description': r[i].name,
-                               'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
+                               #'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
                                })
             return result
         else:
             return None
+    
+    @staticmethod
+    def find_by_cell(cell_name):
+        result = []
+        cell = CellGrid.find_by_name(cell_name)
+        if cell: 
+            q = Baseline.all().filter('cell', cell).order('-start')
+            r = q.fetch(1)
+            
+            if r:
+                return r[0]
+            else:
+                return None
+        else:
+            return None
+    
+    @staticmethod
+    def formated_by_cell_parent(cell_name):
+        result = []
+        cell = CellGrid.find_by_parent_name(cell_name)
+        if cell: 
+            q = Baseline.all().filter('cell IN', cell).order('-start')
+            r = q.fetch(50)
+            
+            if r:
+                for i in range(len(r)):
+                    result.append({
+                                   #'id':          r[i].mapid,
+                                   #'token':       r[i].token,
+                                   'type':        'baseline',
+                                   'visibility':  True,
+                                   'description': r[i].name,
+                                   'start': r[i].start.strftime("%d/%b/%Y"),
+                                   'end': r[i].end.strftime("%d/%b/%Y")
+                                   #'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
+                                   })
+                return result
+            else:
+                return None
+        else:
+            return None
+        
             
 
     def save(self):
         q = ''
+        message = ''
         if self.end:
-            q = Baseline.all().filter('start =', self.start).filter('end =', self.end)
+            q = Baseline.all().filter('start =', self.start).filter('cell =', self.cell).filter('end =', self.end)
         else:
             q = Baseline.all().filter('start =', self.start)
             
@@ -1010,33 +1070,25 @@ class Baseline(db.Model):
 
         try:
             if r:
-                r[0].mapid   = self.mapid
-                r[0].token  = self.token
+                #r[0].mapid   = self.mapid
+                #r[0].token  = self.token
                 r[0].put()
-                return {'message': 'Baseline updated.', 
-                       'data': {
-                                    'id':          r[0].mapid,
-                                    'token':       r[0].token,
-                                    'type':        'baseline',
-                                    'visibility':  True,
-                                    'description': self.name,
-                                    'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
-                                   }
-                       }
+                message = 'Baseline updated.' 
+                       
             else:
                 self.put()
-                return {'message': 'Baseline created.', 
+                message = 'Baseline created.' 
+                       
+            return {'message': message, 
                        'data': {
-                                    'id':          self.mapid,
-                                    'token':       self.token,
+                                    #'id':          r[0].mapid,
+                                    #'token':       r[0].token,
                                     'type':        'baseline',
                                     'visibility':  True,
-                                    'description': self.name,
-                                    'url': 'https://earthengine.googleapis.com/map/'+self.mapid+'/{Z}/{X}/{Y}?token='+self.token
+                                    'description': self.name
+                                    #'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
                                    }
                        }
-
-            
         except:
             return 'Could not save baseline.'
 

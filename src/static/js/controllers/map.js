@@ -34,6 +34,8 @@ var MapView = Backbone.View.extend({
        google.maps.event.addListener(this.map, 'center_changed', this.center_changed);
        google.maps.event.addListener(this.map, 'zoom_changed', this.zoom_changed);
        google.maps.event.addListener(this.map, 'click', this.click);
+       this.zoom_level = '0';
+       this.operation_map = 'sad';
        //google.maps.event.addListener(this.map, 'idle', this.tilesloaded);
        this.projector = new Projector(this.map);
        this.projector.draw = this.ready;
@@ -191,13 +193,21 @@ var MapView = Backbone.View.extend({
 
             }
     },
+    reset_layers_map: function(level, layer, operation_map) {
+    	this.layers        = layer;
+    	this.zoom_level    = level;
+    	this.operation_map = operation_map; 
+    	this.layer_editor  = undefined;
+	},
     open_layer_editor: function(e) {
             if(e) e.preventDefault();            
             if(this.layer_editor === undefined) {
                 //console.log(this.layer_editor);
                 this.layer_editor = new LayerEditor({
-                    parent: this.el,
-                    layers: this.layers
+                    parent:        this.el,
+                    layers:        this.layers,
+                    zoom_level:    this.zoom_level,
+                    operation_map: this.operation_map
                 });
             }
 

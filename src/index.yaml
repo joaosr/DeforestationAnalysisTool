@@ -16,6 +16,12 @@ indexes:
   - name: added_on
     direction: desc
 
+- kind: Baseline
+  properties:
+  - name: cell
+  - name: start
+    direction: desc
+
 - kind: ImagePicker
   properties:
   - name: cell

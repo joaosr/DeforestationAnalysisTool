@@ -14,6 +14,7 @@ import os
 #from secret_keys import *
 from secret_keys import EE_ACCOUNT, EE_PRIVATE_KEY_FILE, CSRF_SECRET_KEY, SESSION_KEY, FT_CONSUMER_KEY, FT_CONSUMER_SECRET, FT_TOKEN, FT_SECRET
 import ee
+from ee.oauthinfo import OAuthInfo
 from oauth2client import appengine
 
 
@@ -28,7 +29,8 @@ if DEBUG_MODE:
     FT_TABLE_ID = '2676501'
 else:
     EE_API_URL = 'https://earthengine.googleapis.com'
-    EE_CREDENTIALS = appengine.AppAssertionCredentials(ee.OAUTH2_SCOPE)
+    #EE_CREDENTIALS = appengine.AppAssertionCredentials(ee.OAUTH2_SCOPE)
+    EE_CREDENTIALS = appengine.AppAssertionCredentials(OAuthInfo.SCOPE)
     app_id  = app_identity.get_application_id()
     if app_id == 'imazon-sad-tool':
         FT_TABLE = 'areas'

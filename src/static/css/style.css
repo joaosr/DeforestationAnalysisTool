@@ -475,22 +475,27 @@ article .example .field {
   color: white;
   border-radius: 10px;
 }
-#header #tools #monthly_sad{
-  margin: 0 20px 0 200px;
+#header #tools #sad{
+  margin: 0 20px 0 150px;
   padding: 20px 14px 23px 20px;
   display: inline-block;
 }
-#header #tools #monthly_sad #monthly_sad_select{
- text-decoration: none;
+#header #tools #sad #sad_select{
+ border: 0;
+ outline: 0;
  float: right;
- margin-left: 10px;
+ padding-left: 25px;
+ background: url("/static/img/tick_white.png") no-repeat 0 3px;
 }
-#header #tools #monthly_sad #monthly_sad_select h3{
-  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+#header #tools #sad #sad_select h3{
+font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
   color: #999999;
   text-shadow: 0 1px black;
 }
-#header #tools #monthly_sad #monthly_sad_content{
+#header #tools #sad #sad_select.sad_select{
+  background: url("/static/img/tick_green_selected.png") no-repeat 0 3px;
+}
+#header #tools #sad #sad_content{
   display: none;
   position: absolute;
   min-width: 702px;
@@ -500,53 +505,51 @@ article .example .field {
   /* border: 1px solid rgba(51, 51, 51, 0.5); */
   background: rgba(0, 0 , 0, 1);
   top: 40px;
-  left: 200px;
+  left: 150px;
   display: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #range_select {
-  padding-top: 20px;
-  display: inline-block;
-}
-#header #tools #monthly_sad #monthly_sad_content #range_select p {
-  display: inline-block;
-  vertical-align: top;
-  padding: 1px 0 0;
-  font: normal 13px "Helvetica Neue", Arial, Sans-Serif;
-  color: #4D575F;
-  text-shadow: 0 1px black;
-}
-#header #tools #monthly_sad #monthly_sad_content #range_select p strong {
-  font-weight: bold;
+
+#header #tools #sad #sad_content #date_range #date_range_select {
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
+  text-shadow: 0 1px black;
+  padding: 22px 20px 23px 20px;
+  border: 0;
+  outline: 0;
+  background: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #range_select a#select_range {
-  display: inline-block;
-  vertical-align: top;
-  width: 19px;
-  height: 19px;
-  text-indent: -9999px;
-  background: url("../img/icons/report.png") no-repeat 0 0;
+#header #tools #sad #sad_content #date_range #form_date_range{
+  position: absolute;
+  width: 700px;
+  font: normal 16px "Helvetica Neue";
+  color: #666666;
+  text-shadow: 0 1px white;
+  max-height: 254px;
+  padding: 30px 30px 30px 30px;
+  top: 60px;
+  left: 0px;
+  z-index: 20;
+  display: none;
+  border-top: none;
+  border-left: 1px solid rgba(0, 0, 0, 0.4);
+  border-right: 1px solid rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#EBEBEB), to(#D1D1D1));
 }
-#header #tools #monthly_sad #monthly_sad_content #range_select a#select_range:hover {
-  background-position: 0 -19px;
-}
-header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
-  background: url("") repeat 0 0;
-}
-#header #tools #monthly_sad #monthly_sad_content #sad_list  {
+#header #tools #sad #sad_content #sad_list  {
   margin: 0 20px 0 20px;
   padding: 16px 14px 11px 20px;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  a#sad_list_select {
+#header #tools #sad #sad_content #sad_list  a#sad_list_select {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
   text-shadow: 0 1px black;
   padding: 22px 20px 23px 20px;
   text-decoration: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog{
   position: absolute;
-  min-width: 845px;
+  min-width: 740px;
   max-height: 254px;
   min-height: 150px;
   padding: 10px 10px 10px 10px;
@@ -560,17 +563,17 @@ header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
   border-bottom: 1px solid rgba(0, 0, 0, 0.4);
   background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#EBEBEB), to(#D1D1D1));
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog .jspVerticalBar{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog .jspVerticalBar{
   right: 13px;
 }
 
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul{
   position: relative;  
   height: 100%;
   width: 100%;
   overflow: hidden;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li{
   width: 100%;
   font-size: 13px;
   color: #626262;
@@ -580,26 +583,26 @@ header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
   border-bottom: 1px solid #CFCFCF;
   background: url("/static/img/tick_white.png") no-repeat 6px 16px;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li:first-child{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li:first-child{
   border-top: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li:last-child{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li:last-child{
   border-bottom: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li.selected{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li.selected{
   background: url("/static/img/tick_white_selected.png") no-repeat 6px 16px;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li.moving{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li.moving{
   background-color: #E7E7E7;
   box-shadow: 0 0 3px 3px rgba(0, 0, 0, 0.1);
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li:hover a{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li:hover a{
   color: #333333;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li.sortable a{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li.sortable a{
   background: url("/static/img/bkg_layers_drag.png") no-repeat 90% 5px;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li a{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li a{
   display: block;
   width: 100%;
   padding-right: 20px;
@@ -608,21 +611,21 @@ header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
   text-shadow: 0 1px white;
   text-decoration: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #sad_list  #layer_reports_dialog ul li a:hover{
+#header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul li a:hover{
   color: #333333;
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker {
+#header #tools #sad #sad_content #image_picker {
   margin: 0 20px 0 20px;
   padding: 16px 14px 11px 20px;
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker a#picker_select {
+#header #tools #sad #sad_content #image_picker a#picker_select {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
   text-shadow: 0 1px black;
   padding: 3px 3px 3px 3px;
   text-decoration: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form {
+#header #tools #sad #sad_content #image_picker #picker_form {
   position: absolute;
   width: 700px;
   height: 618px;
@@ -633,12 +636,12 @@ header #tools #monthly_sad #monthly_sad_content #range_select #range_picker {
   background: rgba(22, 22, 23, 1);
   display: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span label{
+#header #tools #sad #sad_content #image_picker #picker_form ul li span label{
 font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
 color: rgba(153, 153, 153, 0.9);
 text-shadow: #000000 0px 1px 0px;
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span select{
+#header #tools #sad #sad_content #image_picker #picker_form ul li span select{
   padding-right: 2.5em;
   border: 0;
   border-radius: 3px;
@@ -651,7 +654,7 @@ text-shadow: #000000 0px 1px 0px;
   color: #666666;
   text-shadow: 0 1px white;
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span select::after{
+#header #tools #sad #sad_content #image_picker #picker_form ul li span select::after{
     color: rgba(0,0,0,.4);
     content: "\25BC";
     height: 1em;
@@ -664,7 +667,7 @@ text-shadow: #000000 0px 1px 0px;
     pointer-events: none;
 
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li span #submit{
+#header #tools #sad #sad_content #image_picker #picker_form ul li span #submit{
     float: right;
     margin: 0 13px 0 0;
     padding: 8px;
@@ -678,24 +681,24 @@ text-shadow: #000000 0px 1px 0px;
     -webkit-radius: 5px;
     background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#08d531), to(#319f06));
 }
-#header #tools #monthly_sad #monthly_sad_content #image_picker #picker_form ul li#thumbs {
+#header #tools #sad #sad_content #image_picker #picker_form ul li#thumbs {
     /*overflow: auto;*/
     max-height: 600px;
     max-width: 700px;
     margin-top: 20px;
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling {
+#header #tools #sad #sad_content #downscalling {
   margin: 0 20px 0 20px;
   padding: 16px 19px 11px 20px;
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling a#scalling_select {
+#header #tools #sad #sad_content #downscalling a#scalling_select {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
   text-shadow: 0 1px black;
   padding: 3px 3px 3px 3px;
   text-decoration: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form {
+#header #tools #sad #sad_content #downscalling #scalling_form {
   position: absolute;
   top: 60px;
   left: 0px;
@@ -706,7 +709,7 @@ text-shadow: #000000 0px 1px 0px;
   background: rgba(22, 22, 23, 1);
   display: none;
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form span h3{
+#header #tools #sad #sad_content #downscalling #scalling_form span h3{
   font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
   color: rgba(153, 153, 153, 0.9);
   text-shadow: #000000 0px 1px 0px;
@@ -714,7 +717,7 @@ text-shadow: #000000 0px 1px 0px;
   margin: 0 0 0 13px;
 }
 
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form select{
+#header #tools #sad #sad_content #downscalling #scalling_form select{
     min-width: 80px;
     padding-right: 2.5em;
     border: 0;
@@ -729,7 +732,7 @@ text-shadow: #000000 0px 1px 0px;
     text-shadow: 0 1px white;
 }
 
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form span input#submit{
+#header #tools #sad #sad_content #downscalling #scalling_form span input#submit{
     float: right;
     margin: 0 13px 0 0;
     padding: 8px;
@@ -743,16 +746,16 @@ text-shadow: #000000 0px 1px 0px;
     -webkit-radius: 5px;
     background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#08d531), to(#319f06));
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table h3{
+#header #tools #sad #sad_content #downscalling #scalling_form table h3{
   font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
   color: rgba(153, 153, 153, 0.9);
   text-shadow: #000000 0px 1px 0px;
   text-align: center;
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table{
+#header #tools #sad #sad_content #downscalling #scalling_form table{
   margin-top: 30px;
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table select{
+#header #tools #sad #sad_content #downscalling #scalling_form table select{
     min-width: 80px;
     padding-right: 2.5em;
     border: 0;
@@ -766,18 +769,23 @@ text-shadow: #000000 0px 1px 0px;
     color: #666666;
     text-shadow: 0 1px white;
 }
-#header #tools #monthly_sad #monthly_sad_content #downscalling #scalling_form table td{
+#header #tools #sad #sad_content #downscalling #scalling_form table td{
  padding: 10px 15px 10px 15px;
 }
 #header #tools #baseline{
-  margin: 0 20px 0 100px;
+  margin: 0 20px 0 150px;
   padding: 20px 14px 23px 20px;
   display: inline-block;
 }
 #header #tools #baseline #baseline_select{
- text-decoration: none;
+ border: 0;
+ outline: 0;
  float: right;
- margin-left: 10px;
+ padding-left: 25px;
+ background: url("/static/img/tick_white.png") no-repeat 0 3px;
+}
+#header #tools #baseline #baseline_select.baseline_select{
+  background: url("/static/img/tick_green_selected.png") no-repeat 0 3px;
 }
 #header #tools #baseline #baseline_select h3{
   font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
@@ -793,41 +801,36 @@ text-shadow: #000000 0px 1px 0px;
   /* border: 1px solid rgba(51, 51, 51, 0.5); */
   background: rgba(0, 0 , 0, 1);
   top: 40px;
-  left: 390px;
+  left: 150px;
   display: none;
 }
-#header #tools #baseline #baseline_content #range_select {
-  padding-top: 20px;
-  display: inline-block;
-}
-#header #tools #baseline #baseline_content #range_select p {
-  display: inline-block;
-  vertical-align: top;
-  padding: 1px 0 0;
-  font: normal 13px "Helvetica Neue", Arial, Sans-Serif;
-  color: #4D575F;
-  text-shadow: 0 1px black;
-}
-#header #tools #baseline #baseline_content #range_select p strong {
-  font-weight: bold;
+#header #tools #baseline #baseline_content #date_range #date_range_select {
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
   color: white;
+  text-shadow: 0 1px black;
+  padding: 22px 20px 23px 20px;
+  border: 0;
+  outline: 0;
+  background: none;
 }
-#header #tools #baseline #baseline_content #range_select a#select_range {
-  display: inline-block;
-  vertical-align: top;
-  width: 19px;
-  height: 19px;
-  text-indent: -9999px;
-  background: url("../img/icons/report.png") no-repeat 0 0;
+#header #tools #baseline #baseline_content #date_range #form_date_range{
+  position: absolute;
+  width: 700px;
+  font: normal 16px "Helvetica Neue";
+  color: #666666;
+  text-shadow: 0 1px white;
+  max-height: 254px;
+  padding: 30px 30px 30px 30px;
+  top: 60px;
+  left: 0px;
+  z-index: 20;
+  display: none;
+  border-top: none;
+  border-left: 1px solid rgba(0, 0, 0, 0.4);
+  border-right: 1px solid rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#EBEBEB), to(#D1D1D1));
 }
-#header #tools #baseline #baseline_content #range_select a#select_range:hover {
-  background-position: 0 -19px;
-}
-
-header #tools #baseline #baseline_content #range_select #range_picker {
-  background: url("") repeat 0 0;
-}
-
 #header #tools #baseline #baseline_content #baseline_list {
   margin: 0 20px 0 20px;
   padding: 16px 14px 11px 20px;
@@ -1165,14 +1168,19 @@ text-shadow: #000000 0px 1px 0px;
   margin: 10px;
 }
 #header #tools #time_series{
-  margin: 0 20px 0 100px;
+  margin: 0 20px 0 150px;
   padding: 20px 14px 23px 20px;
-  display: inline-block;
+  display: inline-block;  
 }
 #header #tools #time_series #time_series_select{
-    text-decoration: none;
-    float: right;
-    margin-left: 10px;
+  border: 0;
+  outline: 0;
+  float: right;
+  padding-left: 25px;
+  background: url("/static/img/tick_white.png") no-repeat 0 3px;
+}
+#header #tools #time_series #time_series_select.time_series_select{
+  background: url("/static/img/tick_green_selected.png") no-repeat 0 3px;
 }
 #header #tools #time_series #time_series_select  h3{
   font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
@@ -1188,7 +1196,7 @@ text-shadow: #000000 0px 1px 0px;
   /* border: 1px solid rgba(51, 51, 51, 0.5); */
   background: rgba(0, 0 , 0, 1);
   top: 40px;
-  left: 390px;
+  left: 150px;
   display: none;
 }
 #header #tools #time_series #time_series_content #date_range #date_range_select {
@@ -1196,15 +1204,18 @@ text-shadow: #000000 0px 1px 0px;
   color: white;
   text-shadow: 0 1px black;
   padding: 22px 20px 23px 20px;
-  text-decoration: none;
-  border: 1px;
+  border: 0;
+  outline: 0;
+  background: none;
 }
 #header #tools #time_series #time_series_content #date_range #form_date_range{
   position: absolute;
-  width: 740px;
+  width: 700px;
+  font: normal 16px "Helvetica Neue";
+  color: #666666;
+  text-shadow: 0 1px white;
   max-height: 254px;
-  min-height: 150px;
-  padding: 10px 10px 10px 10px;
+  padding: 30px 30px 30px 30px;
   top: 60px;
   left: 0px;
   z-index: 20;
@@ -2283,7 +2294,12 @@ body, html {
   margin: -5px 0 0 0;
   background: url("../img/cellinfo_arrow.png") no-repeat 0 0;
 }
-#grid .cell .cell_wrapper_info .setting_baseline {
+#grid .cell .cell_wrapper_info #setting_baseline {
+  display: none;
+  float: left;
+  margin: 10px;
+}
+#grid .cell .cell_wrapper_info #setting_baseline #build_baseline{
   display: none;
   float: left;
   padding: 5px 10px 5px 10px;
@@ -2291,8 +2307,34 @@ body, html {
   background-color: rgb(100, 157, 221);
   color: rgb(255, 255, 255);
   text-shadow: 0 1px rgb(63, 84, 98);
-  text-decoration: none;  
-  margin: 10px;
+  text-decoration: none;
+  margin: 5px;  
+  border: 1px solid rgb(63, 62, 62);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 1);
+}
+#grid .cell .cell_wrapper_info #setting_baseline #rebuild_baseline{
+  display: none;
+  float: left;
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(25, 190, 31);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(63, 84, 98);
+  text-decoration: none;
+  margin: 5px;  
+  border: 1px solid rgb(63, 62, 62);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 1);
+}
+#grid .cell .cell_wrapper_info #setting_baseline #load_baseline{
+  display: none;
+  float: left;
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(100, 157, 221);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(63, 84, 98);
+  text-decoration: none;
+  margin: 5px;  
   border: 1px solid rgb(63, 62, 62);
   box-shadow: 0 0 1px rgba(255, 255, 255, 1);
 }

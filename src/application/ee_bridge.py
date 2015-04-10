@@ -1619,16 +1619,18 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
     return result_final
 
 
-def create_tile_baseline(start_date, end_date, cell):    
-    
+def create_tile_baseline(start_date, end_date, cell):  
+      
+    """
     start_compounddate = '%04d%02d' % (start_date.year, start_date.month)
     end_compounddate   = '%04d%02d' % (end_date.year, end_date.month)
     
     tiles = Tile.find_by_cell_name(cell)
     
     baselines = []
-    resutls = []
-    images = None
+    ndfis     = [] 
+    smas      = []
+    resutls   = []
     
     for tile in tiles:
         tile_name = tiles[tile]['name']
@@ -1643,32 +1645,159 @@ def create_tile_baseline(start_date, end_date, cell):
             if image_num == 1:
                 logging.info(collection.getInfo()['features'][0])
                 image = ee.Image(collection.getInfo()['features'][0]['id'])
-                baselines.append(baseline_image(image, sensor, start_date, None, cell))
+                
+                feature_image = image.getMapId({
+                               'bands': ','.join(EELandsat.get_image_bands(sensor).get('bands')),
+                               'gain': ','.join(EELandsat.get_image_bands(sensor).get('gain'))                          
+                              })
+                
+                resutls.append({'id':          feature_image['mapid'],
+                                'token':       feature_image['token'],
+                                'type':        'baseline',
+                                'visibility':  True,
+                                'description': 'RGB/'+sensor,
+                                'url': 'https://earthengine.googleapis.com/map/'+feature_image['mapid']+'/{Z}/{X}/{Y}?token='+feature_image['token']
+                              })
+                
+                classifications = baseline_image(image, sensor, start_date, None, cell)
+                baselines.append(classifications['baseline'])
+                ndfis.append(classifications['ndfi'])
+                smas.append(classifications['sma'])
             elif image_num > 1 :
                 resutls.append("Process with temporal composition")
             else:
                 resutls.append(None)
+    """
+    baselines = []
+    ndfis     = [] 
+    smas      = []
+    resutls   = []
+    
+    #image_picker = ImagePicker.find_by_period(start_compounddate, end_compounddate, tile_name)
+    baseline     = Baseline.find_by_cell(cell)
+    image_picker = ''
+    
+    if baseline:
+        image_picker = baseline.image_picker()
+    else: 
+        cell_grid = CellGrid.find_by_name(cell)
+        baseline  = Baseline(added_by=users.get_current_user(), cell=cell_grid, name='null', start=start_date.date(), end=end_date.date())
+        image_picker = baseline.image_picker()
+        
+    
+    
+    for i in range(len(image_picker)):
+        sensor     = image_picker[i].sensor
+        tile_name  = image_picker[i].cell
+        
+        days  = image_picker[i].day
+        month = image_picker[i].month
+        year  = image_picker[i].year
+        
+        if len(days) == 1:
+            date_star  = year+'-'+month+'-'+days[0]
+            collection = EELandsat.find_collection_tile(sensor, tile_name, date_star)
+        
+            #image_num = len(collection.getInfo()['features'])
+        
+        
+            logging.info(collection.getInfo()['features'][0])
+            image = ee.Image(collection.getInfo()['features'][0]['id'])
+            
+            feature_image = image.getMapId({
+                           'bands': ','.join(EELandsat.get_image_bands(sensor).get('bands')),
+                           'gain': ','.join(EELandsat.get_image_bands(sensor).get('gain'))                          
+                          })
+            
+            resutls.append({'id':          feature_image['mapid'],
+                            'token':       feature_image['token'],
+                            'type':        'baseline',
+                            'visibility':  True,
+                            'description': 'RGB/'+sensor,
+                            'url': 'https://earthengine.googleapis.com/map/'+feature_image['mapid']+'/{Z}/{X}/{Y}?token='+feature_image['token']
+                          })
+            
+            classifications = baseline_image(image, sensor, start_date, None, cell)
+            baselines.append(classifications['baseline'])
+            ndfis.append(classifications['ndfi'])
+            smas.append(classifications['sma'])
+        elif len(days) > 1 :
+            resutls.append("Process with temporal composition")
+        else:
+            resutls.append(None)
 
     if len(baselines) > 0:                
-        images = ee.ImageCollection(baselines)
-        image  = images.mosaic()
-        logging.info(image)
+        images_baseline = ee.ImageCollection(baselines)
+        images_ndfi = ee.ImageCollection(ndfis)
+        images_sma = ee.ImageCollection(smas)
+        
+        image_baseline  = images_baseline.mosaic()
+        image_ndfi  = images_ndfi.mosaic()
+        image_sma  = images_sma.mosaic()
+        
+        logging.info(image_baseline)
+        
         cell_grid = CellGrid.find_by_name(cell)
         geo  = ast.literal_eval(cell_grid.geo)
+        #polygon = ee.Geometry(ee.Geometry.Polygon(geo), "EPSG:3857")
         polygon = ee.Geometry.Polygon(geo)
-        image = image.clip(polygon) 
-        feature = ee.Image(image).getMapId({
+        
+        image_baseline = image_baseline.clip(polygon)
+        image_ndfi     = image_ndfi.clip(polygon)
+        image_sma      = image_sma.clip(polygon) 
+        
+        feature_baseline = ee.Image(image_baseline).getMapId({
                               'bands': 'nd', 
                               'palette': '000000,00994d,00ffff,000000,0000ff,666666'                            
                               })
-
-        mapid = feature['mapid']
-        token = feature['token']    
-    
-        name = 'BASELINE/'+cell+'/'+sensor+'/'+start_date.strftime("%Y-%b-%d")
-        baseline = Baseline(added_by=users.get_current_user(), cell=cell_grid, name=name, start=start_date.date(), mapid=mapid, token=token)
         
-        return baseline.save()
+        mapid = feature_baseline['mapid']
+        token = feature_baseline['token']    
+        
+        name = 'BASELINE/'+cell+'/'+sensor+'/'+start_date.strftime("%Y-%b-%d")
+        
+        #baseline = Baseline(added_by=users.get_current_user(), cell=cell_grid, name=name, start=start_date.date(), end=end_date.date())
+        baseline.added_by = users.get_current_user()
+        baseline.name     = name
+         
+        baseline_result          = baseline.save()['data']
+        baseline_result['mapid'] = mapid
+        baseline_result['token'] = token
+        baseline_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 
+        
+        resutls.append(baseline_result)
+        
+        feature_ndfi = ee.Image(image_ndfi).getMapId({
+                              'bands': 'vis-red,vis-green,vis-blue',
+                              'gain': 1,
+                              'bias': 0.0,
+                              'gamma': 1.6                            
+                              })
+        
+        resutls.append({'id':          feature_ndfi['mapid'],
+                        'token':       feature_ndfi['token'],
+                        'type':        'baseline',
+                        'visibility':  True,
+                        'description': 'NDFI',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_ndfi['mapid']+'/{Z}/{X}/{Y}?token='+feature_ndfi['token']
+                        })
+        
+        feature_sma = ee.Image(image_sma).getMapId({
+                              'bands': 'band_3,band_2,band_1',
+                              'gain': 256,
+                              'bias': 0.0,
+                              'gamma': 1.6                           
+                              })
+        
+        resutls.append({'id':          feature_sma['mapid'],
+                        'token':       feature_sma['token'],
+                        'type':        'baseline',
+                        'visibility':  True,
+                        'description': 'SMA',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_sma['mapid']+'/{Z}/{X}/{Y}?token='+feature_sma['token']
+                        })
+        
+        return resutls
     else:
         return None
                 
@@ -1693,6 +1822,17 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None):
     npv_plus_soil = clamped.select(1).add(clamped.select(2))
     raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
     ndfi = raw_ndfi.multiply(100).add(100).byte()
+    
+    ndfi_vizualize = ndfi.where(summed.eq(0), INVALID_NDFI)
+    ndfi_vizualize = ndfi_vizualize.select([0], ['ndfi']) 
+    red = ndfi_vizualize.interpolate([150, 185], [255, 0], 'clamp')
+    green = ndfi_vizualize.interpolate([  0, 100, 125, 150, 185, 200, 201],
+                                 [255,   0, 255, 165, 140,  80,   0], 'clamp')
+    blue = ndfi_vizualize.interpolate([100, 125], [255, 0], 'clamp')
+
+    rgb = ee.Image.cat(red, green, blue).round().byte()
+
+    classification_ndfi = rgb.select([0, 1, 2], ['vis-red', 'vis-green', 'vis-blue'])     
 
     ## Cloud mask ====================================================================
     cloudThresh = [0.15, 0.07] # % 0-1
@@ -1708,14 +1848,14 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None):
     cloudMask2 = buffered.eq(1).And(unmixed.select([3]).gte(cloudThresh[1]))
 
     ## Classification =================================================================
-    classification = ndfi.multiply(0)
-    classification = classification.where(ndfi.gte(175), 1) #Forest
-    classification = classification.where(ndfi.gte(165).And(ndfi.lte(174)), 2) #Degradation
-    classification = classification.where(ndfi.lte(164), 3) #Deforestation
-    classification = classification.where(summed.lte(0.15), 4) #Water
-    classification = classification.where(cloudMask2.eq(1), 5) #Cloud
+    classification_baseline = ndfi.multiply(0)
+    classification_baseline = classification_baseline.where(ndfi.gte(175), 1) #Forest
+    classification_baseline = classification_baseline.where(ndfi.gte(165).And(ndfi.lte(174)), 2) #Degradation
+    classification_baseline = classification_baseline.where(ndfi.lte(164), 3) #Deforestation
+    classification_baseline = classification_baseline.where(summed.lte(0.15), 4) #Water
+    classification_baseline = classification_baseline.where(cloudMask2.eq(1), 5) #Cloud
     
-    return classification 
+    return {'baseline': classification_baseline, 'ndfi': classification_ndfi, 'sma': unmixed}
     
 
 
@@ -1754,8 +1894,8 @@ def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     else:
         image_L7 = image_L7.find_map_image(bbox)        
         if image_L7:
-           image = image_L7
-           sensor = EELandsat.LANDSAT7 
+            image = image_L7
+            sensor = EELandsat.LANDSAT7 
 
     
     ## SMA ===========================================================================
@@ -1820,6 +1960,7 @@ def create_time_series(start_date, end_date, sensor=EELandsat.LANDSAT5):
     landstat = EELandsat(start_date, end_date, EELandsat.LANDSAT5)
     
     images_cumulated = []
+    nImages = 0;
     
     for i in range(len(tiles)):
         cumulated = None
@@ -1828,7 +1969,7 @@ def create_time_series(start_date, end_date, sensor=EELandsat.LANDSAT5):
         images = collection.getInfo().get('features')
         
         for i in range(len(images)):
-            
+            nImages = nImages + 1
             ## SMA ===========================================================================
             unmixed = ee.Image(images[i]['id']).select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
             
@@ -1886,8 +2027,8 @@ def create_time_series(start_date, end_date, sensor=EELandsat.LANDSAT5):
     feature = ee.Image(image.mosaic()).getMapId({
                                                 'bands': 'nd',
                                                 'min': 1,
-                                                'max': len(images_cumulated),
-                                                'palette': 'ffff00,ff0000'                            
+                                                'max': nImages,
+                                                'palette': 'ffff00, ff0000'                            
                                               })
 
     mapid = feature['mapid']

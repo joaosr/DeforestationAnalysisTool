@@ -28,14 +28,14 @@ import simplejson as json
 sys.modules['ssl'] = None
 
 try:
-  from flask import render_template,  redirect, abort, request, make_response, jsonify
+    from flask import render_template,  redirect, abort, request, make_response, jsonify
 except:
-  # nose tests require zipped packages to be manually loadedi
-  import zipimport
-  gflags = zipimport.zipimporter('packages/gflags.zip').load_module('gflags')
-  jinja2 = zipimport.zipimporter('packages/jinja2.zip').load_module('jinja2')
-  flask = zipimport.zipimporter('packages/flask.zip').load_module('flask')
-  wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
+    # nose tests require zipped packages to be manually loadedi
+    import zipimport
+    gflags = zipimport.zipimporter('packages/gflags.zip').load_module('gflags')
+    jinja2 = zipimport.zipimporter('packages/jinja2.zip').load_module('jinja2')
+    flask = zipimport.zipimporter('packages/flask.zip').load_module('flask')
+    wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
 
 
 #from forms import ExampleForm
@@ -99,23 +99,23 @@ def default_maps():
 def maps_level(level, bbox):
     result = []
     if level == '0':
-       result.append(map_from_bbox(EELandsat.LANDSAT5, bbox))
-       result.append(map_from_bbox(EELandsat.LANDSAT7, bbox))
-       result.append(map_from_bbox(EELandsat.LANDSAT8, bbox))
+        result.append(map_from_bbox(EELandsat.LANDSAT5, bbox))
+        result.append(map_from_bbox(EELandsat.LANDSAT7, bbox))
+        result.append(map_from_bbox(EELandsat.LANDSAT8, bbox))
     elif level == '1':
-       result.append(map_from_bbox(SMA.LANDSAT5_T0, bbox))
-       result.append(map_from_bbox(SMA.LANDSAT5_T1, bbox))
-       result.append(map_from_bbox(SMA.LANDSAT7_T0, bbox))
-       result.append(map_from_bbox(SMA.LANDSAT7_T1, bbox))
-       result.append(map_from_bbox(SMA.LANDSAT8_T0, bbox))
-       result.append(map_from_bbox(SMA.LANDSAT8_T1, bbox))
+        result.append(map_from_bbox(SMA.LANDSAT5_T0, bbox))
+        result.append(map_from_bbox(SMA.LANDSAT5_T1, bbox))
+        result.append(map_from_bbox(SMA.LANDSAT7_T0, bbox))
+        result.append(map_from_bbox(SMA.LANDSAT7_T1, bbox))
+        result.append(map_from_bbox(SMA.LANDSAT8_T0, bbox))
+        result.append(map_from_bbox(SMA.LANDSAT8_T1, bbox))
     elif level == '2':
-       result.append(map_from_bbox(NDFI.LANDSAT5_T0, bbox))
-       result.append(map_from_bbox(NDFI.LANDSAT5_T1, bbox))
-       result.append(map_from_bbox(NDFI.LANDSAT7_T0, bbox))
-       result.append(map_from_bbox(NDFI.LANDSAT7_T1, bbox))
-       result.append(map_from_bbox(NDFI.LANDSAT8_T0, bbox))
-       result.append(map_from_bbox(NDFI.LANDSAT8_T1, bbox))
+        result.append(map_from_bbox(NDFI.LANDSAT5_T0, bbox))
+        result.append(map_from_bbox(NDFI.LANDSAT5_T1, bbox))
+        result.append(map_from_bbox(NDFI.LANDSAT7_T0, bbox))
+        result.append(map_from_bbox(NDFI.LANDSAT7_T1, bbox))
+        result.append(map_from_bbox(NDFI.LANDSAT8_T0, bbox))
+        result.append(map_from_bbox(NDFI.LANDSAT8_T1, bbox))
 
     return jsonify({'result': result})
 
@@ -280,12 +280,11 @@ FT_TABLE_DOWNSCALLING = '17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 
 @app.route('/range_report/', methods=['POST', 'GET'])
 def range_report():
-    range_picker = request.form.get('range_picker')
-    date_start = range_picker.split(' to ')[0]
-    date_end   = range_picker.split(' to ')[1]
+    date_start = request.form.get('date_start')
+    date_end   = request.form.get('date_end')
     message = ''
     try:
-       message =  Report.add_report(date_start, date_end)
+        message =  Report.add_report(date_start, date_end)
     except:
         return jsonify({'result': 'error'})
 
@@ -298,7 +297,7 @@ def tiles_sensor(sensor=None):
         return jsonify({'result': 'post method'})
     else:
         if sensor == 'modis':
-           tile_array = [
+            tile_array = [
                          { 'name': 'h11v08', 'value': 'h11v08'},
                          { 'name': 'h12v08', 'value': 'h12v08'},
                          { 'name': 'h10v09', 'value': 'h10v09'},
@@ -318,33 +317,33 @@ def tiles_sensor(sensor=None):
 def downscalling(tile=None):
 
     if request.method == 'POST':
-       range3 = request.form.get('range3')
-       range4 = request.form.get('range4')
-       range6 = request.form.get('range6')
-       range7 = request.form.get('range7')
+        range3 = request.form.get('range3')
+        range4 = request.form.get('range4')
+        range6 = request.form.get('range6')
+        range7 = request.form.get('range7')
 
-       sill3 = request.form.get('sill3')
-       sill4 = request.form.get('sill4')
-       sill6 = request.form.get('sill6')
-       sill7 = request.form.get('sill7')
+        sill3 = request.form.get('sill3') 
+        sill4 = request.form.get('sill4')
+        sill6 = request.form.get('sill6')
+        sill7 = request.form.get('sill7')
 
-       nugget3 = request.form.get('nugget3')
-       nugget4 = request.form.get('nugget4')
-       nugget6 = request.form.get('nugget6')
-       nugget7 = request.form.get('nugget7')
+        nugget3 = request.form.get('nugget3')
+        nugget4 = request.form.get('nugget4')
+        nugget6 = request.form.get('nugget6')
+        nugget7 = request.form.get('nugget7')
 
-       cell = request.form.get('tile')
-       cell = cell.upper()
+        cell = request.form.get('tile')
+        cell = cell.upper()
 
-       location = get_modis_location(cell.lower())
+        location = get_modis_location(cell.lower())
 
-       compounddate = request.form.get('compounddate')
+        compounddate = request.form.get('compounddate')
 
-       report = Report.current()
+        report = Report.current()
 
-       model = 'exponential'
+        model = 'exponential'
 
-       downscalling3 = Downscalling(report=report,
+        downscalling3 = Downscalling(report=report,
                                  added_by= users.get_current_user(),
                                  cell=str(cell),
                                  region=location,
@@ -355,9 +354,9 @@ def downscalling(tile=None):
                                  range=long(range3),
                                  nugget=long(nugget3)
                                  )
-       message1 = downscalling3.save()
+        message1 = downscalling3.save()
 
-       downscalling4 = Downscalling(report=report,
+        downscalling4 = Downscalling(report=report,
                                  added_by= users.get_current_user(),
                                  cell=str(cell),
                                  region=location,
@@ -368,9 +367,9 @@ def downscalling(tile=None):
                                  range=long(range4),
                                  nugget=long(nugget4)
                                  )
-       message2 = downscalling4.save()
+        message2 = downscalling4.save()
 
-       downscalling6 = Downscalling(report=report,
+        downscalling6 = Downscalling(report=report,
                                  added_by= users.get_current_user(),
                                  cell=str(cell),
                                  region=location,
@@ -381,9 +380,9 @@ def downscalling(tile=None):
                                  range=long(range6),
                                  nugget=long(nugget6)
                                  )
-       message3 = downscalling6.save()
+        message3 = downscalling6.save()
 
-       downscalling7 = Downscalling(report=report,
+        downscalling7 = Downscalling(report=report,
                                  added_by= users.get_current_user(),
                                  cell=str(cell),
                                  region=location,
@@ -394,12 +393,12 @@ def downscalling(tile=None):
                                  range=long(range7),
                                  nugget=long(nugget7)
                                  )
-       message4 = downscalling7.save()
+        message4 = downscalling7.save()
 
-       if message1 == message2 == message3 == message4:
-           return jsonify({'result': message1})
-       else:
-           return jsonify({'result': 'Could not save values.'})
+        if message1 == message2 == message3 == message4:
+            return jsonify({'result': message1})
+        else:
+            return jsonify({'result': 'Could not save values.'})
 
     else:
         result = []
@@ -428,45 +427,45 @@ def downscalling(tile=None):
 def picker(tile=None):
     
     if request.method == 'POST':
-       logging.info(request.form.get('thumb'))
+        logging.info(request.form.get('thumb'))
 
-       cell   = request.form.get('tile')
-       p      = re.compile('\d+')
-       p      = p.findall(cell)
-       cell   = 'h' + p[0] + 'v' + p[1]
+        cell   = request.form.get('tile')
+        p      = re.compile('\d+')
+        p      = p.findall(cell)
+        cell   = 'h' + p[0] + 'v' + p[1]
 
-       thumbs = request.form.get('thumb').split(',')
-       days   = []
-       day, month, year = ['', '', '']
+        thumbs = request.form.get('thumb').split(',')
+        days   = []
+        day, month, year = ['', '', '']
 
-       for thumb in thumbs:
-           day, month, year = thumb.split('-')
-           days.append(day)
+        for thumb in thumbs:
+            day, month, year = thumb.split('-')
+            days.append(day)
 
-       #day          = ','.join(days)
-       compounddate = year + month
+        #day          = ','.join(days)
+        compounddate = year + month
 
-       location = get_modis_location(cell)
+        location = get_modis_location(cell)
 
-       report = Report.current()
+        report = Report.current()
 
-       imagePicker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=day, location=location, compounddate=str(compounddate))
-       return jsonify({'result': imagePicker.save()})
+        imagePicker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=day, location=location, compounddate=str(compounddate))
+        return jsonify({'result': imagePicker.save()})
 
     else:
-       #cell = request.args.get('cell', '')
-       reports = Report.current().as_dict()
-       date = time.gmtime(reports['start'] / 1000)
-       year = time.strftime("%Y", date)
-       month = time.strftime("%m", date)
+        #cell = request.args.get('cell', '')
+        reports = Report.current().as_dict()
+        date = time.gmtime(reports['start'] / 1000)
+        year = time.strftime("%Y", date)
+        month = time.strftime("%m", date)
 
-       if tile:
-          bands = 'sur_refl_b01,sur_refl_b04,sur_refl_b03'
-          gain = 0.1
-          results = get_modis_thumbnails_list(year, month, tile, bands, gain)
-          return jsonify({'result': results})
-       else:
-          return jsonify({'result': []})
+        if tile:
+            bands = 'sur_refl_b01,sur_refl_b04,sur_refl_b03'
+            gain = 0.1
+            results = get_modis_thumbnails_list(year, month, tile, bands, gain)
+            return jsonify({'result': results})
+        else:
+            return jsonify({'result': []})
 
 @app.route('/baseline_list/')
 def baseline_list():
@@ -488,8 +487,9 @@ def reports_list():
 def baseline_report():
 
     if request.method == 'POST':
-        date_period = request.form.get('range_picker').split(' to ')
-        result      = create_baseline(date_period[0], date_period[1], EELandsat.LANDSAT5)
+        date_start = request.form.get('date_start')
+        date_end = request.form.get('date_end')
+        result      = create_baseline(date_start, date_end, EELandsat.LANDSAT5)
         return jsonify({'result': result})
     else:
         return jsonify({'result': 'Other method'})
@@ -513,8 +513,8 @@ def baseline_search_tiles():
         return jsonify({'tiles': result})
 
 
-@app.route('/baseline_on_cell/', methods=['POST', 'GET'])
-def baseline_on_cell():
+@app.route('/baseline_on_cell/<date_start>/<date_end>/<cell_name>/', methods=['POST', 'GET'])
+def baseline_on_cell(date_start, date_end, cell_name):
     if request.method == 'POST':
         cell_name    = request.form.get('cell_name')
         logging.info(cell_name)
@@ -524,7 +524,25 @@ def baseline_on_cell():
         end_date = datetime.datetime.strptime(end_date,"%d/%b/%Y")
         
         result = create_tile_baseline(start_date, end_date, cell_name)
-        return jsonify({'result': result})    
+        return jsonify({'result': result})
+    else:
+        logging.info(cell_name)
+        start_date   = date_start.replace("-", "/")
+        end_date     = date_end.replace("-", "/")
+        start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
+        end_date = datetime.datetime.strptime(end_date,"%d/%b/%Y")
+        
+        result = create_tile_baseline(start_date, end_date, cell_name)
+        return jsonify({'result': result})
+
+@app.route('/baseline/<cell_name>/', methods=['POST', 'GET'])
+def baseline_cell(cell_name):
+    if request.method == 'POST':
+        return jsonify({'result': None})
+    else:
+        logging.info(cell_name)
+        result = Baseline.formated_by_cell_parent(cell_name)        
+        return jsonify({'result': result})            
 
     
 @app.route('/imagepicker_baseline/', methods=['POST', 'GET'])

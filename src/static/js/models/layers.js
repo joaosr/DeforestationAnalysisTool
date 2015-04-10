@@ -97,6 +97,52 @@ var RGBStrechLayer = LayerModel.extend({
 
 });
 
+var LayerBaselineCollection = Backbone.Collection.extend({
+
+    model: LayerModel,
+
+    initialize: function()  {
+
+    },
+    parse: function(result){
+        console.log(result.result);
+        return result.result;
+    },
+    get_by_cell: function(cell_name) {
+        var lay;
+        this.each(function(m) {
+        	var baseline_name = m.get('description')
+        	var index_found = baseline_name.search(cell_name)
+            if(index_found > -1) {
+                lay = m;
+            }
+        });
+        return lay;
+    },
+    get_by_name: function(name) {
+        var lay;
+        this.each(function(m) {
+            if(m.get('description') === name) {
+                lay = m;
+            }
+        });
+        return lay;
+    },
+ // return a new collection
+    filter_by_type: function(callback) {
+        return _(this.filter(function(layer) {
+                return callback(layer.get('type'));
+               }));
+    },
+    base_layers: function() {
+        return this.filter_by_type(function(t) { return t === 'google_maps'; });
+    },
+
+    raster_layers: function() {
+        return this.filter_by_type(function(t) { return t !== 'google_maps'; });
+    }
+
+});
 
 var LayerCollection = Backbone.Collection.extend({
 

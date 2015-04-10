@@ -219,11 +219,10 @@ var TimeSeries = Backbone.View.extend({
     el: $("#time_series"),
      events:{
         'click #time_series_select': 'visibility_change',
-        'click #time_series_check': 'selected',
         'click #time_series_historical_results_select': 'show_time_series_historical_results'
     },
     initialize: function(){
-        _.bindAll(this, 'visibility_change');
+        _.bindAll(this, 'visibility_change', 'set_selected');
         this.callerView = this.options.callerView;
         this.report     = this.options.report;
         this.map        = this.options.mapview;
@@ -236,13 +235,18 @@ var TimeSeries = Backbone.View.extend({
         var that = this;
         this.range_date.bind('send_success', function(){that.time_series.add(that.range_date.data_response)});
     },
-    selected: function(){
-        this.selected = document.getElementById('time_series_check').checked;
+    set_selected: function(){        
+        this.selected = true;
         this.callerView.callback_selected(this);
+        this.$("#time_series_select").addClass('time_series_select');
     },
     disable: function(){
+    	$(this.el).css("background-color", "rgba(0, 0, 0, 0)");
+        this.$("#time_series_select h3").css("color", "#999999");
+        this.$("#time_series_content").hide();
+        this.visibility = false;        
         this.selected = false;
-        document.getElementById('time_series_check').checked = false;
+        this.$("#time_series_select").removeClass('time_series_select');
     },
     show_time_series_historical_results: function(e){
     	if(e) e.preventDefault();
@@ -309,6 +313,7 @@ var TimeSeries = Backbone.View.extend({
             this.$("#time_series_content").show();   
             this.visibility = true;
             this.callerView.callback(this);
+            this.set_selected();            
         }
     },
     show: function() {

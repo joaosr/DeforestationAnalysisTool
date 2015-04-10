@@ -83,6 +83,9 @@
   <!-- downscalling -->
   <script src="{{url_for('static',filename='js/downscalling.js')}}"></script>
 
+  <!-- sad -->
+  <script src="{{url_for('static',filename='js/controllers/sad.js')}}"></script>
+
   <!-- baseline -->
   <script src="{{url_for('static',filename='js/controllers/baseline.js')}}"></script>
   
@@ -399,7 +402,12 @@
                     print(added_by.split('@')[0]);
             %></h3>
         </div>
-        <button class="setting_baseline" type="button">Setting Baseline</button>
+        <div id="setting_baseline">
+			<button id="build_baseline" type="button">Build Baseline</button>
+    		<button id="rebuild_baseline" type="button">Rebuild Baseline</button>
+    		<button id="load_baseline" type="button">Load Baseline</button>
+        </div>
+        <!--<button class="setting_baseline" type="button">Setting Baseline</button>-->
       </div>
     </script>
 
