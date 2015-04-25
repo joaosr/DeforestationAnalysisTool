@@ -210,8 +210,9 @@ var MapView = Backbone.View.extend({
                     operation_map: this.operation_map
                 });
             }
-
-
+            
+            console.log(this.layers);
+           
             if(this.layer_editor.showing) {
                 this.layer_editor.close();
                 var view_bkg = {'background-image': "url('/static/img/layers_editor.png')"};

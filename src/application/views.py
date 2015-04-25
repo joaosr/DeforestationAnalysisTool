@@ -16,7 +16,7 @@ from application import settings
 from application.api import landstat
 from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location, create_baseline, \
     create_time_series, create_tile_baseline
-from application.models import Baseline, Tile, TimeSeries
+from application.models import Baseline, Tile, TimeSeries, CellGrid
 from application.time_utils import timestamp, past_month_range
 from decorators import login_required, admin_required
 import ee
@@ -449,7 +449,7 @@ def picker(tile=None):
 
         report = Report.current()
 
-        imagePicker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=day, location=location, compounddate=str(compounddate))
+        imagePicker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=days, location=location, compounddate=str(compounddate))
         return jsonify({'result': imagePicker.save()})
 
     else:
@@ -508,8 +508,20 @@ def time_series():
 @app.route('/baseline_search_tiles/', methods=['POST', 'GET'])
 def baseline_search_tiles():
     if request.method == 'POST':
-        cell_name   = request.form.get('cell_name')
-        result = Tile.find_by_cell_name(cell_name)
+        cell_name = request.form.get('cell_name')
+        cell_grid = CellGrid.find_by_name(cell_name)
+        
+        if cell_grid:
+            result    = cell_grid.tiles_as_dict()
+        else:
+            bbox = request.form.get('bbox')
+            bbox = bbox.replace(";", "],[")
+            bbox = "[[[" + bbox + "]]]"
+            cell_grid = CellGrid(name=cell_name, geo=bbox)
+            cell_grid.save()
+            result    = cell_grid.tiles_as_dict()
+        
+        #result = Tile.find_by_cell_name(cell_name)
         return jsonify({'tiles': result})
 
 

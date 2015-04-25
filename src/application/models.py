@@ -184,12 +184,19 @@ class Report(db.Model):
         logging.info(r)
         if len(r) > 0:
            if r[0].finished:
-              r = Report(start=start_date, end=end_date, assetid=assetid)
+              #r = Report(start=start_date, end=end_date, assetid=assetid)
+              r[0].start = start_date;
+              r[0].end = end_date;
+              r[0].assetid = assetid
               r.put()
               return {'message': 'New period of analyse saved!', 'data': None}
           
            else:
               return {'message': 'Last period not finalized!', 'data': None}
+        else:
+            r = Report(start=start_date, end=end_date, assetid=assetid)
+            r.put()
+            return {'message': 'New period of analyse saved!', 'data': None}
 
 
     def base_map(self):
@@ -465,6 +472,37 @@ class CellGrid(db.Model):
     last_change_on = db.DateTimeProperty(auto_now=True)
     geo = db.TextProperty(required=True)
     
+    @property
+    def tiles(self):
+        geo_cell_grid = ee.Geometry.Polygon(ast.literal_eval(self.geo))
+        q = Tile.all().filter('cells =', self.name)
+        r = q.fetch(300)                
+        result = []
+        
+        for i in range(len(r)):
+            geo_tile = ee.Geometry.Polygon(ast.literal_eval(r[i].geo))
+            #intersection = geo_cell_grid.intersection(geo_tile, ee.ErrorMargin(30.0, "meters"), "EPSG:4326")
+                        
+            #if len(intersection.getInfo()['coordinates']) > 0:
+            if geo_cell_grid.intersects(geo_tile, ee.ErrorMargin(30.0, "meters"), "EPSG:4326").getInfo():
+                logging.info(r[i].name)
+                #logging.info(geo_cell_grid.intersects(geo_tile, ee.ErrorMargin(30.0, "meters"), "EPSG:4326").getInfo())
+                result.append(r[i])
+            else:
+                logging.info(r[i].name)
+        
+        return result
+    
+    def tiles_as_dict(self):
+        tiles = self.tiles
+        if tiles:
+            results = {}
+            for i in range(len(tiles)):
+                results.update({'tile'+str(i): tiles[i].as_dict()})
+            return results
+        else:
+            return None
+    
     def as_dict(self):
         return {
                 #'id': str(self.ID),
@@ -525,6 +563,8 @@ class Tile(db.Model):
     last_change_on = db.DateTimeProperty(auto_now=True)
     geo = db.TextProperty(required=True)
     
+    
+    
     def as_dict(self):
         return {
                 #'id': str(self.ID),
@@ -548,6 +588,7 @@ class Tile(db.Model):
             return tiles
         else:
             return None
+        
         
     @staticmethod
     def find_tiles_by_sensor(sensor):
@@ -775,13 +816,13 @@ class ImagePicker(db.Model):
                 #'cell': str(self.cell.key()),
                 #'paths': json.loads(self.geo),
                 #'type': self.type,
+                'sensor': self.sensor,
                 'cell': self.cell,
                 'year': self.year,
                 'month': self.month,
                 'day': self.day,
                 'Location': json.loads(self.location),
                 'compounddate': self.compounddate,
-                'fusion_tables_id': self.fusion_tables_id,
                 'added_on': timestamp(self.added_on),
                 'added_by': str(self.added_by.nickname())
         }
@@ -811,6 +852,23 @@ class ImagePicker(db.Model):
                     date = r[i].year+'-'+r[i].month+'-'+r[i].day[j]
                     sensor = r[i].sensor
                     result[date] = sensor
+                
+            return result
+        else:
+            return None
+        
+    @staticmethod
+    def list_by_period(start_compounddate, end_compounddate, tile):
+        q = ImagePicker.all().filter('compounddate >=', start_compounddate).filter('compounddate <=', end_compounddate).filter("cell =", tile)
+        r = q.fetch(10)
+        if r:
+            result = []
+            for i in range(len(r)):
+                result.append(r[i].as_dict())
+                #for j in range(len(r[i].day)): 
+                #    date = r[i].year+'-'+r[i].month+'-'+r[i].day[j]
+                #    sensor = r[i].sensor
+                #    result[date] = sensor
                 
             return result
         else:
@@ -973,10 +1031,12 @@ class Baseline(db.Model):
         result = []
         start_compounddate = '%04d%02d' % (self.start.year, self.start.month)
         end_compounddate   = '%04d%02d' % (self.end.year, self.end.month)
-        tiles = Tile.find_by_cell_name(self.cell)
+        tiles = Tile.find_by_cell_name(self.cell.name)
         for tile in tiles:
             tile_name = tiles[tile]['name']
-            result.append(ImagePicker.find_by_period(start_compounddate, end_compounddate, tile_name))
+            list_image_picker = ImagePicker.list_by_period(start_compounddate, end_compounddate, tile_name)
+            for i in range(len(list_image_picker)):
+                result.append(list_image_picker[i])
             
         return result
 

@@ -61,7 +61,8 @@ var CellView = Backbone.View.extend({
     },
 
     border_size: 8,
-    onmouseover: function() {
+    onmouseover: function(e) {
+    	if(e) e.preventDefault();
         var border_size = this.border_size;
         if(this.model.get('blocked')) {
             return;
@@ -80,7 +81,8 @@ var CellView = Backbone.View.extend({
         this.trigger('show_cell_popup', popup);
     },
 
-    onmouseout: function() {
+    onmouseout: function(e) {
+    	if(e) e.preventDefault();
         var border_size = this.border_size;
         if(this.model.get('blocked')) {
             return;
@@ -110,7 +112,7 @@ var CellView = Backbone.View.extend({
 var Grid = Backbone.View.extend({
 
     initialize: function() {
-        _.bindAll(this, 'render', 'add_cells', 'cell_selected', 'populate_cells','set_visible_zone', 'clear_visible_zone', 'bounds');
+        _.bindAll(this, 'render', 'add_cells', 'cell_selected', 'populate_cells','set_visible_zone', 'clear_visible_zone', 'bounds', 'cell_bbox');
         if(this.options.mapview === undefined) {
             throw "you should specify MapView in constructor";
         }
@@ -153,6 +155,7 @@ var Grid = Backbone.View.extend({
             var cellview = new CellView({model: c});            
             cellview.bind('show_cell_popup', function(popup) {
             	that.trigger('show_cell_popup', popup, this);
+            	this.trigger('get_cell_bbox', that.cell_bbox(this));
 			});            
             that.el.append(cellview.render(p.x, p.y, marginx + (c.get('x') - srcx)*wc, marginy + (c.get('y') - srcy)*wh, wc, wh).el);
             cellview.bind('enter', that.cell_selected);            
@@ -161,7 +164,6 @@ var Grid = Backbone.View.extend({
         this.set_visible_zone(cell_bounds);
         this.render();
     },
-
     // called when user clicks on a cell
     cell_selected: function(cell) {
         this.trigger('enter_cell', cell);
@@ -202,7 +204,29 @@ var Grid = Backbone.View.extend({
         );
         return bounds;
     },
+    cell_bbox: function(cell){
+    	var p = window.mapper.cell_position(cell.model.get('x'), cell.model.get('y'), cell.model.get('z'));
+        // normalize
+        var x = Math.floor(p.x);
+        var y = Math.floor(p.y);
+        var w = Math.floor((p.width/5))*5;
+        var h = Math.floor((p.height/5))*5;
+        
+        var prj = this.mapview.projector;
 
+        console.log("X: "+x+" ,Y: "+y+" ,H: "+h+", W: "+w);
+
+        bounds = new google.maps.LatLngBounds(
+            prj.untransformCoordinates(new google.maps.Point(x, y + h)),
+            prj.untransformCoordinates(new google.maps.Point(x + w, y))
+        );
+        
+        var sw = bounds.getSouthWest();
+        var ne = bounds.getNorthEast();
+
+        return sw.lng()+','+sw.lat()+';'+sw.lng()+','+ne.lat()+';'+ne.lng()+','+ne.lat()+';'+ne.lng()+','+sw.lat() +';'+sw.lng()+','+sw.lat();
+        
+    },
     set_visible_zone: function(bounds) {
         // calculate outer and inner polygon
         var X = 179.5;

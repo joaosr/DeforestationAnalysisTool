@@ -340,7 +340,7 @@ var LayerEditorReports = Backbone.View.extend({
           }
         });
         this.layers.trigger('reset');
-        this.bind('change_layers', function(){self.addLayers(self.layers)});
+        //this.bind('change_layers', function(){self.addLayers(self.layers)});
     },
 
     // reorder layers in map

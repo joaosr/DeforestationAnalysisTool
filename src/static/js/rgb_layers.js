@@ -93,6 +93,8 @@ function add_rgb_layers(layers, gridstack, report_id) {
 function unbind_rgb_layers(layers, gridstack) {
     _(RGB_layers).each(function(layer) {
         var lyr = layers.get_by_name(layer.description);
-        gridstack.unbind('work_mode', lyr.on_cell);
+        if(lyr){
+        	gridstack.unbind('work_mode', lyr.on_cell);
+        }
     });
 }

@@ -499,8 +499,7 @@ font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
   display: none;
   position: absolute;
   min-width: 702px;
-  height: 60px;
-  padding: 0 30px 0 30px;
+  height: 60px;  
   margin-top: 19px;
   /* border: 1px solid rgba(51, 51, 51, 0.5); */
   background: rgba(0, 0 , 0, 1);
@@ -520,7 +519,7 @@ font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
 }
 #header #tools #sad #sad_content #date_range #form_date_range{
   position: absolute;
-  width: 700px;
+  width: 640px;
   font: normal 16px "Helvetica Neue";
   color: #666666;
   text-shadow: 0 1px white;
@@ -549,9 +548,9 @@ font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
 }
 #header #tools #sad #sad_content #sad_list  #layer_reports_dialog{
   position: absolute;
-  min-width: 740px;
+  min-width: 680px;
   max-height: 254px;
-  min-height: 150px;
+  min-height: 200px;
   padding: 10px 10px 10px 10px;
   top: 60px;
   left: 0px;
@@ -569,7 +568,7 @@ font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
 
 #header #tools #sad #sad_content #sad_list  #layer_reports_dialog ul{
   position: relative;  
-  height: 100%;
+  height: 200px;
   width: 100%;
   overflow: hidden;
 }
@@ -627,7 +626,7 @@ font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
 }
 #header #tools #sad #sad_content #image_picker #picker_form {
   position: absolute;
-  width: 700px;
+  width: 640px;
   height: 618px;
   padding: 40px 30px 30px 30px;
   top: 60px;
@@ -702,7 +701,7 @@ text-shadow: #000000 0px 1px 0px;
   position: absolute;
   top: 60px;
   left: 0px;
-  width: 700px;
+  width: 640px;
   padding: 40px 30px 30px 30px;
   border-bottom-left-radius: 5px;
   border-bottom-right-radius: 5px;
@@ -2261,6 +2260,7 @@ body, html {
     background-color: rgba(20, 21, 22, 0.8);
     color: #ffffff;
     padding: 10px;
+    font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
 }
 
 #grid .finished {

@@ -439,10 +439,20 @@ $(function() {
                     m.bind('zoom_changed', self.map.set_zoom_silence);
                     m.bind('click', self.map.close_layer_editor);
                     m.bind('open_layer_editor', self.map.close_layer_editor);
-                    m.layers.reset(self.available_layers.toJSON());
-                    m.crosshair(true);
-                    // add rgb layers
-                    add_rgb_layers(m.layers, self.gridstack, self.active_report.get('id'));
+                    
+                    if(self.main_operations.sad.selected){
+                    	m.layers.reset(self.available_layers.toJSON());
+                    	m.crosshair(true);
+                    	// add rgb layers
+                        add_rgb_layers(m.layers, self.gridstack, self.active_report.get('id'));
+                    	
+                    }else if(self.main_operations.baseline.selected){
+                    	m.layers.reset(self.map.layers.toJSON());
+                    	
+                    	m.crosshair(true);
+                    	
+                    }
+                                        
                     m.layers.trigger('reset');
                     _.each(self.compare_maps, function(other) {
                         if(other !== m) {
@@ -510,6 +520,8 @@ $(function() {
             console.log(cell);
             
             if(this.main_operations.sad.selected){
+            	this.map.reset_layers_map('2', this.available_layers, 'sad');
+            	
             	this.ndfi_layer.show();
             	this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
             	this.compare_view(cell.get('compare_view'));
@@ -530,38 +542,28 @@ $(function() {
                 });
                 this.get_status_layer_map(cell.get('compare_view'));
             }
-            else if(this.main_operations.baseline.selected){
-            	this.compare_view(cell.get('compare_view'));
+            else if(this.main_operations.baseline.selected){            	
                 var response = this.main_operations.baseline.setting_baseline_layers(cell);
          	    //cell = response['cell'];
          	    console.log(response['cell']);
          	    console.log(response['baseline']);
          	    this.map.reset_layers_map('2', response['baseline'], 'baseline');
          	    
+         	    this.compare_view(cell.get('compare_view'));
+         	    
          	   _.each(this.compare_maps, function(m) {
-                   
-                   m.reset_layers_map('2', response['baseline'], 'baseline');
-                   add_rgb_layers(m.layers, self.gridstack, self.active_report.get('id'));
-                   m.layers.trigger('reset');
+         		  m.zoom_level = '2';
+         		  m.operation_map = 'baseline';
          	   });
          	   
-         	  this.map.show_zoom_control();
-              this.map.show_layers_control();
+         	    this.map.show_zoom_control();
+                this.map.show_layers_control();
               
-              this.editing_router = new EditingToolsRuoter({
-                  app: this
-              });
-              this.get_status_layer_map(cell.get('compare_view'));
+                this.editing_router = new EditingToolsRuoter({
+                     app: this
+                });
+                this.get_status_layer_map(cell.get('compare_view'));
             }
-            
-            
-            
-            
-            
-            
-            
-            
-
             
         },
 
