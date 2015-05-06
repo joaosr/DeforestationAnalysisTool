@@ -59,9 +59,11 @@ var CellPolygons = Backbone.View.extend({
         'mouseout', 'mouseover', 'show_polygons');
         this.mapview = this.options.mapview;
         this.report = this.options.report;
+        this.operation = this.options.operation;
         this.poly_views = [];
-        this.polygons = new PolygonCollection({
+        this.polygons = new PolygonCollection({        	
             report: this.report || '',
+            operation: this.operation || '',
             x: this.options.x || 0,
             y: this.options.y || 0,
             z: this.options.z || 0

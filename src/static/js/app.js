@@ -406,6 +406,7 @@ $(function() {
         compare_view_save: function(num) {
         	var cell = this.gridstack.current_cell;
         	cell.set({'compare_view':num});
+        	cell.set({'operation': this.main_operations.operation});
         	cell.save();
         },
 
@@ -444,7 +445,7 @@ $(function() {
                     	m.layers.reset(self.available_layers.toJSON());
                     	m.crosshair(true);
                     	// add rgb layers
-                        add_rgb_layers(m.layers, self.gridstack, self.active_report.get('id'));
+                        add_rgb_layers(m.layers, self.gridstack, self.active_report.get('id'), 'sad');
                     	
                     }else if(self.main_operations.baseline.selected){
                     	m.layers.reset(self.map.layers.toJSON());
@@ -504,6 +505,12 @@ $(function() {
             }
             this.active_report = this.reports.models[0];
             this.cell_polygons.polygons.report = this.active_report;
+            if(this.main_operations === undefined){
+            	this.cell_polygons.polygons.operation = 'null';
+            }else{
+            	this.cell_polygons.polygons.operation = this.main_operations.operation;
+            }
+            
             this.cell_polygons.polygons.fetch();
         },
 
@@ -519,8 +526,8 @@ $(function() {
             var cell = this.gridstack.current_cell;
             console.log(cell);
             
-            if(this.main_operations.sad.selected){
-            	this.map.reset_layers_map('2', this.available_layers, 'sad');
+            if(this.main_operations.sad.selected){            	
+            	
             	
             	this.ndfi_layer.show();
             	this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
@@ -535,6 +542,7 @@ $(function() {
                 this.cell_polygons.polygons.x = x;
                 this.cell_polygons.polygons.y = y;
                 this.cell_polygons.polygons.z = z;
+                this.cell_polygons.polygons.operation = 'sad';
                 this.cell_polygons.polygons.fetch();
 
                 this.editing_router = new EditingToolsRuoter({
@@ -635,44 +643,50 @@ $(function() {
             // bindings
             this.gridstack.grid.bind('enter_cell', function(cell) {
             	var cell_name = cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y')
-            	var enter_cell = false;
+            	var cell_operation = '';
             	
             	if(cell.get('z') == '1'){
             		if(self.main_operations.sad.selected){
-            			enter_cell = true;
+            			cell_operation = 'sad';
             			
             		}else if(self.main_operations.baseline.selected){
             			self.main_operations.baseline.baselines_cell(cell_name);
-            			enter_cell = true;
+            			cell_operation = 'baseline';
             		}
             		else if(self.main_operations.time_series.selected){
-            			enter_cell = true;
+            			cell_operation = 'timeseries';
             		}
             		else{
             			alert("One operation must be selected in Toolbar");
             		}
             	}
             	else if(cell.get('z') == '2'){
-                    if(self.main_operations.baseline.selected){
+                    if(self.main_operations.sad.selected){            			
+                    	cell_operation = 'sad';
+            		}
+                    else if(self.main_operations.baseline.selected){
                     	if(self.main_operations.baseline.cell_done(cell_name)){
                     	   
-                    	   enter_cell = true;
+                    		cell_operation = 'baseline';
                     	   
                     	}
                     	else{
                     		alert("There is not baseline for this cell.");
                     	}
             		}
+            		else if(self.main_operations.time_series.selected){
+            			cell_operation = 'timeseries';
+            		}
                     else{
-                    	enter_cell = true;
+                    	alert("One operation must be selected in Toolbar");
             		}            		
             	}
             	  	
             	
                 
                 
-                if(enter_cell){
-                	self.gridstack.grid.trigger('cell_click', cell);
+                if(cell_operation !== ''){
+                	self.gridstack.grid.trigger('cell_click', cell, cell_operation);
                     self.overview.on_cell(cell.get('x'), cell.get('y'), cell.get('z'));
                     router.navigate('cell/' +  cell.get('z') + "/" + cell.get('x') + "/" + cell.get('y'));
                 }

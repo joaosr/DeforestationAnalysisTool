@@ -177,8 +177,8 @@ var NDFILayer = Backbone.View.extend({
         }
         window.loading_small.loading('ndfilayer: click');
 
-        //var c = this.layer.composed(this.mapview.el[0]);
-        var c =  this.layer_L5.composed(this.mapview.el[0]);
+        var c = this.layer.composed(this.mapview.el[0]);
+        //var c =  this.layer_L5.composed(this.mapview.el[0]);
         var point = this.mapview.projector.transformCoordinates(e.latLng);
 
         // rendef offscreen

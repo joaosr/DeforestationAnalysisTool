@@ -26,6 +26,7 @@ var OptionParameter = Backbone.View.extend({
 var SelectParameters = Backbone.View.extend({
     initialize: function(){
         _.bindAll(this, "addOne", "addAll", "render");
+        this.parentView = this.options.parentView;
         this.collection.bind('reset', this.addAll());
         this.tilesView = new TilesView({el: $("#scalling_form #tile"), sensor: 'modis', callerView: this});
 /*        var that = this;
@@ -37,23 +38,26 @@ var SelectParameters = Backbone.View.extend({
     },
     callback: function(){
         //$(this.el).empty();
-        $("tr#band3  td select#sill3").empty();
-        $("tr#band3  td select#range3").empty();
-        $("tr#band3  td select#nugget3").empty();
+    	this.parentView.$("tr#band3  td select#sill3").empty();
+    	this.parentView.$("tr#band3  td select#range3").empty();
+    	this.parentView.$("tr#band3  td select#nugget3").empty();
 
-        $("tr#band4  td select#sill4").empty();
-        $("tr#band4  td select#range4").empty();
-        $("tr#band4  td select#nugget4").empty();
+    	this.parentView.$("tr#band4  td select#sill4").empty();
+    	this.parentView.$("tr#band4  td select#range4").empty();
+    	this.parentView.$("tr#band4  td select#nugget4").empty();
 
-        $("tr#band6  td select#sill6").empty();
-        $("tr#band6  td select#range6").empty();
-        $("tr#band6  td select#nugget6").empty();
+    	this.parentView.$("tr#band6  td select#sill6").empty();
+    	this.parentView.$("tr#band6  td select#range6").empty();
+    	this.parentView.$("tr#band6  td select#nugget6").empty();
 
-        $("tr#band7  td select#sill7").empty();
-        $("tr#band7  td select#range7").empty();
-        $("tr#band7  td select#nugget7").empty();
+    	this.parentView.$("tr#band7  td select#sill7").empty();
+    	this.parentView.$("tr#band7  td select#range7").empty();
+    	this.parentView.$("tr#band7  td select#nugget7").empty();
 
-
+    	this.parentView.$("table").hide();
+    	this.parentView.$("#submit").hide();
+    	this.parentView.$("#loading_tile_downscalling").show();
+    	
 
         $(this.el).attr('disabled', false);
         this.collection.url = "downscalling/"+this.tilesView.tileId;
@@ -61,6 +65,9 @@ var SelectParameters = Backbone.View.extend({
         this.collection.fetch({
            success: function(){
                that.render();
+               that.parentView.$("table").show();
+               that.parentView.$("#submit").show();
+               that.parentView.$("#loading_tile_downscalling").hide();
                console.log(that.collection);
            }
        });

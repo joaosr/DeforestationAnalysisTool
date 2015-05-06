@@ -48,7 +48,7 @@ class Resource(object):
 
         _view.__name__ = name
         app.add_url_rule(name, view_func=_view, methods=("GET","POST"))
-        app.add_url_rule(name + "/<id>", view_func=_view, methods=("GET", "PUT", "DELETE"))
+        app.add_url_rule(name + "/<id>/", view_func=_view, methods=("GET", "PUT", "DELETE"))
 
 
 

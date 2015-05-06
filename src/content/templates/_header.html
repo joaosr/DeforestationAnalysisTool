@@ -152,9 +152,11 @@
                                       <select id="tile" name="tile" class="tile" >
                                              <option value="" >Select</option>
                                       </select>
+                                      <span><img id="loading_tile_downscalling" src="/static/img/loading_gray.gif" style="width: 20px; height: 20px; display: none; float: right; margin-left: 10px;"></span>                                      
                                 </span>
+                                
                                 <span>
-                                     <input type="submit" name="submit" id="submit" value="Save in Fusion Tables">                                           
+                                     <input type="submit" name="submit" id="submit" value="Save">                                           
                                 </span>
 
                                 <table style="width:100%">
@@ -166,27 +168,88 @@
                                     </tr>
                                     <tr id="band3">
                                         <td ><h3>3</h3></td>
-                                        <td><select id="sill3" name="sill3"></select></td>
-                                        <td><select id="range3" name="range3"></select></td>
-                                        <td><select id="nugget3" name="nugget3"></select></td>
+                                        <td>
+                                            <input type="text" id="i_sill3" list="list_sill3" placeholder="Type a value" />
+                                            <datalist id="list_sill3">
+                                               <select id="sill3" name="sill3"></select>
+                                            </datalist>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="i_range3" list="list_range3" placeholder="Type a value" />
+                                            <datalist id="list_range3">
+                                                <select id="range3" name="range3"></select>
+                                            </datalist>
+                                        </td>
+                                            
+                                        <td>
+                                            <input type="text" id="i_nugget3" list="list_nugget3" placeholder="Type a value" />
+                                            <datalist id="list_nugget3">
+                                               <select id="nugget3" name="nugget3"></select>
+                                            </datalist>
+                                        </td>
                                     </tr>
                                     <tr id="band4">
                                         <td ><h3>4</h3></td>
-                                        <td><select id="sill4" name="sill4"></select></td>    
-                                        <td><select id="range4" name="range4"></select></td>
-                                        <td><select id="nugget4" name="nugget4"></select></td>
+                                        <td>
+                                            <input type="text" id="i_sill4" list="list_sill4" placeholder="Type a value" />
+                                            <datalist id="list_sill4">
+                                               <select id="sill4" name="sill4"></select>
+                                            </datalist>
+                                        </td>    
+                                        <td>
+                                            <input type="text" id="i_range4" list="list_range4" placeholder="Type a value" />
+                                            <datalist id="list_range4">
+                                               <select id="range4" name="range4"></select>
+                                            </datalist>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="i_nugget4" list="list_nugget4" placeholder="Type a value" />
+                                            <datalist id="list_nugget4">
+                                               <select id="nugget4" name="nugget4"></select>
+                                            </datalist>
+                                        </td>
                                     </tr>
                                     <tr id="band6">
                                         <td ><h3>6</h3></td>
-                                        <td><select id="sill6" name="sill6"></select></td>    
-                                        <td><select id="range6" name="range6"></select></td>
-                                        <td><select id="nugget6" name="nugget6"></select></td>
+                                        <td>
+                                            <input type="text" id="i_sill6" list="list_sill6" placeholder="Type a value" />
+                                            <datalist id="list_sill6">
+                                               <select id="sill6" name="sill6"></select>
+                                            </datalist>
+                                        </td>    
+                                        <td>
+                                            <input type="text" id="i_range6" list="list_range6" placeholder="Type a value" />
+                                            <datalist id="list_range6">
+                                               <select id="range6" name="range6"></select>
+                                            </datalist>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="i_nugget6" list="list_nugget6" placeholder="Type a value" />
+                                            <datalist id="list_nugget6">
+                                               <select id="nugget6" name="nugget6"></select>
+                                            </datalist>
+                                        </td>
                                     </tr>
                                     <tr id="band7">
                                         <td><h3>7</h3></td>
-                                        <td><select id="sill7" name="sill7"></select></td>    
-                                        <td><select id="range7" name="range7"></select></td>
-                                        <td><select id="nugget7" name="nugget7"></select></td>
+                                        <td>
+                                            <input type="text" id="i_sill7" list="list_sill7" placeholder="Type a value" />
+                                            <datalist id="list_sill7">
+                                               <select id="sill7" name="sill7"></select>
+                                            </datalist>
+                                        </td>    
+                                        <td>
+                                            <input type="text" id="i_range7" list="list_range7" placeholder="Type a value" />
+                                            <datalist id="list_range7">
+                                               <select id="range7" name="range7"></select>
+                                            </datalist>
+                                        </td>
+                                        <td>
+                                            <input type="text" id="i_nugget7" list="list_nugget7" placeholder="Type a value" />
+                                            <datalist id="list_nugget7">
+                                               <select id="nugget7" name="nugget7"></select>
+                                            </datalist>
+                                        </td>
                                     </tr>
                                  </table>
 

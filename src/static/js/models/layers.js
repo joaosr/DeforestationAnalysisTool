@@ -45,7 +45,7 @@ var RGBStrechLayer = LayerModel.extend({
               id: 'RGB',
               type: 'custom',
               description: desc,
-              layer: this.google_maps_layer()
+              layer: this.google_maps_layer()               
         });
         this.set_enabled(false);
     },
@@ -58,7 +58,7 @@ var RGBStrechLayer = LayerModel.extend({
     url: function() {
         var cell_id =  this.get('z') + "_" + this.get('x') + "_" + this.get('y');
         var mapid =  this.get('r') + "/" + this.get('g') + '/' + this.get('b');
-        return "/api/v0/report/" + this.get('report_id') + "/cell/" + cell_id + "/rgb/" + mapid + "/sensor/" + this.get('sensor');
+        return "/api/v0/report/" + this.get('report_id') + "/operation/" + this.get('operation') + "/cell/" + cell_id + "/rgb/" + mapid + "/sensor/" + this.get('sensor');
     },
 
     //parses token and mapid response from server and creates tile url

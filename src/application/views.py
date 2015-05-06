@@ -66,10 +66,10 @@ def default_maps():
 
     d = ndfi.smaid()
     if d: maps.append({'data': d, 'info': 'SMA'})
-    sma = SMA(past_month_range(r.start), r.range(), SMA.LANDSAT7_T1)
-    bbox = [-74.0, -18.0, -44.0, 5.0]    
-    d = sma.find_mapid_from_sensor(bbox)
-    if d: maps.append({'data': d, 'info': SMA.LANDSAT7_T1})
+    #sma = SMA(past_month_range(r.start), r.range(), SMA.LANDSAT7_T1)
+    #bbox = [-74.0, -18.0, -44.0, 5.0]    
+    #d = sma.find_mapid_from_sensor(bbox)
+    #if d: maps.append({'data': d, 'info': SMA.LANDSAT7_T1})
     d = ndfi.rgb1id()
     if d: maps.append({'data': d, 'info': 'RGB'})
     d = ndfi.ndfi0id('modis')
@@ -169,6 +169,9 @@ def start():
 @app.route('/analysis')
 @login_required
 def home(cell_path=None):
+    import sys
+    logging.info("Version python: "+sys.version);
+    
     maps = memcache.get('default_maps')
 
     if maps:

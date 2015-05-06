@@ -71,9 +71,10 @@ var PolygonCollection = Backbone.Collection.extend({
         this.y = options.y;
         this.z = options.z;
         this.report = options.report;
+        this.operation = options.operation;
     },
 
     url: function() {
-        return "/api/v0/report/" + this.report.id + "/cell/" + this.z + "_" + this.x + "_" + this.y + "/polygon";
+        return "/api/v0/report/" + this.report.id + "/operation/"+this.operation + "/cell/" + this.z + "_" + this.x + "_" + this.y + "/polygon";
     }
 });

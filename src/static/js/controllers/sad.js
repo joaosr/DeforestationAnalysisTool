@@ -193,49 +193,93 @@ var DownScalling = Backbone.View.extend({
         _.bindAll(this, 'visibility_change', 'hide_form');
         var parameters = new Parameters();
         this.callerView = this.options.callerView;
-        this.downScalling = new SelectParameters({collection: parameters});
+        this.downScalling = new SelectParameters({collection: parameters, parentView: this});
         this.visibility = false;
     },
      send_downscalling: function(e){
     	 if(e) e.preventDefault();
     	 
-        var sill3 = this.$("#sill3").val();
-        var range3 = this.$("#range3").val();
-        var nugget3 = this.$("#nugget3").val();
+    	 var values_valid = true;
+    	 
+    	 var sill3 = this.$("#i_sill3").val();
+    	 var range3 = this.$("#i_range3").val();
+         var nugget3 = this.$("#i_nugget3").val();
 
-        var sill4 = this.$("#sill4").val();
-        var range4 = this.$("#range4").val();
-        var nugget4 = this.$("#nugget4").val();
+         var sill4 = this.$("#i_sill4").val();
+         var range4 = this.$("#i_range4").val();
+         var nugget4 = this.$("#i_nugget4").val();
 
-        var sill6 = this.$("#sill6").val();
-        var range6 = this.$("#range6").val();
-        var nugget6 = this.$("#nugget6").val();
+         var sill6 = this.$("#i_sill6").val();
+         var range6 = this.$("#i_range6").val();
+         var nugget6 = this.$("#i_nugget6").val();
 
-        var sill7 = this.$("#sill7").val();
-        var range7 = this.$("#range7").val();
-        var nugget7 = this.$("#nugget7").val();
+         var sill7 = this.$("#i_sill7").val();
+         var range7 = this.$("#i_range7").val();
+         var nugget7 = this.$("#i_nugget7").val();
+    	 
+        if(isNaN(parseInt(sill3, 10))){
+        	console.log("Not number: "+sill3);
+        	values_valid = false;
+        }else if(isNaN(parseInt(range3, 10))){
+        	console.log("Not number: "+range3);
+        	values_valid = false;
+        }else if(isNaN(parseInt(nugget3, 10))){
+        	console.log("Not number: "+nugget3);
+        	values_valid = false;        	
+        }else if(isNaN(parseInt(sill4, 10))){
+        	console.log("Not number: "+sill4);
+        	values_valid = false;
+        }else if(isNaN(parseInt(range4, 10))){
+        	console.log("Not number: "+range4);
+        	values_valid = false;
+        }else if(isNaN(parseInt(nugget4, 10))){
+        	console.log("Not number: "+sill3);
+        	values_valid = false;
+        }else if(isNaN(parseInt(sill6, 10))){
+        	console.log("Not number: "+sill6);
+        	values_valid = false;
+        }else if(isNaN(parseInt(range6, 10))){
+        	console.log("Not number: "+range6);
+        	values_valid = false;
+        }else if(isNaN(parseInt(nugget6, 10))){
+        	console.log("Not number: "+nugget6);
+        	values_valid = false;
+        }else if(isNaN(parseInt(sill7, 10))){
+        	console.log("Not number: "+sill7);
+        	values_valid = false;
+        }else if(isNaN(parseInt(range7, 10))){
+        	console.log("Not number: "+range7);
+        	values_valid = false;
+        }else if(isNaN(parseInt(nugget7, 10))){
+        	console.log("Not number: "+nugget7);
+        	values_valid = false;
+        }
+        
+        if(values_valid){
+        	var tile = this.$("#tile").val();
+            var compounddate = this.callerView.compounddate();
 
-        var tile = this.$("#tile").val();
-        var compounddate = this.callerView.compounddate();
+            console.log(thumb);
+            var message = $.ajax({
+                                  url: "/downscalling/",
+                                  type: 'POST',
+                                  data: {
+                                      tile: tile, compounddate: compounddate,
+                                      sill3: sill3, range3: range3, nugget3: nugget3,
+                                      sill4: sill4, range4: range4, nugget4: nugget4,
+                                      sill6: sill6, range6: range6, nugget6: nugget6,
+                                      sill7: sill7, range7: range7, nugget7: nugget7,
+                                },
+                                  dataType: 'json',
+                                  async: false
+                                }).responseText;
 
-        console.log(thumb);
-        var message = $.ajax({
-                              url: "/downscalling/",
-                              type: 'POST',
-                              data: {
-                                  tile: tile, compounddate: compounddate,
-                                  sill3: sill3, range3: range3, nugget3: nugget3,
-                                  sill4: sill4, range4: range4, nugget4: nugget4,
-                                  sill6: sill6, range6: range6, nugget6: nugget6,
-                                  sill7: sill7, range7: range7, nugget7: nugget7,
-                            },
-                              dataType: 'json',
-                              async: false
-                            }).responseText;
-
-        var s = jQuery.parseJSON(message);
-        alert(s.result);
-        console.log(s);
+            var s = jQuery.parseJSON(message);
+            alert(s.result);
+            console.log(s);
+        }
+   
+        
     },
     hide_form: function(){
         $("#scalling_form").hide();

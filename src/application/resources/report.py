@@ -134,28 +134,28 @@ class CellAPI(Resource):
         return cell.external_id() in CELL_BLACK_LIST
 
 
-    def list(self, report_id):
+    def list(self, report_id, operation):
         r = Report.get(Key(report_id))
         cell = Cell.get_or_default(r, 0, 0, 0)
         return self._as_json([x.as_dict() for x in iter(cell.children()) if not self.is_in_backlist(x)])
 
-    def children(self, report_id, id):
+    def children(self, report_id, operation, id):
         r = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(id)
-        cell = Cell.get_or_default(r, x, y, z)
+        cell = Cell.get_or_default(r, operation, x, y, z)
         cells = cell.children()
         return self._as_json([x.as_dict() for x in cells if not self.is_in_backlist(x)])
 
-    def get(self, report_id, id):
+    def get(self, report_id, operation, id):
         r = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(id)
-        cell = Cell.get_or_default(r, x, y, z)
+        cell = Cell.get_or_default(r,  operation, x, y, z)
         return Response(cell.as_json(), mimetype='application/json')
 
-    def update(self, report_id, id):
+    def update(self, report_id, operation, id):
         r = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(id)
-        cell = Cell.get_or_default(r, x, y, z)
+        cell = Cell.get_or_default(r, operation, x, y, z)
         cell.report = r
 
         data = json.loads(request.data)
@@ -198,10 +198,10 @@ class CellAPI(Resource):
         cell = Cell.get_or_default(r, x, y, z)
         return Response(json.dumps(cell.bounds(amazon_bounds)), mimetype='application/json')
 
-    def landsat(self, report_id, id):
+    def landsat(self, operation, report_id, id):
         r = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(id)
-        cell = Cell.get_or_default(r, x, y, z)
+        cell = Cell.get_or_default(r, operation, x, y, z)
         bounds = cell.bounds(amazon_bounds)
         bounds = "%f,%f,%f,%f" % (bounds[1][1], bounds[1][0], bounds[0][1], bounds[0][0])
         ee = EELandsat(timestamp(r.start), datetime.datetime.now())
@@ -225,10 +225,10 @@ class CellAPI(Resource):
             }
         return Response(json.dumps(data), mimetype='application/json')
 
-    def rgb_mapid(self, report_id, id, r, g, b, sensor):
+    def rgb_mapid(self, report_id, operation, id, r, g, b, sensor):
         report = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(id)
-        cell = Cell.get_or_default(report, x, y, z)
+        cell = Cell.get_or_default(report, operation, x, y, z)
         ndfi = NDFI(report.comparation_range(), report.range())
         poly = cell.bbox_polygon(amazon_bounds)
         mapid = ndfi.rgb_stretch(poly, sensor, tuple(map(int, (r, g, b))))
@@ -239,10 +239,10 @@ class CellAPI(Resource):
 
 class PolygonAPI(Resource):
 
-    def list(self, report_id, cell_pos):
+    def list(self, report_id, operation, cell_pos):
         r = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(cell_pos)
-        cell = Cell.get_cell(r, x, y, z)
+        cell = Cell.get_cell(r, operation, x, y, z)
         if not cell:
             return self._as_json([])
         else:
@@ -255,10 +255,10 @@ class PolygonAPI(Resource):
         return Response(a.as_json(), mimetype='application/json')
 
 
-    def create(self, report_id, cell_pos):
+    def create(self, operation, report_id, cell_pos):
         r = Report.get(Key(report_id))
         z, x, y = Cell.cell_id(cell_pos)
-        cell = Cell.get_or_create(r, x, y, z)
+        cell = Cell.get_or_create(r, operation, x, y, z)
         data = json.loads(request.data)
         a = Area(geo=json.dumps(data['paths']),
             type=data['type'],
@@ -280,7 +280,7 @@ class PolygonAPI(Resource):
         a.save();
         return Response(a.as_json(), mimetype='application/json')
 
-    def delete(self, report_id, cell_pos, id):
+    def delete(self, operation, report_id, cell_pos, id):
         a = Area.get(Key(id))
         if a:
             a.delete();

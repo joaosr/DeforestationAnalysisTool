@@ -238,25 +238,26 @@ class Cell(db.Model):
     last_change_by = db.UserProperty()
     last_change_on = db.DateTimeProperty(auto_now=True)
     compare_view = db.StringProperty(default='four')
+    operation = db.StringProperty(default='sad')
     map_one_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
                                                      '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
                                                      '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
-                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","false",'
-                                                     '"NDFI (LANDSAT5) analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","true",'
+                                                     '"NDFI (LANDSAT5) analysis","false","True color RGB141","false","False color RGB421","false",'
                                                      '"F color infrared RGB214","false","Validated polygons","true",*')
 
     map_two_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
                                                     '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
-                                                     '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
-                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","true","NDFI T1 (LANDSAT5)","false","NDFI analysis","false",'
-                                                     '"NDFI (LANDSAT5) analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                     '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","true",'
+                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","true",'
+                                                     '"NDFI (LANDSAT5) analysis","false","True color RGB141","false","False color RGB421","false",'
                                                      '"F color infrared RGB214","false","Validated polygons","true",*')
 
     map_three_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
                                                        '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
                                                        '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
-                                                       '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","true","NDFI analysis","false",'
-                                                       '"NDFI (LANDSAT5) analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                       '"NDFI T1","true","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","true",'
+                                                       '"NDFI (LANDSAT5) analysis","false","True color RGB141","false","False color RGB421","false",'
                                                        '"F color infrared RGB214","false","Validated polygons","true",*')
 
     map_four_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
@@ -267,11 +268,12 @@ class Cell(db.Model):
 
 
     @staticmethod
-    def get_cell(report, x, y, z):
+    def get_cell(report, operation, x, y, z):
         q = Cell.all()
         q.filter("z =", z)
         q.filter("x =", x)
         q.filter("y =", y)
+        q.filter("operation =", operation)
         q.filter("report =", report)
         cell = q.fetch(1)
         if cell:
@@ -282,7 +284,7 @@ class Cell(db.Model):
         zz = self.z+1
         xx = (SPLITS**self.z)*self.x + i
         yy = (SPLITS**self.z)*self.y + j
-        return Cell.get_or_create(self.report, xx, yy, zz)
+        return Cell.get_or_create(self.report, self.operation, xx, yy, zz)
 
     def children(self):
         """ return child cells """
@@ -304,7 +306,7 @@ class Cell(db.Model):
                 if cid in children_cells:
                     cell = children_cells[cid]
                 else:
-                    cell = Cell.default_cell(self.report, xx, yy, zz)
+                    cell = Cell.default_cell(self.report, self.operation, xx, yy, zz)
                 cells.append(cell)
         return cells
 
@@ -324,7 +326,7 @@ class Cell(db.Model):
             return None
         pid = self.calc_parent_id()
         z, x, y = Cell.cell_id(pid)
-        return Cell.get_or_default(self.report, x, y, z)
+        return Cell.get_or_default(self.report, self.operation, x, y, z)
 
     def put(self):
         self.parent_id = self.calc_parent_id()
@@ -340,23 +342,23 @@ class Cell(db.Model):
         return tuple(map(int, id.split('_')))
 
     @staticmethod
-    def get_or_create(r, x, y ,z):
-        c = Cell.get_cell(r, x, y, z)
+    def get_or_create(r, operation, x, y ,z):
+        c = Cell.get_cell(r, operation, x, y, z)
         if not c:
-            c = Cell.default_cell(r, x, y ,z)
+            c = Cell.default_cell(r, operation, x, y ,z)
             c.put()
         return c
 
     @staticmethod
-    def get_or_default(r, x, y, z):
-        cell = Cell.get_cell(r, x, y, z)
+    def get_or_default(r, operation, x, y, z):
+        cell = Cell.get_cell(r, operation, x, y, z)
         if not cell:
-            cell = Cell.default_cell(r, x, y, z)
+            cell = Cell.default_cell(r, operation, x, y, z)
         return cell
 
     @staticmethod
-    def default_cell(r, x, y, z):
-        return Cell(z=z, x=x, y=y, ndfi_low=0.2, ndfi_high=0.3, report=r)
+    def default_cell(r, operation, x, y, z):
+        return Cell(z=z, x=x, y=y, ndfi_low=0.2, ndfi_high=0.3, report=r, operation=operation)
 
     def external_id(self):
         return "_".join(map(str,(self.z, self.x, self.y)))
@@ -393,7 +395,8 @@ class Cell(db.Model):
                 'ndfi_low': self.ndfi_low,
                 'ndfi_high': self.ndfi_high,
                 'ndfi_change_value': self.ndfi_change_value,
-                'compare_view':self.compare_view,
+                'compare_view': self.compare_view,
+                'operation': self.operation,
                 'map_one_layer_status': self.map_one_layer_status,
                 'map_two_layer_status': self.map_two_layer_status,
                 'map_three_layer_status': self.map_three_layer_status,

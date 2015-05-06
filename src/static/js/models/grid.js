@@ -32,7 +32,7 @@ var Cell = Backbone.Model.extend({
     },
 
     url: function() {
-        return "/api/v0/report/" + this.get('report_id') + "/cell/" + this.get('z') + "_" + this.get('x') + "_" + this.get('y');
+        return "/api/v0/report/" + this.get('report_id') + "/operation/" + this.get('operation') + "/cell/" + this.get('z') + "_" + this.get('x') + "_" + this.get('y');
     },
 
     // ok, sorry, i'm not going to use backbone sync stuff
@@ -67,6 +67,7 @@ var Cells = Backbone.Collection.extend({
         this.x = options.x;
         this.y = options.y;
         this.z = options.z;
+        this.operation = options.operation;
         this.report = options.report;
     },
 
@@ -76,7 +77,7 @@ var Cells = Backbone.Collection.extend({
     },
 
     url: function() {
-        return "/api/v0/report/" + this.report.id + "/cell/" + this.z + "_" + this.x + "_" + this.y + "/children";
+        return "/api/v0/report/" + this.report.id + "/operation/"+this.operation + "/cell/" + this.z + "_" + this.x + "_" + this.y +"/children";
     }
 
 });

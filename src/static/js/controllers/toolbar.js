@@ -106,6 +106,7 @@ var MainOperations = Backbone.View.extend({
         this.baseline    = new Baseline({report: this.report, callerView: this, mapview: this.options.mapview});
         this.time_series = new TimeSeries({report: this.report, callerView: this, mapview: this.options.mapview});
         this.operation_selected = false;
+        this.operation = "null";
         this.MESSAGE_ALERT = 1;
         this.MESSAGE_ERROR = 2;
         this.MESSAGE_SUCCESS = 3;
@@ -132,16 +133,20 @@ var MainOperations = Backbone.View.extend({
         if(view === this.sad && this.sad.selected){
             this.baseline.disable();
             this.time_series.disable();
+            this.operation = "sad";
         }
         else if(view === this.baseline && this.baseline.selected){
             this.sad.disable();
             this.time_series.disable();
+            this.operation = "baseline";
         }
         else if(view === this.time_series && this.time_series.selected){
             this.sad.disable();
             this.baseline.disable();
+            this.operation = "timeseries";
         }
         else{
+        	this.operation = "null";
             this.operation_selected = false;
         }
     },

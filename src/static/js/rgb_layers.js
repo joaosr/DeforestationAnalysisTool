@@ -64,7 +64,7 @@ var RGB_layers =  [
  helper to add rgb layers to maps
  ==========================================
 */
-function add_rgb_layers(layers, gridstack, report_id) {
+function add_rgb_layers(layers, gridstack, report_id, operation) {
     _(RGB_layers).each(function(layer) {
         var rgb = new RGBStrechLayer({
             r: layer.r,
@@ -72,7 +72,8 @@ function add_rgb_layers(layers, gridstack, report_id) {
             b: layer.b,
             sensor: layer.sensor,
             report_id: report_id,
-            description: layer.description
+            description: layer.description,
+            operation: operation
         });
 
         layers.add(rgb);

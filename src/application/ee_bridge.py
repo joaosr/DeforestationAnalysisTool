@@ -402,11 +402,12 @@ class EELandsat(object):
         }))
 
     def mapid_landsat8(self, start, end):
-        MAP_IMAGE_BANDS = ['B4', 'B3', 'B2']
-        PREVIEW_GAIN = 500
+        MAP_IMAGE_BANDS = ['B7', 'B5', 'B4']
+        PREVIEW_GAIN = ['0.013','0.009','0.013']        
+        
         return _get_raw_mapid(_get_landsat8(start, end).mosaic().getMapId({
             'bands': ','.join(MAP_IMAGE_BANDS),
-            'gain': PREVIEW_GAIN
+            'gain': ','.join(PREVIEW_GAIN)
         }))
 
 class SMA(object):
@@ -1052,12 +1053,27 @@ class NDFI(object):
 
     def _NDFI_period_image_command(self, period, sensor, long_span=False):
         """Returns a Map ID for the RGB visualization of a MODIS NDFI mosaic for a given period."""
-        return _get_raw_mapid(self._NDFI_visualize(period, sensor, long_span).getMapId({
-            'bands': 'vis-red,vis-green,vis-blue',
-            'gain': 1,
-            'bias': 0.0,
-            'gamma': 1.6
-        }))
+        
+        
+        if sensor == 'modis':
+            return _get_raw_mapid(self._NDFI_visualize(period, sensor, long_span).getMapId({
+                'bands': 'vis-red,vis-green,vis-blue',
+                'gain': 1,
+                'bias': 0.0,
+                'gamma': 1.6
+            }))
+        elif sensor == 'landsat5': 
+            return _get_raw_mapid(self._NDFI_visualize(period, sensor, long_span).getMapId({
+                'bands': 'vis-red,vis-green,vis-blue',
+                #'gain': ','.join(['1', '1', '1'])
+                'gain': '1.0, 1.0, 1.0'
+            }))
+        elif sensor == 'landsat7':
+            return _get_raw_mapid(self._NDFI_visualize(period, sensor, long_span).getMapId({
+                'bands': 'vis-red,vis-green,vis-blue',
+                'gain': '1.0, 1.0, 1.0'
+            }))
+        
 
     # Joao code
     def _ndfi_change(self, asset_id, sensor):
@@ -1355,7 +1371,7 @@ class NDFI(object):
         #collection = ee.ImageCollection('L5_L1T_SR').filterMetadata('WRS_PATH', 'equals', 227).filterMetadata('WRS_ROW', 'equals', 65).filterMetadata('CLOUD_COVER', 'less_than', 30).filterDate(periodo[0], periodo[1])
         bounder = ee.Geometry.Rectangle(-74.0, -18.0, -44, 5.0)
 
-        collection = ee.ImageCollection('L7_L1T_SR').filterDate(periodo[0], periodo[1]).filterBounds(bounder)
+        collection = ee.ImageCollection('LE7_L1T_SR').filterDate(periodo[0], periodo[1]).filterBounds(bounder)
 
         image = collection.mosaic()
 
@@ -2295,7 +2311,8 @@ def _get_landsat_toa(start_time, end_time, version=-1):
 def _get_landsat8(start_time, end_time, version=-1):
     collection = ee.ImageCollection.load('LC8_L1T', version)
     collection = collection.filterDate(start_time, end_time)
-    return collection.map(ee.Algorithms.LandsatTOA)
+    #return collection.map(ee.Algorithms.LandsatTOA)
+    return collection
 
 
 def _get_modis_tile(horizontal, vertical):
