@@ -214,8 +214,6 @@ var Grid = Backbone.View.extend({
         
         var prj = this.mapview.projector;
 
-        console.log("X: "+x+" ,Y: "+y+" ,H: "+h+", W: "+w);
-
         bounds = new google.maps.LatLngBounds(
             prj.untransformCoordinates(new google.maps.Point(x, y + h)),
             prj.untransformCoordinates(new google.maps.Point(x + w, y))

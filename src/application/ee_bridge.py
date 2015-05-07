@@ -1410,6 +1410,7 @@ class NDFI(object):
         else:
             krig_filter = ee.Filter.eq('Compounddate', int(date))
             params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
+            Downscalling.save_feature_collection(params)
         
         mosaic = self._make_mosaic(period, long_span)
         return ee.Algorithms.SAD.KrigeModis(mosaic, params)
@@ -1482,6 +1483,7 @@ class NDFI(object):
                 # Prepare the inclusions table.
                 inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
                 inclusions = inclusions.filter(inclusions_filter)
+                ImagePicker.save_feature_collection(inclusions)
                 
         else:
             # Calculate the time span.
@@ -1501,6 +1503,7 @@ class NDFI(object):
                 'compounddate', compounddate)
                 inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
                 inclusions = inclusions.filter(inclusions_filter)
+                ImagePicker.save_feature_collection(inclusions)
 
         # Prepare source image collections.
         modis_ga = ee.ImageCollection('MODIS/MOD09GA').filterDate(start_time, end_time)

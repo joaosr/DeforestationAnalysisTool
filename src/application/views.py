@@ -61,21 +61,12 @@ def default_maps():
 
     assetid = r.previous().as_dict().get('assetid')
     logging.info("Assetid :"+str(assetid))
-
     
-
-    d = ndfi.smaid()
-    if d: maps.append({'data': d, 'info': 'SMA'})
-    #sma = SMA(past_month_range(r.start), r.range(), SMA.LANDSAT7_T1)
-    #bbox = [-74.0, -18.0, -44.0, 5.0]    
-    #d = sma.find_mapid_from_sensor(bbox)
-    #if d: maps.append({'data': d, 'info': SMA.LANDSAT7_T1})
-    d = ndfi.rgb1id()
-    if d: maps.append({'data': d, 'info': 'RGB'})
-    d = ndfi.ndfi0id('modis')
-    if d: maps.append({'data': d, 'info': 'NDFI T0'})
-    d = ndfi.ndfi1id('modis')
-    if d: maps.append({'data' :d, 'info': 'NDFI T1'})
+    """
+    sma = SMA(past_month_range(r.start), r.range(), SMA.LANDSAT7_T1)
+    bbox = [-74.0, -18.0, -44.0, 5.0]    
+    d = sma.find_mapid_from_sensor(bbox)
+    if d: maps.append({'data': d, 'info': SMA.LANDSAT7_T1})
     d = ndfi.ndfi0id('landsat5')
     logging.info('Image ID: '+str(d))
     if d: maps.append({'data': d, 'info': 'NDFI T0 (LANDSAT5)'})
@@ -88,7 +79,16 @@ def default_maps():
     d = ndfi.ndfi1id('landsat7')
     logging.info('Image ID: '+str(d))
     if d: maps.append({'data': d, 'info': 'NDFI T1 (LANDSAT7)'})
-
+    """
+    
+    d = ndfi.smaid()
+    if d: maps.append({'data': d, 'info': 'SMA'})    
+    d = ndfi.rgb1id()
+    if d: maps.append({'data': d, 'info': 'RGB'})
+    d = ndfi.ndfi0id('modis')
+    if d: maps.append({'data': d, 'info': 'NDFI T0 (MODIS)'})
+    d = ndfi.ndfi1id('modis')
+    if d: maps.append({'data' :d, 'info': 'NDFI T1 (MODIS)'})
     d = ndfi.baseline(r.base_map())
     if d: maps.append({'data' :d, 'info': 'Baseline'})
     d = ndfi.rgb0id()
@@ -301,15 +301,15 @@ def tiles_sensor(sensor=None):
     else:
         if sensor == 'modis':
             tile_array = [
-                         { 'name': 'h11v08', 'value': 'h11v08'},
-                         { 'name': 'h12v08', 'value': 'h12v08'},
-                         { 'name': 'h10v09', 'value': 'h10v09'},
-                         { 'name': 'h11v09', 'value': 'h11v09'},
-                         { 'name': 'h12v09', 'value': 'h12v09'},
-                         { 'name': 'h13v09', 'value': 'h13v09'},
-                         { 'name': 'h11v10', 'value': 'h11v10'},
-                         { 'name': 'h12v10', 'value': 'h12v10'},
-                         { 'name': 'h13v10', 'value': 'h13v10'}
+                          { 'name': 'h10v09', 'value': 'h10v09'},
+                          { 'name': 'h11v08', 'value': 'h11v08'},
+                          { 'name': 'h11v09', 'value': 'h11v09'},
+                          { 'name': 'h11v10', 'value': 'h11v10'}, 
+                          { 'name': 'h12v08', 'value': 'h12v08'},
+                          { 'name': 'h12v09', 'value': 'h12v09'},                       
+                          { 'name': 'h12v10', 'value': 'h12v10'},
+                          { 'name': 'h13v09', 'value': 'h13v09'},
+                          { 'name': 'h13v10', 'value': 'h13v10'}
                         ]
 
     return jsonify({'result': tile_array})

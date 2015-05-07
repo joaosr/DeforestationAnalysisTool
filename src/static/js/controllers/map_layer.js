@@ -28,9 +28,11 @@ var NDFILayer = Backbone.View.extend({
         this.layer = new CanvasTileLayer(this.canvas_setup, this.filter);
 
         //Joao code
+        /*
         this.layer_L5 = new CanvasTileLayer(this.canvas_setup, this.filter);
 
         this.layer_L7 = new CanvasTileLayer(this.canvas_setup, this.filter);
+        */
 
         this.low = 40;
         this.high = 60;
@@ -40,9 +42,9 @@ var NDFILayer = Backbone.View.extend({
 
         this.ndfimap = new NDFIMap({report_id: this.report.id, sensor: 'modis'});
 
-        this.ndfimap_L5 = new NDFIMap({report_id: this.report.id, sensor: 'landsat5'});
+        //this.ndfimap_L5 = new NDFIMap({report_id: this.report.id, sensor: 'landsat5'});
 
-        this.ndfimap_L7 = new NDFIMap({report_id: this.report.id, sensor: 'landsat7'});
+        //this.ndfimap_L7 = new NDFIMap({report_id: this.report.id, sensor: 'landsat7'});
 
         this.ndfimap.bind('change', this.map_auth);
 
@@ -54,6 +56,7 @@ var NDFILayer = Backbone.View.extend({
             }
         });
 
+        /*
         this.ndfimap_L5.fetch({
             error: function(){
                 self.trigger('map_error');
@@ -64,7 +67,7 @@ var NDFILayer = Backbone.View.extend({
             error: function(){
                 self.trigger('map_error');
             }
-        });
+        });*/
 
         this.map_layer = new LayerModel({
               id: 'NDFI',
@@ -77,7 +80,9 @@ var NDFILayer = Backbone.View.extend({
        /* console.log("MapId: "+this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('id')+', Token: '+
                     this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('token'));*/
 
+        
         //Joao code
+        /*
         this.map_layer_L5 = new LayerModel({
               id: 'NDFI LANDSAT5',
               type: 'custom',
@@ -92,7 +97,7 @@ var NDFILayer = Backbone.View.extend({
               description: 'NDFI (LANDSAT7) analysis',
               layer: this.layer_L7,
               visibility: true
-       });
+       });*/
 
         this.sub_map_layer = [];
         this.add_class_control_layers();
@@ -112,11 +117,13 @@ var NDFILayer = Backbone.View.extend({
         var self = this;
         this.token = this.ndfimap.get('token');
         this.mapid = this.ndfimap.get('mapid');
-        console.log("URL NDFI : "+this.ndfimap.url);
+        //console.log("URL NDFI : "+this.ndfimap.url);
         this.mapview.layers.add(this.map_layer, { at: 0 });
+        /*
         this.mapview.layers.add(this.map_layer_L5, { at: 1});
         this.mapview.layers.add(this.map_layer_L7, { at: 2});
-        this.mapview.layers.bind('change', this.change_map_auth);
+        
+        this.mapview.layers.bind('change', this.change_map_auth);*/
         /*_.each(this.sub_map_layer, function(l) {
             l.bind('change', self.class_visibility);
             self.mapview.layers.add(l);
@@ -129,6 +136,7 @@ var NDFILayer = Backbone.View.extend({
     },
 
     change_map_auth: function(){
+    	/*
         var map_layer = this.mapview.layers.get_by_name(this.map_layer.get('description'));
 
         if(map_layer){
@@ -156,7 +164,7 @@ var NDFILayer = Backbone.View.extend({
             this.token = this.ndfimap_L7.get('token');
             this.mapid = this.ndfimap_L7.get('mapid');
            }
-        }
+        }*/
     },
 
     class_visibility: function(layer_id, enabled) {
@@ -275,8 +283,10 @@ var NDFILayer = Backbone.View.extend({
     hide: function() {
         this.showing = false;
         this.map_layer.set_enabled(false);
+        /*
         this.map_layer_L5.set_enabled(false);
         this.map_layer_L7.set_enabled(false);
+        */
     },
 
     apply_filter: function(low, high) {
@@ -303,11 +313,9 @@ var NDFILayer = Backbone.View.extend({
       //check if thereis support for corssOrigin images and use proxy if isn't available
       if(image.crossOrigin !== undefined) {
           image.crossOrigin = '';
-          image.src = EARTH_ENGINE_TILE_SERVER + this.mapid + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.token;
-          console.log(image.src);
+          image.src = EARTH_ENGINE_TILE_SERVER + this.mapid + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.token;          
       } else {
-        image.src = "/ee/tiles/" + this.mapid + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.token;
-        console.log(image.src);
+        image.src = "/ee/tiles/" + this.mapid + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.token;        
       }
 
       var ctx = canvas.getContext('2d');

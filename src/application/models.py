@@ -11,6 +11,7 @@ from dateutil.relativedelta import relativedelta
 import logging
 import operator
 
+from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import deferred
 
@@ -240,25 +241,22 @@ class Cell(db.Model):
     compare_view = db.StringProperty(default='four')
     operation = db.StringProperty(default='sad')
     map_one_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
-                                                     '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
-                                                     '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
-                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","true",'
-                                                     '"NDFI (LANDSAT5) analysis","false","True color RGB141","false","False color RGB421","false",'
-                                                     '"F color infrared RGB214","false","Validated polygons","true",*')
+                                                   '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
+                                                   '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0 (MODIS)","false",'
+                                                   '"NDFI T1 (MODIS)","false","NDFI analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                   '"F color infrared RGB214","false","Validated polygons","true",*')
 
     map_two_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
-                                                    '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
-                                                     '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","true",'
-                                                     '"NDFI T1","false","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","true",'
-                                                     '"NDFI (LANDSAT5) analysis","false","True color RGB141","false","False color RGB421","false",'
-                                                     '"F color infrared RGB214","false","Validated polygons","true",*')
+                                                   '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
+                                                   '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0 (MODIS)",'
+                                                   '"true","NDFI T1","false","NDFI analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                   '"F color infrared RGB214","false","Validated polygons","true",*')
 
     map_three_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
-                                                       '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
-                                                       '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0","false",'
-                                                       '"NDFI T1","true","NDFI T0 (LANDSAT5)","false","NDFI T1 (LANDSAT5)","false","NDFI analysis","true",'
-                                                       '"NDFI (LANDSAT5) analysis","false","True color RGB141","false","False color RGB421","false",'
-                                                       '"F color infrared RGB214","false","Validated polygons","true",*')
+                                                     '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
+                                                     '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0 (MODIS)","false",'
+                                                     '"NDFI T1 (MODIS)","true","NDFI analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                     '"F color infrared RGB214","false","Validated polygons","true",*')
 
     map_four_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
                                                       '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
@@ -910,6 +908,26 @@ class ImagePicker(db.Model):
         
         else:
             return None
+    
+    @staticmethod
+    def save_feature_collection(feature_collection):
+        logging.info("Image Picker feature size:"+str(len(feature_collection.getInfo()['features'])))        
+        collections_ = feature_collection.getInfo()['features']
+        report = Report.current()
+        
+        for i in range(len(collections_)):
+            collection_ = collections_[i]
+            location = collection_['geometry']['coordinates']
+            properties = collection_['properties']            
+            cell = properties['cell']
+            compounddate = properties['compounddate']
+            days = properties['day']
+            month = properties['month']
+            year = properties['year']                        
+            
+            image_picker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=days.split(","), location=str(location), compounddate=str(compounddate))
+            
+            image_picker.save()
 
     def save(self):
         q = ImagePicker.all().filter('compounddate =', self.compounddate).filter('cell =', self.cell)
@@ -1000,6 +1018,38 @@ class Downscalling(db.Model):
         
         else:
             return None
+    
+    @staticmethod
+    def save_feature_collection(feature_collection):
+        logging.info("Downscalling feature size:"+str(len(feature_collection.getInfo()['features'])))        
+        collections_ = feature_collection.getInfo()['features']
+        report = Report.current()
+        
+        for i in range(len(collections_)):
+            collection_ = collections_[i]
+            location = collection_['geometry']['coordinates']
+            properties = collection_['properties']
+            band = properties['Band']
+            cell = properties['Cell']
+            compounddate = properties['Compounddate']
+            model = properties['Model']
+            range_ = properties['Range']
+            sill = properties['Sill']
+            nugget = properties['Nugget']
+            
+            downscalling = Downscalling(report=report,
+                                        added_by= users.get_current_user(),
+                                        cell=str(cell),
+                                        region=str(location),
+                                        compounddate=str(int(compounddate)),
+                                        band= long(band),
+                                        model=model,
+                                        sill=long(sill),
+                                        range=long(range_),
+                                        nugget=long(nugget)
+                                       )
+            
+            downscalling.save()
 
     def save(self):
         q = Downscalling.all().filter('compounddate =', self.compounddate).filter('cell =', self.cell).filter('band =', self.band)

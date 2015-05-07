@@ -24,29 +24,29 @@ var ReportToolbar = Backbone.View.extend({
        this.$('#date_timepicker_start').attr("value", this.start_date).html();
        this.$('#date_timepicker_end').attr("value", this.end_date).html();
        
-       var picker_start = new Pikaday(
-          	    {
-          	        field: this.$("#date_timepicker_start")[0],
-          	        format: 'DD/MMM/YYYY',       	        
-          	        minDate:new Date('01/03/1985'),
-          	        maxDate: new Date(this.$('#date_timepicker_end').val()),   
-          	        yearRange: [1985, new Date().getFullYear()],
-          	        onOpen: function() {
-       	        	this.setMaxDate(new Date(self.$('#date_timepicker_end').val()));
-   				}
-          	    });
-          
-          var picker_end = new Pikaday(
-          	    {
-          	        field: this.$("#date_timepicker_end")[0],
-          	        format: 'DD/MMM/YYYY',
-          	        minDate: new Date(this.$('#date_timepicker_start').val()),
-          	        maxDate: new Date(this.end_date),
-          	        yearRange: [1985, new Date().getFullYear()],
-          	        onOpen: function() {
-          	        	this.setMinDate(new Date(self.$('#date_timepicker_start').val()));
-   				}
-         });
+          var picker_start = new Pikaday(
+             	    {
+             	        field: this.$("#date_timepicker_start")[0],
+             	        format: 'DD/MMM/YYYY',       	        
+             	        minDate:new Date('01/03/1985'),
+             	        maxDate: new Date(this.$('#date_timepicker_end').val()),   
+             	        yearRange: [1985, new Date().getFullYear()],
+             	        onOpen: function() {
+          	        	this.setMaxDate(new Date(self.$('#date_timepicker_end').val()));
+      				}
+             	    });
+             
+             var picker_end = new Pikaday(
+             	    {
+             	        field: this.$("#date_timepicker_end")[0],
+             	        format: 'DD/MMM/YYYY',
+             	        minDate: new Date(this.$('#date_timepicker_start').val()),
+             	        maxDate: new Date(),
+             	        yearRange: [1985, new Date().getFullYear()],
+             	        onOpen: function() {
+             	        	this.setMinDate(new Date(self.$('#date_timepicker_start').val()));
+      				}
+             	    });
     },
     send_date_report: function(e){
     	if(e) e.preventDefault();
@@ -134,7 +134,7 @@ var ImagePicker = Backbone.View.extend({
     },
     initialize: function(){
         _.bindAll(this, 'visibility_change');
-        this.thumbsView = new ThumbsView({el: this.$("#thumb"), tile_el: this.$("#tile")});
+        this.thumbsView = new ThumbsView({el: this.$("#thumb"), tile_el: this.$("#tile"), parentView: this});
         this.callerView = this.options.callerView;
         this.visibility = false;
     },
@@ -145,7 +145,7 @@ var ImagePicker = Backbone.View.extend({
     	if(e) e.preventDefault();
     	
         var thumb = this.$("#thumb").val();
-        var tile = this.$("#tile").val();
+        var tile = this.$("#tile").val();        
         console.log(thumb);
         var message = $.ajax({
                               url: "/picker/",
@@ -461,7 +461,7 @@ var Sad = Backbone.View.extend({
         this.report = this.options.report
         console.log("==== setting_report_data ====");
 
-        this.setting_report_data();
+        //this.setting_report_data();
         this.date_range = new ReportToolbar({el: this.$("#date_range"), report: this.report, url_send: '/range_report/', callerView: this});
         this.image_picker = new ImagePicker({el: this.$("#image_picker"), callerView: this});
         this.down_scalling = new DownScalling({callerView: this});

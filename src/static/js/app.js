@@ -379,7 +379,7 @@ $(function() {
         	 *
         	 */
         	var arraylayer = new Array("Brazil Legal Amazon","Brazil Municipalities Public","Brazil States Public","Brazil Federal Conservation Unit Public",
-        			"Brazil State Conservation Unit Public","LANDSAT/LE7_L1T","LANDSAT/LC8_L1T","SMA","RGB","NDFI T0","NDFI T1","NDFI T0 (LANDSAT5)","NDFI T1 (LANDSAT5)","NDFI analysis","NDFI (LANDSAT5) analysis","True color RGB141","False color RGB421",
+        			"Brazil State Conservation Unit Public","LANDSAT/LE7_L1T","LANDSAT/LC8_L1T","SMA","RGB","NDFI T0 (MODIS)","NDFI T1 (MODIS)","NDFI analysis","True color RGB141","False color RGB421",
         			"F color infrared RGB214", "Baseline", "Previous RGB", "Validated polygons");
         	var save_status_layer="";
         	for(var num=0; num<arraylayer.length;num++){

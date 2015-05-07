@@ -723,7 +723,6 @@ var Baseline = Backbone.View.extend({
 			},
 			setting_baseline_popup : function(popup, cell) {
 				var self = this;
-				console.log("------  cell bound ---------");
 				
 				
 				var cell_bbox = "";

@@ -28,6 +28,7 @@ var ThumbsView = Backbone.View.extend({
     initialize: function(){
         _.bindAll(this, 'addOne', 'addAll', 'render');
         console.log("Aqui");
+        this.parentView = this.options.parentView;
         this.collection = new Thumbs();
         this.collection.bind('reset', this.addAll());
         if(this.options.tile_el){
@@ -39,13 +40,22 @@ var ThumbsView = Backbone.View.extend({
        $(this.el).attr('disabled', false);
        this.collection.url = "picker/"+this.tilesView.tileId;
        var that = this;
-       window.loading_small.loading('loading image picker');
+       
+       this.parentView.$("#thumbs").hide();
+   	   this.parentView.$("#submit").hide();
+   	   this.parentView.$("#loading_tile_image_picker").show();
+       
+       //window.loading_small.loading('loading image picker');
        this.collection.fetch({
            success: function(){
-               that.render();
+        	   that.parentView.$("#thumbs").show();
+               that.parentView.$("#submit").show();
+               that.parentView.$("#loading_tile_image_picker").hide();
+               that.render();               
                $(that.el).imagepicker({show_label: true});
+               
                console.log(that.collection);
-               window.loading_small.finished('loading image picker');
+               //window.loading_small.finished('loading image picker');
            }
        });
     },

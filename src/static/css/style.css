@@ -668,6 +668,7 @@ text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #sad #sad_content #image_picker #picker_form ul li span #submit{
     float: right;
+    display: none;
     margin: 0 13px 0 0;
     padding: 8px;
     font: bold 12px "Helvetica Neue", Arial, Sans-Serif;
@@ -685,6 +686,7 @@ text-shadow: #000000 0px 1px 0px;
     max-height: 600px;
     max-width: 700px;
     margin-top: 20px;
+    display: none;
 }
 #header #tools #sad #sad_content #downscalling {
   margin: 0 20px 0 20px;
