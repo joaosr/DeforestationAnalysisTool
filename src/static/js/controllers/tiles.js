@@ -4,7 +4,11 @@ var TileView = Backbone.View.extend({
         _.bindAll(this, 'render');
     },
     render: function(){
-        $(this.el).attr('value', this.model.get('value')).html(this.model.get('name'));
+    	if(this.model.get('done'))
+          $(this.el).attr('value', this.model.get('value')).html(this.model.get('name')+" - ok");
+    	else{
+    	  $(this.el).attr('value', this.model.get('value')).html(this.model.get('name'));	
+    	}
         return this;
     }
 });

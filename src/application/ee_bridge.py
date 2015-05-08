@@ -784,7 +784,7 @@ class NDFI(object):
     def mapid2(self, asset_id, sensor):
         """Returns a Map ID for a visualization of the NDFI difference between last_period and work_period."""
         return _get_raw_mapid(
-		#self._ndfi_change(asset_id, sensor).getMapId({'format': 'png'}))
+		    #self._ndfi_change(asset_id, sensor).getMapId({'format': 'png'}))
             self._ndfi_delta(asset_id, sensor).getMapId({'format': 'png'}))
 
 
@@ -1153,10 +1153,8 @@ class NDFI(object):
                                      self.work_period['end'])
         baseline = self._paint_edited_deforestation(
             asset_id, work_month, work_year)
-
-        # Get ndfi images to make the difference.
-        ndfi0 = self._NDFI_image(self.last_period, sensor, True)
-        ndfi1 = self._NDFI_image(self.work_period, sensor)
+        ndfi0 = self._NDFI_image(self.last_period, True)
+        ndfi1 = self._NDFI_image(self.work_period)
 
         # Basic difference.
         diff = ndfi1.subtract(ndfi0)
@@ -1403,6 +1401,7 @@ class NDFI(object):
         date = '%04d%02d' % (work_year, work_month)
         downscalling = Downscalling.find_by_compounddate(date)
         feature_collection = Downscalling.return_feature_collection(downscalling)
+        logging.info(type(feature_collection))
         params = ''
         
         if feature_collection:
@@ -1410,6 +1409,7 @@ class NDFI(object):
         else:
             krig_filter = ee.Filter.eq('Compounddate', int(date))
             params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
+            logging.info(params.getInfo())
             Downscalling.save_feature_collection(params)
         
         mosaic = self._make_mosaic(period, long_span)
@@ -1618,6 +1618,7 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
     result_final = []
     nextYear = year
     nextMonth = str(int(month) + 1).zfill(2)
+    cell = tile
 
     if month == '12':
         nextYear = str(int(year) + 1)
@@ -1625,6 +1626,7 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
 
     collection = ee.ImageCollection('MOD09GA').filterDate(year+'-'+month+'-01', nextYear+'-'+nextMonth+'-01')
     images = collection.getInfo().get('features')
+    images = images[::-1]
 
     MAX_ERROR_METERS = 500.0
     #tile = _get_modis_tile(*cell)
@@ -1647,8 +1649,16 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
         imageId = images[i].get('id')
         imageIdSplit = imageId.split('_')
         date = imageIdSplit[4]+'-'+imageIdSplit[3]+'-'+imageIdSplit[2]
+        
+        selected = ImagePicker.is_day_selected(imageIdSplit[4], imageIdSplit[2]+imageIdSplit[3], cell)
+        
+        if selected:
+            result_final.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date, 'selected': True})
+        else:
+            result_final.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date, 'selected': False})
+          
 
-        result_final.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date})
+        
 
     return result_final
 

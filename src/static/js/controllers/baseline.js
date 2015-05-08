@@ -431,6 +431,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			console.log(this.date_end);
 			console.log(this.list_cloud_percent);
 			this.$("#image_picker_baseline").show();
+			this.$("#image_picker_baseline ul.thumbnails.image_picker_selector").empty();
 			this.$("#image_picker_baseline #loading_image_picker").show();
 
 			request = $.ajax({
@@ -1035,3 +1036,66 @@ var Baseline = Backbone.View.extend({
 
 			}
 		});
+
+//jqueryui slider wrapper
+//triggers change with values
+var RangeSlider = Backbone.View.extend({
+ initialize: function() {
+     _.bind(this, 'slide', 'set_values');
+     var self = this;
+     this.el.slider({
+             range: true,
+             min: 0,
+             max: 200,
+             //values: [40, 60], //TODO: load from model
+             values: [175], //TODO: load from model
+             slide: function(event, ui) {
+                 // Hack to get red bar resizing
+
+                 var low = ui.values[0];
+                 //var high= ui.values[1];
+                 self.slide(low, high);
+             },
+             stop: function(event, ui) {
+                 var low = ui.values[0];
+                 //var high= ui.values[1];
+                 //self.trigger('stop', low, high);
+                 self.trigger('stop', low);
+             },
+             create: function(event,ui) {
+                 // Hack to get red bar resizing
+                 var size = $('a.ui-slider-handle:eq(1)').css('left');
+                 $('span.hack_red').css('left',size);
+                 // Hack for handles tooltip
+                 var size0 = $('a.ui-slider-handle:eq(0)').css('left');
+
+                 $('a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">40</p>');
+                 $('a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">60</p>');
+             }
+      });
+ },
+
+ slide: function(low, high, silent) {
+     var size = $('a.ui-slider-handle:eq(1)').css('left');
+     $('span.hack_red').css('left',size);
+     // Hack for handles tooltip
+     var size0 = $('a.ui-slider-handle:eq(0)').css('left');
+     $('p#ht0').text(low);
+     $('p#ht1').text(high);
+     if(silent !== true) {
+         this.trigger('change', low);
+     }
+ },
+
+ // set_values([0, 1.0],[0, 1.0])
+ set_values: function(low, high) {
+     low = Math.floor(low*200);
+     high =  Math.floor(high*200);
+
+     this.el.slider( "values" , 0, low);
+     this.el.slider( "values" , 1, high);
+     //launch an event
+     this.slide(low, high, false);//true);
+ }
+});
+

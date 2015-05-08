@@ -184,6 +184,7 @@ class Report(db.Model):
         r = q.fetch(1)
         logging.info(r)
         if len(r) > 0:
+           """ 
            if r[0].finished:
               #r = Report(start=start_date, end=end_date, assetid=assetid)
               r[0].start = start_date;
@@ -194,10 +195,23 @@ class Report(db.Model):
           
            else:
               return {'message': 'Last period not finalized!', 'data': None}
+           """
+           return {'message': 'Period already created, try another one!', 'data': None}
         else:
-            r = Report(start=start_date, end=end_date, assetid=assetid)
-            r.put()
-            return {'message': 'New period of analyse saved!', 'data': None}
+            r_last = Report.all().filter('start <', start_date).order('-start').fetch(1)
+            if len(r_last) > 0:
+                r = r_last[0]
+                if not r.finished and r.assetid == 'null':
+                    r.finished = True;
+                    r.assetid = r.previous().assetid
+                    r_new = Report(start=start_date, end=end_date, assetid=assetid)
+                    r.put()
+                    r_new.put()
+                    return {'message': 'New period of analyse saved!', 'data': None}
+                else:
+                    return {'message': 'New period of analyse not saved!', 'data': None}
+            else:
+                return {'message': 'Period not accepted!', 'data': None}
 
 
     def base_map(self):
@@ -249,7 +263,7 @@ class Cell(db.Model):
     map_two_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
                                                    '"Brazil Federal Conservation Unit Public","false","Brazil State Conservation Unit Public","false",'
                                                    '"LANDSAT/LE7_L1T","false","LANDSAT/LC8_L1T","false","SMA","false","RGB","false","NDFI T0 (MODIS)",'
-                                                   '"true","NDFI T1","false","NDFI analysis","true","True color RGB141","false","False color RGB421","false",'
+                                                   '"true","NDFI T1 (MODIS)","false","NDFI analysis","true","True color RGB141","false","False color RGB421","false",'
                                                    '"F color infrared RGB214","false","Validated polygons","true",*')
 
     map_three_layer_status = db.TextProperty(default='"Brazil Legal Amazon","false","Brazil Municipalities Public","false","Brazil States Public","false",'
@@ -857,6 +871,19 @@ class ImagePicker(db.Model):
             return result
         else:
             return None
+    
+    @staticmethod
+    def is_day_selected(day, compounddate, cell):
+        q = ImagePicker.all().filter('compounddate =', compounddate).filter('cell =', cell)
+        r = q.fetch(1)
+        
+        if len(r) > 0:
+            if day in r[0].day:
+                return True
+            else:
+                return False
+        else:
+            return False
         
     @staticmethod
     def list_by_period(start_compounddate, end_compounddate, tile):
@@ -881,6 +908,15 @@ class ImagePicker(db.Model):
     def find_by_compounddate(compounddate):
         q = ImagePicker.all().filter('compounddate =', compounddate)
         r = q.fetch(10)
+        if r:
+            return r
+        else:
+            return None
+        
+    @staticmethod
+    def find_by_compounddate_and_cell(compounddate, cell):
+        q = ImagePicker.all().filter('compounddate =', compounddate).filter('cell =', cell)
+        r = q.fetch(1)
         if r:
             return r
         else:

@@ -627,7 +627,8 @@ font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
 #header #tools #sad #sad_content #image_picker #picker_form {
   position: absolute;
   width: 640px;
-  height: 618px;
+  min-height: 50px;
+  max-height: 450px;
   padding: 40px 30px 30px 30px;
   top: 60px;
   left: 0px;
@@ -687,6 +688,15 @@ text-shadow: #000000 0px 1px 0px;
     max-width: 700px;
     margin-top: 20px;
     display: none;
+}
+#header #tools #sad #sad_content #image_picker #picker_form ul li#thumbs ul.thumbnails.image_picker_selector{
+  overflow: auto;
+  height: 400px;
+  list-style-image: none;
+  list-style-position: outside;
+  list-style-type: none;
+  padding: 0px;
+  margin: 20px 0 0 0;
 }
 #header #tools #sad #sad_content #downscalling {
   margin: 0 20px 0 20px;

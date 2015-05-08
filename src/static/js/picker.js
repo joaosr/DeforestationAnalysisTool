@@ -17,6 +17,11 @@ var ThumbView = Backbone.View.extend({
     render: function(){
         console.log(this.model.get('thumb'));
         $(this.el).attr('data-img-label', this.model.get('date')).html();
+        
+        if(this.model.get('selected')){
+        	$(this.el).attr('selected', 'selected').html();
+        }
+        
         $(this.el).attr('data-img-src', 'https://earthengine.googleapis.com/api/thumb?thumbid='+this.model.get('thumb')+'&token='+this.model.get('token')).html(this.model.get("date"));
         $(this.el).attr('value', this.model.get('date')).html();
         return this;thumbs
@@ -41,6 +46,7 @@ var ThumbsView = Backbone.View.extend({
        this.collection.url = "picker/"+this.tilesView.tileId;
        var that = this;
        
+       this.parentView.$("#thumbs ul.thumbnails.image_picker_selector").empty();
        this.parentView.$("#thumbs").hide();
    	   this.parentView.$("#submit").hide();
    	   this.parentView.$("#loading_tile_image_picker").show();

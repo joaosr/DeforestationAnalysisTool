@@ -94,6 +94,8 @@ var RangeSlider = Backbone.View.extend({
     }
 });
 
+
+
 var MainOperations = Backbone.View.extend({
     el: $("#tools"),
     events:{

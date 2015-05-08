@@ -286,10 +286,10 @@ def range_report():
     date_start = request.form.get('date_start')
     date_end   = request.form.get('date_end')
     message = ''
-    try:
-        message =  Report.add_report(date_start, date_end)
-    except:
-        return jsonify({'result': 'error'})
+    #try:
+    message =  Report.add_report(date_start, date_end)
+    #except:
+    #    return jsonify({'result': 'error'})
 
     return jsonify({'result': message})
 
@@ -311,6 +311,18 @@ def tiles_sensor(sensor=None):
                           { 'name': 'h13v09', 'value': 'h13v09'},
                           { 'name': 'h13v10', 'value': 'h13v10'}
                         ]
+            
+            r = Report.current()
+            start_date = r.start
+            compounddate = '%04d%02d' % (start_date.year, start_date.month) 
+            
+            for i in range(len(tile_array)):
+                image_picker = ImagePicker.find_by_compounddate_and_cell(compounddate, tile_array[i]['name'])
+                if image_picker:
+                    tile_array[i]['done'] = True
+                else:
+                    tile_array[i]['done'] = False
+                
 
     return jsonify({'result': tile_array})
 

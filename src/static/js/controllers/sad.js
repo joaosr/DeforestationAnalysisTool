@@ -24,29 +24,45 @@ var ReportToolbar = Backbone.View.extend({
        this.$('#date_timepicker_start').attr("value", this.start_date).html();
        this.$('#date_timepicker_end').attr("value", this.end_date).html();
        
-          var picker_start = new Pikaday(
-             	    {
-             	        field: this.$("#date_timepicker_start")[0],
-             	        format: 'DD/MMM/YYYY',       	        
-             	        minDate:new Date('01/03/1985'),
-             	        maxDate: new Date(this.$('#date_timepicker_end').val()),   
-             	        yearRange: [1985, new Date().getFullYear()],
-             	        onOpen: function() {
-          	        	this.setMaxDate(new Date(self.$('#date_timepicker_end').val()));
-      				}
-             	    });
+       var d = new Date();
+       var date_defaut = moment(new Date(d.getFullYear(), d.getMonth(), 0)).format("DD/MMM/YYYY");
+       
+      var picker_start = new Pikaday(
+         	    {
+         	        field: this.$("#date_timepicker_start")[0],
+         	        format: 'DD/MMM/YYYY',       	        
+         	        minDate: new Date('01/03/1985'),
+         	        //maxDate: new Date(this.$('#date_timepicker_end').val()),
+         	        maxDate: new Date(date_defaut),
+         	        yearRange: [1985, new Date().getFullYear()],
+         	        onSelect: function() {             	        	  
+         	        	var date = this.getDate(); 
+         	        	var date_start = moment(new Date(date.getFullYear(), date.getMonth(), 1)).format("DD/MMM/YYYY");
+         	        	var date_end = moment(new Date(date.getFullYear(), date.getMonth() + 1, 0)).format("DD/MMM/YYYY");
+         	        	self.$('#date_timepicker_start').attr("value", date_start).html();
+         	        	self.$('#date_timepicker_end').attr("value", date_end).html();             	        	
+  				    }
+  				    
+         	    });
              
-             var picker_end = new Pikaday(
-             	    {
-             	        field: this.$("#date_timepicker_end")[0],
-             	        format: 'DD/MMM/YYYY',
-             	        minDate: new Date(this.$('#date_timepicker_start').val()),
-             	        maxDate: new Date(),
-             	        yearRange: [1985, new Date().getFullYear()],
-             	        onOpen: function() {
-             	        	this.setMinDate(new Date(self.$('#date_timepicker_start').val()));
-      				}
-             	    });
+         var picker_end = new Pikaday(
+         	    {
+         	        field: this.$("#date_timepicker_end")[0],
+         	        format: 'DD/MMM/YYYY',
+         	        minDate: new Date('01/03/1985'),
+         	        maxDate: new Date(date_defaut),
+         	        yearRange: [1985, new Date().getFullYear()],
+         	        onSelect: function() {
+        	        	//var date = new Date(self.$('#date_timepicker_start').val());   
+        	        	var date = this.getDate(); 
+        	        	var date_start = moment(new Date(date.getFullYear(), date.getMonth(), 1)).format("DD/MMM/YYYY");
+        	        	var date_end = moment(new Date(date.getFullYear(), date.getMonth() + 1, 0)).format("DD/MMM/YYYY");
+        	        	self.$('#date_timepicker_start').attr("value", date_start).html();
+        	        	self.$('#date_timepicker_end').attr("value", date_end).html();
+        	        	
+     	        	    //this.setDate(new Date(date.getFullYear(), date.getMonth(), 1));
+ 				    }
+         	    });
     },
     send_date_report: function(e){
     	if(e) e.preventDefault();
