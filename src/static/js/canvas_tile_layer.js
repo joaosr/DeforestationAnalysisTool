@@ -29,7 +29,7 @@ CanvasTileLayer.prototype.create_tile_canvas = function(coord, zoom, ownerDocume
       if(tile_id in this.tiles) {
         delete this.tiles[tile_id];
       }
-      this.tiles[tile_id] = canvas;
+      this.tiles[tile_id] = canvas;      
 
       // custom setup
       if(this.canvas_setup) {
@@ -72,12 +72,13 @@ CanvasTileLayer.prototype.filter_tiles = function() {
     for (var i in arguments) {
         args.push(arguments[i]);
     }
-    for(var c in this.tiles) {
+    
+    for(var c in this.tiles) {    	
         this.filter_tile(this.tiles[c], args);
     }
 }
 CanvasTileLayer.prototype.getTile = function(coord, zoom, ownerDocument) {
-  // could be called directly...
+  // could be called directly...	
   return this.create_tile_canvas(coord, zoom, ownerDocument);
 };
 

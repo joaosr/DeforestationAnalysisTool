@@ -520,14 +520,14 @@ $(function() {
         	var self = this;
             this.map.show_sad_info(this.report_base.models[0], z);
             this.main_operations.listen_zoon(z);
-            this.polygon_tools.show();
+            
             
             //update slider with current cell values
             var cell = this.gridstack.current_cell;
             console.log(cell);
             
             if(this.main_operations.sad.selected){            	
-            	
+            	this.polygon_tools.show();	
             	
             	this.ndfi_layer.show();
             	this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
@@ -550,12 +550,15 @@ $(function() {
                 });
                 this.get_status_layer_map(cell.get('compare_view'));
             }
-            else if(this.main_operations.baseline.selected){            	
+            else if(this.main_operations.baseline.selected){      
+            	this.main_operations.baseline.polygon_tools.show();
                 var response = this.main_operations.baseline.setting_baseline_layers(cell);
          	    //cell = response['cell'];
          	    console.log(response['cell']);
          	    console.log(response['baseline']);
          	    this.map.reset_layers_map('2', response['baseline'], 'baseline');
+         	    this.map.layers.bind('change_layers_baseline');
+         	    this.main_operations.baseline.baseline_layer.map_auth();
          	    
          	    this.compare_view(cell.get('compare_view'));
          	    
@@ -567,9 +570,7 @@ $(function() {
          	    this.map.show_zoom_control();
                 this.map.show_layers_control();
               
-                this.editing_router = new EditingToolsRuoter({
-                     app: this
-                });
+                this.main_operations.baseline.start_editing_tools(true);
                 this.get_status_layer_map(cell.get('compare_view'));
             }
             
@@ -606,6 +607,7 @@ $(function() {
             this.main_operations.listen_zoon(z);
             this.compare_view('one');
             this.polygon_tools.hide();
+            this.main_operations.baseline.polygon_tools.hide();
             this.ndfi_layer.hide();
             this.overview.select_mode();
             this.cell_polygons.polygons.reset();
@@ -615,6 +617,7 @@ $(function() {
                 this.polygon_tools.reset();
                 delete this.editing_router;
             }
+            this.main_operations.baseline.start_editing_tools(false);
         },
         
         show_messagem: function(){

@@ -304,6 +304,159 @@ var LayerEditorBaseline = Backbone.View.extend({
 
 });
 
+var EditingToolsBaseline = Backbone.View.extend({
+
+    initialize: function() {
+        _.bindAll(this, 'change_state', 'new_polygon', 'reset', 'polygon_mouseout', 'polygon_mouseover');
+        this.state = 'move';
+        this.baseline = this.options.baseline;
+        this.baseline.polygon_tools.bind('state', this.change_state);
+    },
+
+    new_polygon: function(data) {
+        //this.baseline.cell_polygons.polygons.create(data);
+        var p = new Polygon(data);
+        this.baseline.cell_polygons.polygons.add(p);
+        window.loading_small.loading('saving poly');
+        p.save(null, {
+            success: function() {
+                window.loading_small.finished('saving poly');
+            }
+        });
+    },
+
+    //reset to initial state
+    reset: function() {
+        this.baseline.baseline_layer.unbind('polygon', this.new_polygon);
+        this.baseline.create_polygon_tool.unbind('polygon', this.new_polygon);
+        this.baseline.baseline_layer.editing_state = false;
+        this.baseline.cell_polygons.editing_state = false;
+        this.baseline.create_polygon_tool.editing_state(false);
+        this.baseline.polygon_tools.polytype.hide();
+        //this.baseline.map.$("canvas").css('cursor','auto');
+        this.baseline.cell_polygons.unbind('click_on_polygon', this.baseline.create_polygon_tool.edit_polygon);
+        this.baseline.cell_polygons.unbind('mouseover', this.polygon_mouseover);
+        this.baseline.cell_polygons.unbind('mouseout', this.polygon_mouseout);
+        this.baseline.map.map.setOptions({draggableCursor: 'default'});
+    },
+
+    editing_mode: function() {
+        this.baseline.cell_polygons.bind('click_on_polygon', this.baseline.create_polygon_tool.edit_polygon);
+    },
+
+    polygon_mouseout: function() {
+        var st = this.state;
+        var cursors_pos = {
+            'edit': '4 4',
+            'auto': '7 7',
+            'remove': '6 6',
+            'draw': '4 16'
+        };
+        this.baseline.map.map.setOptions({draggableCursor: 'url(/static/img/cursor_' + st +'.png) ' + cursors_pos[st] + ', default'});
+    },
+
+    polygon_mouseover: function() {
+        var st = this.state;
+        var cursors_pos = {
+            'edit': '4 4',
+            'auto': '7 7',
+            'remove': '6 6',
+            'draw': '4 16'
+        };
+        $('path').css({cursor: 'url("http://maps.gstatic.com/intl/en_us/mapfiles/openhand_8_8.cur"), default !important'});
+    },
+
+    change_state: function(st) {
+        if(st == this.state) {
+            return;
+        }
+        this.state = st;
+        this.reset();
+        this.polygon_mouseout();
+        switch(st) {
+            case 'edit':
+                this.editing_mode();
+                this.baseline.cell_polygons.bind('mouseover', this.polygon_mouseover);
+                this.baseline.cell_polygons.bind('mouseout', this.polygon_mouseout);
+                break;
+            case 'remove':
+                this.baseline.cell_polygons.editing_state = true;
+                this.baseline.cell_polygons.bind('mouseover', this.polygon_mouseover);
+                this.baseline.cell_polygons.bind('mouseout', this.polygon_mouseout);
+                break;
+            case 'draw':
+                this.baseline.create_polygon_tool.editing_state(true);
+                this.baseline.polygon_tools.polytype.bind('state', this.baseline.create_polygon_tool.poly_type);
+                this.baseline.create_polygon_tool.bind('polygon', this.new_polygon);
+                this.baseline.polygon_tools.polytype.show();
+                this.baseline.polygon_tools.polytype.select('def');
+                break;
+            case 'auto':
+                this.baseline.baseline_layer.unbind('polygon', this.new_polygon);
+                this.baseline.baseline_layer.bind('polygon', this.new_polygon);
+                this.baseline.baseline_layer.editing_state = true;
+                //this.baseline.map.$("canvas").css('cursor','crosshair');
+                break;
+        }
+        console.log(st);
+    }
+
+});
+
+var PolygonToolbarBaseline = Backbone.View.extend({
+
+    el: $("#work_toolbar_baseline"),
+
+    events: {
+        'click #compare': 'none',
+        'click #ndfirange': 'none',
+        'click .class_selector': 'visibility_change'
+    },
+
+    initialize: function() {
+        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change');
+        this.buttons = new ButtonGroup({el: this.$('#baseline_selection')});
+        this.polytype = new ButtonGroup({el: this.$('#baseline_polytype')});
+        this.baseline_range = new RangeSliderBaseline({el: this.$("#baseline_slider")});
+        this.compare = new ButtonGroup({el: this.$("#compare_buttons")});
+        this.polytype.hide();
+        this.buttons.bind('state', this.change_state);
+    },
+
+    visibility_change: function(e) {
+        var el = $(e.target);
+        var what = $(e.target).attr('id');
+        var selected = false;
+        if(el.hasClass('check_selected')) {
+            el.removeClass('check_selected');
+        } else {
+            el.addClass('check_selected');
+            selected = true;
+        }
+        this.trigger('visibility_change', what, selected);
+        e.preventDefault();
+    },
+
+    none: function(e) { e.preventDefault();},
+
+    change_state: function(st) {
+        this.trigger('state', st);
+    },
+
+    reset: function() {
+        this.polytype.unselect_all();
+        this.buttons.unselect_all();
+    },
+    show: function() {
+        this.el.show();
+    },
+
+    hide: function() {
+        this.el.hide();
+    }
+
+});
+
 var EditorBaselineImagePicker = Backbone.View.extend({
 
 	showing : false,
@@ -518,8 +671,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 	addThumbs : function(thumbs_tiles) {
 		this.$("#thumbs_baseline").empty();
 		this.$("ul.thumbnails.image_picker_selector").empty();
-		// this.$("ul.thumbnails.image_picker_selector").attr('disabled',
-		// false);
+		this.$("ul.thumbnails.image_picker_selector").attr('disabled', false);
 
 		for ( var thumbs in thumbs_tiles) {
 			this.$("#thumbs_baseline").append(
@@ -538,6 +690,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			show_label : true,
 			hide_select : true
 		});
+		
 		this.$('ul.thumbnails.image_picker_selector ul').jScrollPane({autoReinitialise : true});
 		
 		this.el.find('ul, div.jspPane').sortable({
@@ -625,6 +778,8 @@ var Baseline = Backbone.View.extend({
 						'setting_baseline_popup', 'show_imagepicker_search',
 						'set_selected', 'genarete_baseline');
 				this.callerView = this.options.callerView;
+				this.polygon_tools = new PolygonToolbarBaseline();
+				
 				this.report = this.options.report;
 				this.map = this.options.mapview;
 				// this.setting_report_data();
@@ -639,6 +794,11 @@ var Baseline = Backbone.View.extend({
 				this.visibility = false;
 				this.selected = false;
 
+				this.baseline_layer = new BaselineLayer({mapview: this.map, report: this.report});
+				this.polygon_tools.baseline_range.bind('change', this.baseline_layer.apply_filter);
+				this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
+				this.cell_polygons = new CellPolygons({mapview: this.map});
+				//this.polygon_tools.baseline_range.bind('stop', this.change_baseline);
 				this.baselines = new LayerBaselineCollection();
 				this.baselines.url = 'baseline_list/';
 				this.baselines.fetch();
@@ -706,6 +866,14 @@ var Baseline = Backbone.View.extend({
 					this.layer_editor_baseline.show();
 				}
 			},
+			change_baseline: function(low, high) {
+	            //var baseline = this.map.layer.;
+	            cell.set({
+	                'ndfi_low': low/200.0,
+	                'ndfi_high': high/200.0
+	            });
+	            cell.save();
+	        },
 			setting_report_data : function() {
 				var date = new Date();
 				var current_month = date.getMonth();
@@ -797,7 +965,7 @@ var Baseline = Backbone.View.extend({
 					var map_two_layer_status = "";
 					var map_three_layer_status = "";
 					var map_four_layer_status = "";
-
+										
 					item.baseline_layers.each(function(layer) {
 						// var layer_map = self.map.layers.get(layer.get('id'));
 						layer_names.push(layer.get('description'));
@@ -1019,6 +1187,21 @@ var Baseline = Backbone.View.extend({
 			hide : function() {
 				this.el.hide();
 			},
+			start_editing_tools: function(state) {
+				if(state){
+					this.editing_router = new EditingToolsBaseline({
+	                    baseline: this
+	               });
+				}else{
+					if(this.editing_router) {
+		                //unbind all
+		                this.editing_router.reset();
+		                this.polygon_tools.reset();
+		                delete this.editing_router;
+		            }
+				}
+				
+			},
 			visibility_change : function() {
 				if (this.visibility) {
 					$(this.el).css("background-color", "rgba(0, 0, 0, 0)");
@@ -1039,7 +1222,7 @@ var Baseline = Backbone.View.extend({
 
 //jqueryui slider wrapper
 //triggers change with values
-var RangeSlider = Backbone.View.extend({
+var RangeSliderBaseline = Backbone.View.extend({
  initialize: function() {
      _.bind(this, 'slide', 'set_values');
      var self = this;
@@ -1048,42 +1231,44 @@ var RangeSlider = Backbone.View.extend({
              min: 0,
              max: 200,
              //values: [40, 60], //TODO: load from model
-             values: [175], //TODO: load from model
+             values: [175, 185], //TODO: load from model
              slide: function(event, ui) {
                  // Hack to get red bar resizing
 
-                 var low = ui.values[0];
-                 //var high= ui.values[1];
+                 var low  = ui.values[0];
+                 var high = ui.values[1];
                  self.slide(low, high);
              },
              stop: function(event, ui) {
-                 var low = ui.values[0];
-                 //var high= ui.values[1];
-                 //self.trigger('stop', low, high);
-                 self.trigger('stop', low);
+                 var low  = ui.values[0];
+                 var high = ui.values[1];
+                 self.trigger('stop', low, high);
+                 //self.trigger('stop', low);
              },
              create: function(event,ui) {
                  // Hack to get red bar resizing
-                 var size = $('a.ui-slider-handle:eq(1)').css('left');
-                 $('span.hack_red').css('left',size);
+                 var size = self.$('a.ui-slider-handle:eq(1)').css('left');
+                 self.$('span.hack_forest').css('left',size);
                  // Hack for handles tooltip
-                 var size0 = $('a.ui-slider-handle:eq(0)').css('left');
+                 
+                 var size0 = self.$('a.ui-slider-handle:eq(0)').css('left');
 
-                 $('a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">40</p>');
-                 $('a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">60</p>');
+                 self.$('a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">175</p>');
+                 self.$('a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">185</p>');
              }
       });
  },
 
  slide: function(low, high, silent) {
-     var size = $('a.ui-slider-handle:eq(1)').css('left');
-     $('span.hack_red').css('left',size);
+     var size = this.$('a.ui-slider-handle:eq(1)').css('left');
+     this.$('span.hack_forest').css('left',size);
      // Hack for handles tooltip
-     var size0 = $('a.ui-slider-handle:eq(0)').css('left');
-     $('p#ht0').text(low);
-     $('p#ht1').text(high);
+     var size0 = this.$('a.ui-slider-handle:eq(0)').css('left');
+     //this.$('span.hack_degradation').css('left', size);
+     this.$('p#ht0').text(low);
+     this.$('p#ht1').text(high);
      if(silent !== true) {
-         this.trigger('change', low);
+         this.trigger('change', low, high);
      }
  },
 

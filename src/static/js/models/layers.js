@@ -15,6 +15,7 @@ var LayerModel = Backbone.Model.extend({
         if(this.get('enabled') === true) {
             this.set_enabled(true);
         }
+        this.layer = null;
     },
 
     set_enabled: function(b) {
@@ -127,6 +128,34 @@ var LayerBaselineCollection = Backbone.Collection.extend({
             }
         });
         return lay;
+    },
+    get_by_contains_name: function(name, layer) {
+        var lay;        
+        this.each(function(m) {
+            if(m.get('id') === name) { 
+            	console.log("Layer 1 ---------------");
+                console.log(m);                
+                m.set({"layer": layer});
+                m.map_layer = layer;
+                console.log("Layer 2 ---------------");
+                console.log(m);
+            	lay = m.clone();
+            	console.log("Layer 3 ---------------");
+                console.log(lay);
+            }
+            
+        });
+        return lay;
+    },
+    set_by_contains_name: function(name, layer) {    	
+        this.each(function(m) {
+            if(m.get('id') === name) {            	
+                m = layer;
+                
+                console.log("Layer 2 ---------------");
+                console.log(m);
+            }            
+        });                
     },
  // return a new collection
     filter_by_type: function(callback) {

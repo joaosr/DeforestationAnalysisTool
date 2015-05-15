@@ -18,7 +18,7 @@ time, mark, audio, video {
   font: inherit;
   vertical-align: baseline;
 }
-
+ 
 body {
   line-height: 1;
 }
@@ -1686,6 +1686,377 @@ text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #maptools #slider_wrapper div#ndfi_slider .ui-slider-range {
   background: #FDCC8A;
+}
+#header #tools #work_toolbar_baseline {
+  padding-top: 13px;
+}
+#header #tools #work_toolbar_baseline ul, #header #tools #work_toolbar_baseline li {
+  display: inline;
+}
+#header #tools #work_toolbar_baseline #baseline_selection {
+  display: inline-block;
+  width: 120px;
+  height: 29px;
+  padding: 0;
+  border-radius: 3px;
+  -moz-border-radius: 3px;
+  -webkit-radius: 3px;
+  box-shadow: 0 1px #2A2C2E;
+  border: 1px solid #000000;
+}
+#header #tools #work_toolbar_baseline #baseline_selection li {
+  float: left;
+  width: 30px;
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a {
+  display: block;
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#edit {
+  width: 28px;
+  height: 29px;
+  text-indent: -9999px;
+  border-right: 1px solid #3f3d43;
+  border-left: 1px solid #1c1d20;
+  width: 29px;
+  -webkit-border-top-left-radius: 3px;
+  -webkit-border-bottom-left-radius: 3px;
+  border-left: none;
+  background: url(../img/icons/tool_icons.png) no-repeat 3px 4px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(#36383c), to(#232427));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#edit:hover {
+  background: url(../img/icons/tool_icons.png) no-repeat 3px 4px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#edit.selected {
+  background: url(../img/icons/tool_icons.png) no-repeat 3px 4px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#auto {
+  width: 28px;
+  height: 29px;
+  text-indent: -9999px;
+  border-right: 1px solid #3f3d43;
+  border-left: 1px solid #1c1d20;
+  background: url(../img/icons/tool_icons.png) no-repeat -27px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(#36383c), to(#232427));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#auto:hover {
+  background: url(../img/icons/tool_icons.png) no-repeat -27px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#auto.selected {
+  background: url(../img/icons/tool_icons.png) no-repeat -27px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#draw {
+  width: 28px;
+  height: 29px;
+  text-indent: -9999px;
+  border-right: 1px solid #3f3d43;
+  border-left: 1px solid #1c1d20;
+  background: url(../img/icons/tool_icons.png) no-repeat -57px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(#36383c), to(#232427));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#draw:hover {
+  background: url(../img/icons/tool_icons.png) no-repeat -57px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#draw.selected {
+  background: url(../img/icons/tool_icons.png) no-repeat -57px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#remove {
+  width: 28px;
+  height: 29px;
+  text-indent: -9999px;
+  border-right: 1px solid #3f3d43;
+  border-left: 1px solid #1c1d20;
+  width: 29px;
+  -webkit-border-top-right-radius: 3px;
+  -webkit-border-bottom-right-radius: 3px;
+  border-right: none;
+  background: url(../img/icons/tool_icons.png) no-repeat -87px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(#36383c), to(#232427));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#remove:hover {
+  background: url(../img/icons/tool_icons.png) no-repeat -87px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #baseline_selection li a#remove.selected {
+  background: url(../img/icons/tool_icons.png) no-repeat -87px 6px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #polytype_baseline {
+  display: inline-block;
+  width: 128px;
+  height: 29px;
+  padding: 0;
+  margin: 0 0 0 10px;
+  border-radius: 3px;
+  -moz-border-radius: 3px;
+  -webkit-radius: 3px;
+  box-shadow: 0 1px #2A2C2E;
+  border: 1px solid #000000;
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li {
+  float: left;
+  width: 64px;
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li a {
+  display: block;
+  font: bold 11px "Helvetica Neue","Helvetica",Arial;
+  color: white;
+  text-transform: uppercase;
+  text-shadow: 0 1px #000000;
+  text-decoration: none;
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li a#def {
+  width: 29px;
+  height: 11px;
+  padding: 9px 9px 9px 24px;
+  -webkit-border-top-left-radius: 3px;
+  -webkit-border-bottom-left-radius: 3px;
+  border-right: 1px solid #3f3d43;
+  background: url("../img/icons/color_circles.png") no-repeat 10px 12px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(#36383c), to(#232427));
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li a#def:hover {
+  background: url("../img/icons/color_circles.png") no-repeat 10px 12px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li a#def.selected {
+  background: url("../img/icons/color_circles.png") no-repeat 10px 12px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li a#deg {
+  width: 30px;
+  height: 11px;
+  padding: 9px 9px 9px 24px;
+  -webkit-border-top-right-radius: 3px;
+  -webkit-border-bottom-right-radius: 3px;
+  background: url("../img/icons/color_circles.png") no-repeat 10px -9px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(#36383c), to(#232427));
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li a#deg:hover {
+  background: url("../img/icons/color_circles.png") no-repeat 10px -9px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #work_toolbar_baseline #polytype_baseline li a#deg.selected {
+  background: url("../img/icons/color_circles.png") no-repeat 10px -9px, -webkit-gradient(linear, 50% 0%, 50% 100%, from(black), to(#1a1b1e));
+}
+#header #tools #baseline_maptools {
+  float: right;
+  margin: 10px 263px 0 0;
+}
+#header #tools #baseline_maptools li {
+  position: relative;
+  width: 116px;
+  margin: 0;
+  padding: 20px 11px;
+}
+#header #tools #baseline_maptools li a {
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: white;
+  text-shadow: 0 1px black;
+  padding: 0 30px 3px 4px;
+  text-decoration: none;
+}
+#header #tools #baseline_maptools li a#compare {
+  background: url("../img/icons/compare.png") no-repeat right 0;
+}
+#header #tools #baseline_maptools li a#baseline_range {
+  background: url("../img/icons/range.png") no-repeat right 0;
+}
+#header #tools #baseline_maptools li.sep {
+  padding: 0;
+  width: 8px;
+}
+#header #tools #baseline_maptools li.sep img {
+  margin-top: -20px;
+  position: relative;
+  top: 10px;
+  padding: 0 0px;
+}
+#header #tools #baseline_maptools #compare_li {
+  position: relative;
+}
+#header #tools #baseline_maptools div#compare_wrapper {
+  display: none;
+  position: absolute;
+  top: 40px;
+  left: -13px;
+  width: 168px;
+  height: 61px;
+  background: url("../img/bottom_compare_wrapper.png") no-repeat center bottom;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul {
+  display: block;
+  margin: 8px 0 0 27px;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul li {
+  display: inline-block;
+  height: 28px;
+  width: 29px;
+  padding: 0;
+  margin: 0 13px 0 0;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul li a {
+  display: block;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba(0, 0, 0, 0);
+  border-radius: 3px;
+  -moz-border-radius: 3px;
+  -webkit-radius: 3px;
+  text-indent: -9999px;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul li a:hover {
+  border-color: black;
+  box-shadow: 0 1px #2A2C2E;
+  cursor: pointer;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul li a.selected {
+  border-color: black;
+  box-shadow: 0 1px #2A2C2E;
+  cursor: default;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul li a.one {
+  background: url("../img/icons/compare_single.png") center center no-repeat;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul li a.two {
+  background: url("../img/icons/compare_two.png") center center no-repeat;
+}
+#header #tools #baseline_maptools div#compare_wrapper ul li a.four {
+  background: url("../img/icons/compare_four.png") center center no-repeat;
+}
+#header #tools #baseline_maptools #compare_li:hover {
+  background: url("../img/over_header_settings.png") no-repeat -11px 0;
+}
+#header #tools #baseline_maptools #compare_li:hover #compare {
+  background-position: right -23px;
+}
+#header #tools #baseline_maptools #compare_li:hover #compare_wrapper {
+  display: block;
+}
+#header #tools #baseline_maptools #range:hover {
+  background: url("../img/over_header_settings2.png") no-repeat -12px -4px;
+}
+#header #tools #baseline_maptools #range:hover #baseline_range {
+  background-position: right -30px;
+}
+#header #tools #baseline_maptools #range:hover #slider_wrapper {
+  display: block;
+}
+#header #tools #baseline_maptools #range {
+  position: relative;
+}
+#header #tools #baseline_maptools #slider_wrapper {
+  position: absolute;
+  display: none;
+  top: 40px;
+  right: 8px;
+  width: 320px;
+  height: 164px;
+  background: url("../img/bottom_range_wrapper.png") no-repeat 0 0;
+  z-index: 2;
+}
+#header #tools #baseline_maptools #slider_wrapper h3 {
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: rgba(153, 153, 153, 0.9);
+  text-shadow: #000000 0px 1px 0px;
+}
+#header #tools #baseline_maptools #slider_wrapper h3#ndfi_text {
+  position: absolute;
+  left: 27px;
+  top: 13px;
+}
+#header #tools #baseline_maptools #slider_wrapper h3#baseline_visibility_text {
+  position: absolute;
+  left: 27px;
+  top: 60px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility {
+  position: absolute;
+  top: 80px;
+  left: 27px;
+  width: 265px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility .class_selector {
+  font: normal 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: #777;
+  text-shadow: #000000 0px 1px 0px;
+  padding: 0 0 5px 20px;
+  background: url("../img/check.png") no-repeat 0 3px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility .class_selector:hover {
+  color: #FFF;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #degradation {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px -80px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #degradation.check_selected {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px -16px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #deforestation {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px -64px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #deforestation.check_selected {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px 0px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #forest {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px -96px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #forest.check_selected {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px -32px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #deforested {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px -112px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility #deforested.check_selected {
+  background: url("../img/icons/switchers_ndfi.png") no-repeat no-repeat 0px -48px;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility .left {
+  width: 50%;
+  float: left;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_visibility .right {
+  width: 50%;
+  float: right;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_slider {
+  position: absolute;
+  top: 43px;
+  left: 27px;
+  border: none;
+  width: 266px;
+  height: 2px;
+  background: rgb(0, 0, 0);
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_slider span.hack_forest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  height: 2px;
+  background: rgb(32, 224, 32);
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_slider p.tooltip {
+  position: absolute;
+  top: -26px;
+  width: 24px;
+  height: 10px;
+  margin: 0 0 0 -7px;
+  padding: 4px 0 10px 1px;
+  background: url("../img/slider_tooltip_bkg.png") no-repeat 0 0;
+  font: normal 10px "Helvetica Neue", Arial, Sans-Serif;
+  color: #CCCCCC;
+  text-align: center;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-slider-handle {
+  top: -6px;
+  width: 13px;
+  height: 14px;
+  background: url("../img/icons/slider_handle.png") no-repeat 0 0;
+  padding: 0;
+  outline: none;
+  border: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-slider-handle:focus {
+  outline: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-state-hover {
+  background-position: 0 -14px;
+  cursor: pointer;
+}
+#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-slider-range {
+  height: 2px;
+  background: rgb(0,255,255);
 }
 #header #overview {
   position: absolute;

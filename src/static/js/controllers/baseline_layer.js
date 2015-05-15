@@ -5,12 +5,12 @@ function is_color(col1, col2) {
             col1[2] == col2[2];
 }
 
-var NDFILayer = Backbone.View.extend({
+var BaselineLayer = Backbone.View.extend({
 
     //DEFORESTATION_COLOR: [248, 8, 8],
     //DEGRADATION_COLOR: [247, 119, 87],
-    DEFORESTATION_COLOR: [255, 46, 0],
-    DEGRADATION_COLOR: [255, 199, 44],
+    DEFORESTATION_COLOR: [0, 0, 0],
+    DEGRADATION_COLOR: [0, 255, 254],
     PREVIOUS_DEFORESTATION_COLOR: [0, 0, 255],
     PREVIOUS_DEGRADATION_COLOR: [0, 255, 255],
     FOREST_COLOR: [32, 224, 32],
@@ -23,81 +23,34 @@ var NDFILayer = Backbone.View.extend({
         var self = this;
         this.editing_state = false;
         this.mapview = this.options.mapview;
-        this.report = this.options.report;
-        this.available_layers = this.options.available_layers;
+        this.report = this.options.report;        
         this.layer = new CanvasTileLayer(this.canvas_setup, this.filter);
-
-        //Joao code
-        /*
-        this.layer_L5 = new CanvasTileLayer(this.canvas_setup, this.filter);
-
-        this.layer_L7 = new CanvasTileLayer(this.canvas_setup, this.filter);
-        */
-
-        this.low = 40;
-        this.high = 60;
+ 
+        this.low = 175;        
         this.showing = false;
         this.inner_poly_sensibility = 10;
         console.log("Report ID: "+this.report.id);
 
-        this.ndfimap = new NDFIMap({report_id: this.report.id, sensor: 'modis'});
+        
 
-        //this.ndfimap_L5 = new NDFIMap({report_id: this.report.id, sensor: 'landsat5'});
-
-        //this.ndfimap_L7 = new NDFIMap({report_id: this.report.id, sensor: 'landsat7'});
-
-        this.ndfimap.bind('change', this.map_auth);
+        
 
         this.mapview.bind('click', this.click);
 
-        this.ndfimap.fetch({
-            error: function() {
-                self.trigger('map_error');
-            }
-        });
-
-        /*
-        this.ndfimap_L5.fetch({
-            error: function(){
-                self.trigger('map_error');
-            }
-        });
-
-        this.ndfimap_L7.fetch({
-            error: function(){
-                self.trigger('map_error');
-            }
-        });*/
-
-        this.map_layer = new LayerModel({
-              id: 'NDFI',
-              type: 'custom',
-              description: 'NDFI analysis',
-               layer: this.layer,
-               visibility: true
-       });
-
-       /* console.log("MapId: "+this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('id')+', Token: '+
-                    this.available_layers.get_by_name('NDFI T1 (LANDSAT5)').get('token'));*/
+        
 
         
-        //Joao code
-        /*
-        this.map_layer_L5 = new LayerModel({
-              id: 'NDFI LANDSAT5',
-              type: 'custom',
-              description: 'NDFI (LANDSAT5) analysis',
-              layer: this.layer_L5,
+        /*this.map_layer =  new LayerModel({
+              id: 'Baselien',              
+              layer: this.layer,
               visibility: true
-        });
-
-        this.map_layer_L7 = new LayerModel({
-              id: 'NDFI LANDSAT7',
-              type: 'custom',
-              description: 'NDFI (LANDSAT7) analysis',
-              layer: this.layer_L7,
-              visibility: true
-       });*/
+        });*/
+        
+        
+        this.mapview.layers.bind('change_layers_baseline', function() {        	
+        	self.map_auth();
+		});
+        
 
         this.sub_map_layer = [];
         this.add_class_control_layers();
@@ -115,22 +68,14 @@ var NDFILayer = Backbone.View.extend({
 
     map_auth: function() {
         var self = this;
-        this.token = this.ndfimap.get('token');
-        this.mapid = this.ndfimap.get('mapid');
-        //console.log("URL NDFI : "+this.ndfimap.url);
-        console.log(this.map_layer);
-        this.mapview.layers.add(this.map_layer, { at: 0 });
-        console.log(this.map_layer);
-        /*
-        this.mapview.layers.add(this.map_layer_L5, { at: 1});
-        this.mapview.layers.add(this.map_layer_L7, { at: 2});
+        this.map_layer = this.mapview.layers.get_by_contains_name('Baseline', this.layer);        
         
-        this.mapview.layers.bind('change', this.change_map_auth);*/
-        /*_.each(this.sub_map_layer, function(l) {
-            l.bind('change', self.class_visibility);
-            self.mapview.layers.add(l);
-        });*/
-        // reload tiles
+        
+        this.token = this.map_layer.get('token');
+        this.mapid = this.map_layer.get('mapid');
+    	
+        console.log("Token: "+this.token+"Mapid: "+this.mapid);
+        
         if(this.showing) {
             this.hide();
             this.show();
@@ -293,8 +238,10 @@ var NDFILayer = Backbone.View.extend({
 
     apply_filter: function(low, high) {
         this.low = low;
+        //console.log(low);
         this.high = high;
         this.layer.filter_tiles(low, high);
+        //this.layer.filter_tiles(low);
     },
 
     canvas_setup: function (canvas, coord, zoom) {
@@ -328,7 +275,7 @@ var NDFILayer = Backbone.View.extend({
             //ctx.globalAlpha = 0.5;
             ctx.drawImage(image, 0, 0);
             canvas.image_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            self.layer.filter_tile(canvas, [self.low, self.high]);
+            self.layer.filter_tile(canvas, self.low, self.high);
       }).error(function() {
             console.log("server error loading image");
             load_finished();
@@ -338,20 +285,28 @@ var NDFILayer = Backbone.View.extend({
     // filter image canvas based on thresholds
     // and color it
     filter: function(image_data, w, h, low, high) {
-    	var components = 4; //rgba
-
+    //filter: function(image_data, w, h, low) {
+        var components = 4; //rgba
+          
         // yes, this variables are the same as declared on this view
         // this is because javascript looks like optimize if
         // variables are local and a constant
         var NDFI_ENCODING_LIMIT = this.NDFI_ENCODING_LIMIT;
         //var DEFORESTATION_COLOR= [248, 8, 8];
-        var DEFORESTATION_COLOR= [255, 46, 0];
-        var OLD_DEFORESTATION_COLOR= [255, 255, 0];
-        var DEGRADATION_COLOR= [255, 199, 44];
+        var DEFORESTATION_COLOR= [0, 0, 0];
+        //var OLD_DEFORESTATION_COLOR= [255, 255, 0];
+        //var DEGRADATION_COLOR=  [0, 255, 255]; //[255, 199, 44];
+        var DEGRADATION_COLOR= [0, 255, 254]; //[255, 199, 44];
         //var DEGRADATION_COLOR= [247, 119, 87];
-        var FOREST_COLOR= [32, 224, 32];
+        var FOREST_COLOR = [0, 153, 77]; // [32, 224, 32];
+        var CLOUD_COLOR = [102, 102, 102];
+        var WATER_COLOR = [0, 0, 255];
+        
         var UNCLASSIFIED = 201;
-        var BASELINE = 205;
+        //var FOREST = 77;
+        var CLOUD = 202;
+        var WATER = 255;
+        var BASELINE = 0;
         var PREVIOUS_DEFORESTATION = 203;
         var PREVIOUS_DEGRADATION = 204;
         var OLD_DEFORESTATION = 207;
@@ -370,6 +325,8 @@ var NDFILayer = Backbone.View.extend({
         var show_deforested = 255;
 
         var pixel_pos;
+//        console.log(image_data[0],image_data[1],image_data[2],image_data[3]);
+//        console.log(image_data);
         for(var i=0; i < w; ++i) {
             for(var j=0; j < h; ++j) {
                 pixel_pos = (j*w + i) * components;
@@ -378,20 +335,20 @@ var NDFILayer = Backbone.View.extend({
                 // there is a better way to do this but this is fastest
                 if(a > 0) {
                     if(p < low) {
-                        image_data[pixel_pos + 0] = FOREST_COLOR[0];
-                        image_data[pixel_pos + 1] = FOREST_COLOR[1];
-                        image_data[pixel_pos + 2] = FOREST_COLOR[2];
-                        image_data[pixel_pos + 3] = show_forest;
-                    } else if(p > high) {
-                        image_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
+                    	image_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
                         image_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
                         image_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
                         image_data[pixel_pos + 3] = show_deforestation;
-                    } else {
-                        image_data[pixel_pos + 0] = DEGRADATION_COLOR[0];
+                    }else if(p > high) {
+                    	image_data[pixel_pos + 0] = FOREST_COLOR[0];
+                        image_data[pixel_pos + 1] = FOREST_COLOR[1];
+                        image_data[pixel_pos + 2] = FOREST_COLOR[2];
+                        image_data[pixel_pos + 3] = show_forest;                                            	
+                    }else {
+                    	image_data[pixel_pos + 0] = DEGRADATION_COLOR[0];
                         image_data[pixel_pos + 1] = DEGRADATION_COLOR[1];
                         image_data[pixel_pos + 2] = DEGRADATION_COLOR[2];
-                        image_data[pixel_pos + 3] = show_degradation;
+                        image_data[pixel_pos + 3] = show_degradation;                        
                     }
 
                     if(p >= NDFI_ENCODING_LIMIT) {
@@ -400,22 +357,22 @@ var NDFILayer = Backbone.View.extend({
                             image_data[pixel_pos + 1] = 255;
                             image_data[pixel_pos + 2] = 255;
                             image_data[pixel_pos + 3] = 255;
-                        } else if (p == BASELINE) {
+                        } /*else if (p == BASELINE) {
                             image_data[pixel_pos + 0] = 0;
                             image_data[pixel_pos + 1] = 0;
                             image_data[pixel_pos + 2] = 0;
                             image_data[pixel_pos + 3] = 255;
-                        } else if (p == OLD_DEFORESTATION) {
-                            image_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
-                            image_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
-                            image_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
-                            image_data[pixel_pos + 3] = show_deforestation;
-                        } else if (p == PREVIOUS_DEFORESTATION) {
-                            image_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
-                            image_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
-                            image_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
-                            image_data[pixel_pos + 3] = show_deforestation;
-                        } else {
+                        } */else if (p == CLOUD) {
+                        	image_data[pixel_pos + 0] = CLOUD_COLOR[0];
+                            image_data[pixel_pos + 1] = CLOUD_COLOR[1];
+                            image_data[pixel_pos + 2] = CLOUD_COLOR[2];
+                            image_data[pixel_pos + 3] = 255;
+                        }else if (p == WATER) {
+                        	image_data[pixel_pos + 0] = WATER_COLOR[0];
+                            image_data[pixel_pos + 1] = WATER_COLOR[1];
+                            image_data[pixel_pos + 2] = WATER_COLOR[2];
+                            image_data[pixel_pos + 3] = 255;
+                        }else {
                           image_data[pixel_pos + 0] = FOREST_COLOR[0];
                           image_data[pixel_pos + 1] = FOREST_COLOR[1];
                           image_data[pixel_pos + 2] = FOREST_COLOR[2];

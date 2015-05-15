@@ -61,6 +61,19 @@ def default_maps():
 
     assetid = r.previous().as_dict().get('assetid')
     logging.info("Assetid :"+str(assetid))
+    d = ndfi.smaid()
+    if d: maps.append({'data': d, 'info': 'SMA'})    
+    d = ndfi.rgb1id()
+    if d: maps.append({'data': d, 'info': 'RGB'})
+    d = ndfi.ndfi0id('modis')
+    if d: maps.append({'data': d, 'info': 'NDFI T0 (MODIS)'})
+    d = ndfi.ndfi1id('modis')
+    if d: maps.append({'data' :d, 'info': 'NDFI T1 (MODIS)'})
+    d = ndfi.baseline(r.base_map())
+    if d: maps.append({'data' :d, 'info': 'Baseline'})
+    d = ndfi.rgb0id()
+    if d: maps.append({'data': d, 'info': 'Previous RGB'})
+    return maps
     
     """
     sma = SMA(past_month_range(r.start), r.range(), SMA.LANDSAT7_T1)
@@ -81,19 +94,7 @@ def default_maps():
     if d: maps.append({'data': d, 'info': 'NDFI T1 (LANDSAT7)'})
     """
     
-    d = ndfi.smaid()
-    if d: maps.append({'data': d, 'info': 'SMA'})    
-    d = ndfi.rgb1id()
-    if d: maps.append({'data': d, 'info': 'RGB'})
-    d = ndfi.ndfi0id('modis')
-    if d: maps.append({'data': d, 'info': 'NDFI T0 (MODIS)'})
-    d = ndfi.ndfi1id('modis')
-    if d: maps.append({'data' :d, 'info': 'NDFI T1 (MODIS)'})
-    d = ndfi.baseline(r.base_map())
-    if d: maps.append({'data' :d, 'info': 'Baseline'})
-    d = ndfi.rgb0id()
-    if d: maps.append({'data': d, 'info': 'Previous RGB'})
-    return maps
+    
 
 @app.route('/map/level/<level>/<bbox>/')
 def maps_level(level, bbox):

@@ -501,9 +501,11 @@ class CellGrid(db.Model):
             #if len(intersection.getInfo()['coordinates']) > 0:
             if geo_cell_grid.intersects(geo_tile, ee.ErrorMargin(30.0, "meters"), "EPSG:4326").getInfo():
                 logging.info(r[i].name)
+                r[i].save_cells(self.name, False)
                 #logging.info(geo_cell_grid.intersects(geo_tile, ee.ErrorMargin(30.0, "meters"), "EPSG:4326").getInfo())
                 result.append(r[i])
             else:
+                r[i].save_cells(self.name, True)
                 logging.info(r[i].name)
         
         return result
@@ -625,6 +627,17 @@ class Tile(db.Model):
             return  ast.literal_eval(r[0].geo) 
         else:
             return None
+        
+    def save_cells(self, name, remove):
+        if remove:
+            self.cells.remove(name)
+            self.put()
+        else:
+            if name in self.cells:
+                pass
+            else:
+                self.cells.append(name)
+                self.put()    
             
                 
     
