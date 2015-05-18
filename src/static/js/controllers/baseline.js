@@ -662,6 +662,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			success : function() {
 				self.done = true;
 				self.baseline_response = this;
+				alert("Baseline created.");
 				self.trigger('baseline_success');
 				return this;
 			}
@@ -796,6 +797,7 @@ var Baseline = Backbone.View.extend({
 
 				this.baseline_layer = new BaselineLayer({mapview: this.map, report: this.report});
 				this.polygon_tools.baseline_range.bind('change', this.baseline_layer.apply_filter);
+				this.polygon_tools.bind('visibility_change', this.baseline_layer.class_visibility);
 				this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
 				this.cell_polygons = new CellPolygons({mapview: this.map});
 				//this.polygon_tools.baseline_range.bind('stop', this.change_baseline);
@@ -916,7 +918,7 @@ var Baseline = Backbone.View.extend({
 						setting_baseline.find('#load_baseline').click(
 								function(e) {
 									
-									self.genarete_baseline(e, cell, baseline_lay.get('start'), baseline_lay.get('end'), cell_name, cell_bbox);
+									self.genarete_baseline(e, cell, baseline_lay.get('start'), baseline_lay.get('end'), cell_name, cell_bbox, this);
 								});
 
 						setting_baseline.find('#load_baseline').show();
@@ -1117,12 +1119,15 @@ var Baseline = Backbone.View.extend({
 
 				this.editor_baseline_imagepicker.baseline_layers.url = "/baseline_on_cell/"
 						+ date_start + "/" + date_end + "/" + cell_name + "/"
+						
+                						
 				this.editor_baseline_imagepicker.baseline_layers
 						.fetch({
 							success : function() {
 								self.editor_baseline_imagepicker.done = true;
 								self.editor_baseline_imagepicker.baseline_response = this;
 								self.editor_baseline_imagepicker.trigger('baseline_success');
+								alert("Baseline loaded.");
 								return this;
 							}
 						});
@@ -1231,7 +1236,7 @@ var RangeSliderBaseline = Backbone.View.extend({
              min: 0,
              max: 200,
              //values: [40, 60], //TODO: load from model
-             values: [175, 185], //TODO: load from model
+             values: [165, 175], //TODO: load from model
              slide: function(event, ui) {
                  // Hack to get red bar resizing
 
@@ -1253,8 +1258,8 @@ var RangeSliderBaseline = Backbone.View.extend({
                  
                  var size0 = self.$('a.ui-slider-handle:eq(0)').css('left');
 
-                 self.$('a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">175</p>');
-                 self.$('a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">185</p>');
+                 self.$('a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">165</p>');
+                 self.$('a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">175</p>');
              }
       });
  },

@@ -133,15 +133,12 @@ var LayerBaselineCollection = Backbone.Collection.extend({
         var lay;        
         this.each(function(m) {
             if(m.get('id') === name) { 
-            	console.log("Layer 1 ---------------");
-                console.log(m);                
+            	               
                 m.set({"layer": layer});
                 m.map_layer = layer;
-                console.log("Layer 2 ---------------");
-                console.log(m);
-            	lay = m.clone();
-            	console.log("Layer 3 ---------------");
-                console.log(lay);
+                
+            	lay = m;
+            	
             }
             
         });

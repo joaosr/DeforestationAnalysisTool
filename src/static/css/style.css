@@ -2024,7 +2024,7 @@ text-shadow: #000000 0px 1px 0px;
   right: 0;
   z-index: 1;
   height: 2px;
-  background: rgb(32, 224, 32);
+  background: rgb(0, 153, 77);
 }
 #header #tools #baseline_maptools #slider_wrapper div#baseline_slider p.tooltip {
   position: absolute;
