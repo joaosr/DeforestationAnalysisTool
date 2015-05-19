@@ -181,6 +181,13 @@ var LayerCollection = Backbone.Collection.extend({
             console.log(result.result);
             return result.result;
         },
+        remove_layer_type: function(type){
+            this.each(function(m){
+                if(m.get('type') === type){
+                 this.remove(m);
+                }
+            });
+        },
         update_time_range: function(start, end){
             this.each(function(m){
                 if(m.get('type') === 'xyz'){
@@ -216,7 +223,7 @@ var LayerCollection = Backbone.Collection.extend({
                 }
             });
             return lay;
-        },
+        },        
         // return a new collection
         filter_by_type: function(callback) {
             return _(this.filter(function(layer) {

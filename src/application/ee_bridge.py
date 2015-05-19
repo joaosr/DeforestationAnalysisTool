@@ -1768,7 +1768,7 @@ def create_tile_baseline(start_date, end_date, cell):
         baseline_result          = baseline.save()['data']
         baseline_result['mapid'] = mapid
         baseline_result['token'] = token
-        baseline_result['id']    = 'Baseline' 
+        baseline_result['id']    = 'baseline' 
         baseline_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 
         
         resutls.append(baseline_result)
@@ -1789,8 +1789,8 @@ def create_tile_baseline(start_date, end_date, cell):
                         })
         
         feature_sma = ee.Image(image_sma).getMapId({
-                              'bands': 'band_2, band_1, band_0',                              
-                              'gain': '0.06, 0.06, 0.06'                           
+                              'bands': 'band_2, band_0, band_1',                              
+                              'gain': '6.0, 3.0, 6.0'                           
                               })
         
         resutls.append({'id':          feature_sma['mapid'],
@@ -1862,7 +1862,7 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None):
     ndfi = ndfi.where(cloudMask2.eq(1), 202) # Apply cloud mask
     ndfi = ndfi.where(summed.lte(0.15), 255) # Apply water mask
     
-    return {'baseline': classification_baseline, 'ndfi': ndfi, 'ndfi_rgb': classification_ndfi, 'sma': unmixed}
+    return {'baseline': classification_baseline, 'ndfi': ndfi, 'ndfi_rgb': classification_ndfi, 'sma': unmixed.max(0).multiply(100).byte()}
     
 
 

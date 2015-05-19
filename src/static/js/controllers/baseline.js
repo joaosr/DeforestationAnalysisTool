@@ -909,22 +909,37 @@ var Baseline = Backbone.View.extend({
 					var baseline_lay = this.baselines.get_by_cell(cell_name);
 
 					if (baseline_lay) {
+						setting_baseline.find('#rebuild_baseline').unbind('click');
 						setting_baseline.find('#rebuild_baseline').click(
 								function(e) {
 									if (e){e.preventDefault();}
 									self.show_imagepicker_search(e, cell, cell_bbox);
 								});
 
+						
+						console.log(cell_name);
+						setting_baseline.find('#load_baseline').unbind('click');
 						setting_baseline.find('#load_baseline').click(
 								function(e) {
+									e.preventDefault();
+									console.log(cell_name);
+									var that = this;
+									$(this)[0].disabled = true;
+									
+									
+									self.bind('load_success', function(){
+										$(that)[0].disabled = false;
+										
+									})
 									
 									self.genarete_baseline(e, cell, baseline_lay.get('start'), baseline_lay.get('end'), cell_name, cell_bbox, this);
 								});
-
+						
 						setting_baseline.find('#load_baseline').show();
 						setting_baseline.find('#rebuild_baseline').show();
 						setting_baseline.find('#build_baseline').hide();
 					} else {
+						setting_baseline.find('#build_baseline').unbind('click');
 						setting_baseline.find('#build_baseline').click(
 								function(e) {
 									if (e){e.preventDefault();}
@@ -1019,6 +1034,42 @@ var Baseline = Backbone.View.extend({
 									+ name + '","' + 'false' + '",';
 						}
 					}
+					
+					var available_maps=[
+										{
+										    id: '6',
+										    type: 'google_maps',
+										    map_id: 'TERRAIN',
+										      visibility: true,
+										  description: 'Terrain',
+										    enabled: true
+										}, 
+										{
+										    id: '7',
+										    type: 'google_maps',
+										    map_id: 'SATELLITE',
+										       visibility: true,
+										 description: 'Satellite'
+										},
+										{
+										    id: '9',
+										    type: 'google_maps',
+										    map_id: 'ROADMAP',
+										        visibility: true,
+										description: 'Roadmap'
+										}, {
+										    id: '8',
+										    type: 'google_maps',
+										    map_id: 'HYBRID',
+										     visibility: true,
+										   description: 'Hybrid',
+										}
+
+
+					                  ];
+					
+					item.baseline_layers.add(available_maps);
+					
 
 					map_one_layer_status = map_one_layer_status + '*';
 					map_two_layer_status = map_two_layer_status + '*';
@@ -1089,9 +1140,8 @@ var Baseline = Backbone.View.extend({
 					this.editor_baseline_imagepicker.show();
 				}
 			},
-			genarete_baseline : function(e, cell, date_start, date_end, cell_name, bbox) {
-				if (e)e.preventDefault();
-
+			genarete_baseline : function(e, cell, date_start, date_end, cell_name, bbox) {				
+				
 				date_start = date_start.split("/");
 				date_start = date_start.join("-");
 				date_end = date_end.split("/");
@@ -1127,6 +1177,7 @@ var Baseline = Backbone.View.extend({
 								self.editor_baseline_imagepicker.done = true;
 								self.editor_baseline_imagepicker.baseline_response = this;
 								self.editor_baseline_imagepicker.trigger('baseline_success');
+								self.trigger('load_success');
 								alert("Baseline loaded.");
 								return this;
 							}

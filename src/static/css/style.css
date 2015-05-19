@@ -2723,6 +2723,13 @@ body, html {
   border: 1px solid rgb(63, 62, 62);
   box-shadow: 0 0 1px rgba(255, 255, 255, 1);
 }
+
+#grid .cell .cell_wrapper_info #setting_baseline #load_baseline:disabled{      
+  background-color: rgb(158, 158, 158);  
+  text-shadow: 0 1px rgb(68, 68, 68);      
+  border: 1px solid rgb(158, 158, 158);
+  box-shadow: 0 0 1px rgb(0, 0, 0);	
+}
 #grid .cell .cell_wrapper_info h3 {
   display: block;
   margin: 5px 0 0 9px;
@@ -3087,3 +3094,6 @@ article.login a.sign_in:hover {
 img.image_picker_image{
     width: 130px;
 }
+
+
+

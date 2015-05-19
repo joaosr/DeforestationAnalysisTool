@@ -60,7 +60,7 @@ var BaselineLayer = Backbone.View.extend({
 
     add_class_control_layers: function() {
         var self = this;
-        var classes = ['deforestation', 'degradation', 'forest', 'deforested'];
+        var classes = ['deforestation', 'degradation', 'forest'];
         _.each(classes, function(name) {
             var var_name = 'show_' + name;
             self[var_name] = 255;
@@ -69,7 +69,7 @@ var BaselineLayer = Backbone.View.extend({
 
     map_auth: function() {
         var self = this;
-        this.map_layer = this.mapview.layers.get_by_contains_name('Baseline', this.layer);        
+        this.map_layer = this.mapview.layers.get_by_contains_name('baseline', this.layer);        
         
         
         this.token = this.map_layer.get('token');

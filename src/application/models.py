@@ -285,7 +285,10 @@ class Cell(db.Model):
         q.filter("z =", z)
         q.filter("x =", x)
         q.filter("y =", y)
-        q.filter("operation =", operation)
+        if operation == 'null':
+            q.filter("operation =", 'sad')
+        else:    
+            q.filter("operation =", operation)
         q.filter("report =", report)
         cell = q.fetch(1)
         if cell:
@@ -304,6 +307,7 @@ class Cell(db.Model):
         childs = Cell.all()
         childs.filter('report =', self.report)
         childs.filter('parent_id =', eid)
+        childs.filter('operation = ', self.operation)
 
         children_cells = dict((x.external_id(), x) for x in childs.fetch(SPLITS*SPLITS))
 
@@ -370,7 +374,10 @@ class Cell(db.Model):
 
     @staticmethod
     def default_cell(r, operation, x, y, z):
-        return Cell(z=z, x=x, y=y, ndfi_low=0.2, ndfi_high=0.3, report=r, operation=operation)
+        if operation == 'null':
+            return Cell(z=z, x=x, y=y, ndfi_low=0.2, ndfi_high=0.3, report=r, operation='sad')
+        else:
+            return Cell(z=z, x=x, y=y, ndfi_low=0.2, ndfi_high=0.3, report=r, operation=operation)
 
     def external_id(self):
         return "_".join(map(str,(self.z, self.x, self.y)))

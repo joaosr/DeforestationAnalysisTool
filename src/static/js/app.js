@@ -557,6 +557,7 @@ $(function() {
          	    console.log(response['cell']);
          	    console.log(response['baseline']);
          	    this.map.reset_layers_map('2', response['baseline'], 'baseline');
+         	    this.map.layers.trigger('reset');
          	    this.map.layers.bind('change_layers_baseline');
          	    this.main_operations.baseline.baseline_layer.map_auth();
          	    
