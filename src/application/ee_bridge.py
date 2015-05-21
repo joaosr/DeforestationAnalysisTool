@@ -1715,7 +1715,7 @@ def create_tile_baseline(start_date, end_date, cell):
             
             resutls.append({'id':          feature_image['mapid'],
                             'token':       feature_image['token'],
-                            'type':        'baseline',
+                            'type':        'xyz',
                             'visibility':  True,
                             'description': 'RGB/'+sensor,
                             'url': 'https://earthengine.googleapis.com/map/'+feature_image['mapid']+'/{Z}/{X}/{Y}?token='+feature_image['token']
@@ -1768,6 +1768,7 @@ def create_tile_baseline(start_date, end_date, cell):
         baseline_result          = baseline.save()['data']
         baseline_result['mapid'] = mapid
         baseline_result['token'] = token
+        baseline_result['type']  = 'custom'
         baseline_result['id']    = 'baseline' 
         baseline_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 
         
@@ -1782,7 +1783,7 @@ def create_tile_baseline(start_date, end_date, cell):
         
         resutls.append({'id':          feature_ndfi['mapid'],
                         'token':       feature_ndfi['token'],
-                        'type':        'baseline',
+                        'type':        'xyz',
                         'visibility':  True,
                         'description': 'NDFI',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_ndfi['mapid']+'/{Z}/{X}/{Y}?token='+feature_ndfi['token']
@@ -1790,12 +1791,12 @@ def create_tile_baseline(start_date, end_date, cell):
         
         feature_sma = ee.Image(image_sma).getMapId({
                               'bands': 'band_2, band_0, band_1',                              
-                              'gain': '6.0, 3.0, 6.0'                           
+                              'gain': '20.0, 3.5, 20.0'                           
                               })
         
         resutls.append({'id':          feature_sma['mapid'],
                         'token':       feature_sma['token'],
-                        'type':        'baseline',
+                        'type':        'xyz',
                         'visibility':  True,
                         'description': 'SMA',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_sma['mapid']+'/{Z}/{X}/{Y}?token='+feature_sma['token']

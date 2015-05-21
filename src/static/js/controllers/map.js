@@ -134,28 +134,7 @@ var MapView = Backbone.View.extend({
             c.hide();
         }
     },
-    reload_layers: function(level, bound){
-        this.layers.url = 'map/level/'+level+'/'+bound+'/'
-        var that = this;
-        this.layers.fetch({
-            success: function(){
-                that.setting_layer_in_level(level);
-            }
-        });
-    },
-    setting_layer_in_level: function(level){
-        if(level == '0'){
-            this.layers.update_visibility_with_type(false, 'processed');
-            this.layers.update_visibility_with_type(false, 'analysis');
-        }
-        else if(level == '1'){
-            this.layers.update_visibility_with_type(true, 'processed');
-            this.layers.update_visibility_with_type(false, 'analysis');
-        }
-        else if(level == '2'){
-            this.layers.update_visibility_with_type(true, 'analysis');
-        }
-    },
+    
     //close layer editor if it's opened
     close_layer_editor: function() {
         if(this.layer_editor !== undefined && this.layer_editor.showing) {
@@ -194,7 +173,10 @@ var MapView = Backbone.View.extend({
             }
     },
     reset_layers_map: function(level, layer, operation_map) {
-    	this.layers        = layer;
+    	//this.layers.models = layer.models;
+    	this.layers.reset(layer.toJSON());
+    	//this.layers = layer;
+    	//this.layers.trigger('reset');
     	this.zoom_level    = level;
     	this.operation_map = operation_map; 
     	this.layer_editor  = undefined;
@@ -311,7 +293,7 @@ var MapView = Backbone.View.extend({
                 //and the bind to no bond twice
                 layer.unbind('change', self.reoder_layers);
                 layer.bind('change', self.reoder_layers);
-            }
+	        } 
             lyr = layer.map_layer;
             if(lyr) {
                 if(layer.get('type') === 'fusion_tables') {

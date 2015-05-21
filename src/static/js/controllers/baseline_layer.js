@@ -49,7 +49,7 @@ var BaselineLayer = Backbone.View.extend({
         
         
         this.mapview.layers.bind('change_layers_baseline', function() {        	
-        	self.map_auth();
+           self.map_auth();
 		});
         
 
@@ -69,11 +69,12 @@ var BaselineLayer = Backbone.View.extend({
 
     map_auth: function() {
         var self = this;
-        this.map_layer = this.mapview.layers.get_by_contains_name('baseline', this.layer);        
+        this.map_layer = this.mapview.layers.set_canvas_in_custom_layer(this.layer);        
         
         
         this.token = this.map_layer.get('token');
         this.mapid = this.map_layer.get('mapid');
+        this.mapview.layers.trigger('reset');
     	
         console.log("Token: "+this.token+"Mapid: "+this.mapid);
         

@@ -93,11 +93,11 @@ var LayerEditor = Backbone.View.extend({
         this.el = $(this.template());
         this.options.parent.append(this.el);
         
-        if(this.zoom_level === '2'){
+        /*if(this.zoom_level === '2'){
         	this.addLayersOperationMap(this.layers, this.operation_map);
-        }else{
+        }else{*/
         	this.addLayers(this.layers);
-        }
+        //}
         
         this.el.find('ul').jScrollPane({autoReinitialise:true});
 

@@ -528,7 +528,8 @@ $(function() {
             
             if(this.main_operations.sad.selected){            	
             	this.polygon_tools.show();	
-            	
+            	this.map.reset_layers_map('2', this.available_layers, 'sad');
+            	this.ndfi_layer.ndfimap.trigger('change');
             	this.ndfi_layer.show();
             	this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
             	this.compare_view(cell.get('compare_view'));
@@ -556,9 +557,8 @@ $(function() {
          	    //cell = response['cell'];
          	    console.log(response['cell']);
          	    console.log(response['baseline']);
-         	    this.map.reset_layers_map('2', response['baseline'], 'baseline');
-         	    this.map.layers.trigger('reset');
-         	    this.map.layers.bind('change_layers_baseline');
+         	    this.map.reset_layers_map('2', response['baseline'], 'baseline');         	    
+         	    //this.map.layers.trigger('change_layers_baseline');
          	    this.main_operations.baseline.baseline_layer.map_auth();
          	    
          	    this.compare_view(cell.get('compare_view'));

@@ -129,13 +129,12 @@ var LayerBaselineCollection = Backbone.Collection.extend({
         });
         return lay;
     },
-    get_by_contains_name: function(name, layer) {
+    set_canvas_in_custom_layer: function(layer) {
         var lay;        
         this.each(function(m) {
-            if(m.get('id') === name) { 
+            if(m.get('type') === 'custom') { 
             	               
-                m.set({"layer": layer});
-                m.map_layer = layer;
+                m.set({"layer": layer});                    
                 
             	lay = m;
             	
@@ -143,16 +142,6 @@ var LayerBaselineCollection = Backbone.Collection.extend({
             
         });
         return lay;
-    },
-    set_by_contains_name: function(name, layer) {    	
-        this.each(function(m) {
-            if(m.get('id') === name) {            	
-                m = layer;
-                
-                console.log("Layer 2 ---------------");
-                console.log(m);
-            }            
-        });                
     },
  // return a new collection
     filter_by_type: function(callback) {
@@ -180,41 +169,7 @@ var LayerCollection = Backbone.Collection.extend({
         parse: function(result){
             console.log(result.result);
             return result.result;
-        },
-        remove_layer_type: function(type){
-            this.each(function(m){
-                if(m.get('type') === type){
-                 this.remove(m);
-                }
-            });
-        },
-        update_time_range: function(start, end){
-            this.each(function(m){
-                if(m.get('type') === 'xyz'){
-                  m.set('date_start', start);
-                  m.set('date_end', end);
-                }
-            });
-        },
-        update_maps_id: function(){
-            this.each(function(m){
-                if(m.get('type') === 'xyz'){
-                    m.url = ""
-                    m.fetch({
-                        success: function(){
-
-                        }
-                    });
-                }
-            });
-        },
-        update_visibility_with_type: function(visibility, type){
-             this.each(function(m){
-                if(m.get('type') == type && m.get('visibility') != visibility){
-                    m.set('visibility', visibility);
-                }
-             });
-        },
+        },        
         get_by_name: function(name) {
             var lay;
             this.each(function(m) {
@@ -223,7 +178,21 @@ var LayerCollection = Backbone.Collection.extend({
                 }
             });
             return lay;
-        },        
+        },
+        set_canvas_in_custom_layer: function(layer) {
+            var lay;        
+            this.each(function(m) {
+                if(m.get('type') === 'custom') { 
+                	               
+                    m.set({"layer": layer});                    
+                    
+                	lay = m;
+                	
+                }
+                
+            });
+            return lay;
+        },
         // return a new collection
         filter_by_type: function(callback) {
             return _(this.filter(function(layer) {
