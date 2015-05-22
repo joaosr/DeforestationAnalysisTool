@@ -714,7 +714,7 @@ $(function() {
             this.map.layers.reset(this.available_layers.models);
             
 
-            add_rgb_layers(this.map.layers, this.gridstack, this.active_report.get('id'));
+            add_rgb_layers(this.map.layers, this.gridstack, this.active_report.get('id'), 'sad');
             this.map.layers.trigger('reset');
 
             // enable layer, amazonas bounds

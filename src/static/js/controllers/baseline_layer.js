@@ -277,7 +277,7 @@ var BaselineLayer = Backbone.View.extend({
             //ctx.globalAlpha = 0.5;
             ctx.drawImage(image, 0, 0);
             canvas.image_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            self.layer.filter_tile(canvas, self.low, self.high);
+            self.layer.filter_tile(canvas, [self.low, self.high]);
       }).error(function() {
             console.log("server error loading image");
             load_finished();
@@ -286,49 +286,30 @@ var BaselineLayer = Backbone.View.extend({
 
     // filter image canvas based on thresholds
     // and color it
-    filter: function(image_data, w, h, low, high) {
-    //filter: function(image_data, w, h, low) {
+    filter: function(image_data, w, h, low, high) {    
         var components = 4; //rgba
           
         // yes, this variables are the same as declared on this view
         // this is because javascript looks like optimize if
         // variables are local and a constant
-        var NDFI_ENCODING_LIMIT = this.NDFI_ENCODING_LIMIT;
-        //var DEFORESTATION_COLOR= [248, 8, 8];
-        var DEFORESTATION_COLOR= [0, 0, 0];
-        //var OLD_DEFORESTATION_COLOR= [255, 255, 0];
-        //var DEGRADATION_COLOR=  [0, 255, 255]; //[255, 199, 44];
-        var DEGRADATION_COLOR= [0, 255, 254]; //[255, 199, 44];
-        //var DEGRADATION_COLOR= [247, 119, 87];
+        var NDFI_ENCODING_LIMIT = this.NDFI_ENCODING_LIMIT;        
+        var DEFORESTATION_COLOR= [0, 0, 0];                
+        var DEGRADATION_COLOR= [0, 255, 254]; //[255, 199, 44];        
         var FOREST_COLOR = [0, 153, 77]; // [32, 224, 32];
         var CLOUD_COLOR = [102, 102, 102];
         var WATER_COLOR = [0, 0, 255];
         
         var UNCLASSIFIED = 201;
-        //var FOREST = 77;
         var CLOUD = 202;
-        var WATER = 255;
-        var BASELINE = 0;
-        var PREVIOUS_DEFORESTATION = 203;
-        var PREVIOUS_DEGRADATION = 204;
-        var OLD_DEFORESTATION = 207;
-        /*
-        FOREST = 202;
-        DEFORESTED = 203;
-        DEGRADED = 204;
-        CLOUD = 206;
-        OLD_DEFORESTATION = 207;
-        */
+        var WATER = 255;        
 
         var show_deforestation = this.show_deforestation;
         var show_degradation = this.show_degradation;
-        var show_forest = this.show_forest;
-        //var show_deforested = this.show_deforested;
+        var show_forest = this.show_forest;        
         var show_deforested = 255;
 
         var pixel_pos;
-//        console.log(image_data[0],image_data[1],image_data[2],image_data[3]);
-//        console.log(image_data);
+
         for(var i=0; i < w; ++i) {
             for(var j=0; j < h; ++j) {
                 pixel_pos = (j*w + i) * components;
@@ -352,19 +333,15 @@ var BaselineLayer = Backbone.View.extend({
                         image_data[pixel_pos + 2] = DEGRADATION_COLOR[2];
                         image_data[pixel_pos + 3] = show_degradation;                        
                     }
-
+                    
                     if(p >= NDFI_ENCODING_LIMIT) {
                         if (p == UNCLASSIFIED) {
                             image_data[pixel_pos + 0] = 255;
                             image_data[pixel_pos + 1] = 255;
                             image_data[pixel_pos + 2] = 255;
                             image_data[pixel_pos + 3] = 255;
-                        } /*else if (p == BASELINE) {
-                            image_data[pixel_pos + 0] = 0;
-                            image_data[pixel_pos + 1] = 0;
-                            image_data[pixel_pos + 2] = 0;
-                            image_data[pixel_pos + 3] = 255;
-                        } */else if (p == CLOUD) {
+                        } 
+                        else if (p == CLOUD) {
                         	image_data[pixel_pos + 0] = CLOUD_COLOR[0];
                             image_data[pixel_pos + 1] = CLOUD_COLOR[1];
                             image_data[pixel_pos + 2] = CLOUD_COLOR[2];
