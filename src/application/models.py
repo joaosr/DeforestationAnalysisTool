@@ -1200,6 +1200,21 @@ class Baseline(db.Model):
             return None
     
     @staticmethod
+    def find_by_cell_date(cell_name, start_date, end_date):
+        result = []
+        cell = CellGrid.find_by_name(cell_name)
+        if cell: 
+            q = Baseline.all().filter('cell =', cell).filter('start =', start_date).filter('end =', end_date).order('-start')
+            r = q.fetch(1)
+            
+            if r:
+                return r[0]
+            else:
+                return None
+        else:
+            return None
+    
+    @staticmethod
     def formated_by_cell_parent(cell_name):
         result = []
         cell = CellGrid.find_by_parent_name(cell_name)

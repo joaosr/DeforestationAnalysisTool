@@ -23,6 +23,7 @@ from application.models import Report, Baseline, ImagePicker, Downscalling, Tile
     TimeSeries, CellGrid
 import ee
 import settings
+from google.appengine.ext import cloudstorage
 
 
 # A multiplier to convert square meters to square kilometers.
@@ -1671,10 +1672,16 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
 
 def create_tile_baseline(start_date, end_date, cell):  
     
-    baselines = []
-    ndfis     = [] 
-    smas      = []
-    resutls   = []
+    baselines     = []
+    ndfis         = [] 
+    gvs           = []
+    npvs          = []
+    soils         = []
+    clouds        = []
+    shades        = []
+    cloud_regions = []
+    smas          = [] #TODO Remover e ajustar as dependencias
+    resutls       = []
     
     #image_picker = ImagePicker.find_by_period(start_compounddate, end_compounddate, tile_name)
     baseline     = Baseline.find_by_cell(cell)
@@ -1721,10 +1728,18 @@ def create_tile_baseline(start_date, end_date, cell):
                             'url': 'https://earthengine.googleapis.com/map/'+feature_image['mapid']+'/{Z}/{X}/{Y}?token='+feature_image['token']
                           })
             
+            # TODO ajustar os nomes das variaveis
             classifications = baseline_image(image, sensor, start_date, None, cell)
             baselines.append(classifications['ndfi'])
             ndfis.append(classifications['ndfi_rgb'])
             smas.append(classifications['sma'])
+            
+            gvs.append(classifications['gv'])
+            npvs.append(classifications['npv'])
+            soils.append(classifications['soil'])
+            clouds.append(classifications['cloud'])
+            shades.append(classifications['shade'])
+            cloud_regions.append(classifications['cloud_region'])
             
         elif len(days) > 1 :
             resutls.append("Process with temporal composition")
@@ -1733,8 +1748,15 @@ def create_tile_baseline(start_date, end_date, cell):
 
     if len(baselines) > 0:                
         images_baseline = ee.ImageCollection(baselines)
-        images_ndfi = ee.ImageCollection(ndfis)
-        images_sma = ee.ImageCollection(smas)
+        images_ndfi     = ee.ImageCollection(ndfis)
+        images_gvs      = ee.ImageCollection(gvs)
+        images_npvs     = ee.ImageCollection(npvs)
+        images_soils    = ee.ImageCollection(soils)
+        images_clouds   = ee.ImageCollection(clouds)
+        images_shades   = ee.ImageCollection(shades)
+        images_cloud_regions = ee.ImageCollection(cloud_regions)
+        
+        images_sma = ee.ImageCollection(smas) #TODO
         
         image_baseline  = images_baseline.mosaic()
         image_ndfi  = images_ndfi.mosaic()
@@ -1817,19 +1839,27 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None):
                  ]    
     
     ## SMA ===========================================================================
-    unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
+    unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS).max(0) # clamped
 
     ## NDFI calc =====================================================================
-    clamped = unmixed.max(0)
-    summed = clamped.expression('b(0) + b(1) + b(2) + b(3)')
-    gv_shade = clamped.select(0).divide(summed)
-
-    npv_plus_soil = clamped.select(1).add(clamped.select(2))
-    raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
-    ndfi = raw_ndfi.multiply(100).add(100).byte()
+    #clamped = unmixed.max(0)
+    summed = unmixed.expression('b(0) + b(1) + b(2) + b(3)')
+    
+    gv    = unmixed.select(0)
+    npv   = unmixed.select(1)
+    soil  = unmixed.select(2)
+    cloud = unmixed.select(3)
+    shade = summed.subtract(1.0).abs()
+    gv_shade = gv.divide(summed)
+    
+    npv_plus_soil = npv.add(soil)
+    
+    ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
+    ndfi = ndfi.multiply(100).add(100).byte()
     
     ndfi_vizualize = ndfi.where(summed.eq(0), INVALID_NDFI)
     ndfi_vizualize = ndfi_vizualize.select([0], ['ndfi']) 
+    
     red = ndfi_vizualize.interpolate([150, 185], [255, 0], 'clamp')
     green = ndfi_vizualize.interpolate([  0, 100, 125, 150, 185, 200, 201],
                                  [255,   0, 255, 165, 140,  80,   0], 'clamp')
@@ -1837,7 +1867,7 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None):
 
     rgb = ee.Image.cat(red, green, blue).round().byte()
 
-    classification_ndfi = rgb.select([0, 1, 2], ['vis-red', 'vis-green', 'vis-blue'])     
+    ndfi_rgb = rgb.select([0, 1, 2], ['vis-red', 'vis-green', 'vis-blue'])     
 
     ## Cloud mask ====================================================================
     cloudThresh = [0.15, 0.07] # % 0-1
@@ -1850,21 +1880,29 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None):
     buffered = cloudMask1.convolve(kernel)
     buffered = (buffered.add(cloudMask1)).gt(0)
 
-    cloudMask2 = buffered.eq(1).And(unmixed.select([3]).gte(cloudThresh[1]))
+    #cloudMask2 = buffered.eq(1).And(unmixed.select([3]).gte(cloudThresh[1]))
 
     ## Classification =================================================================
-    classification_baseline = ndfi.multiply(0)
-    classification_baseline = classification_baseline.where(ndfi.gte(175), 1) #Forest
-    classification_baseline = classification_baseline.where(ndfi.gte(165).And(ndfi.lte(174)), 2) #Degradation
-    classification_baseline = classification_baseline.where(ndfi.lte(164), 3) #Deforestation
-    classification_baseline = classification_baseline.where(summed.lte(0.15), 4) #Water
-    classification_baseline = classification_baseline.where(cloudMask2.eq(1), 5) #Cloud
+    #classification_baseline = ndfi.multiply(0)
+    #classification_baseline = classification_baseline.where(ndfi.gte(175), 1) #Forest
+    #classification_baseline = classification_baseline.where(ndfi.gte(165).And(ndfi.lte(174)), 2) #Degradation
+    #classification_baseline = classification_baseline.where(ndfi.lte(164), 3) #Deforestation
+    #classification_baseline = classification_baseline.where(summed.lte(0.15), 4) #Water
+    #classification_baseline = classification_baseline.where(cloudMask2.eq(1), 5) #Cloud
     
-    ndfi = ndfi.where(cloudMask2.eq(1), 202) # Apply cloud mask
-    ndfi = ndfi.where(summed.lte(0.15), 255) # Apply water mask
+    #ndfi = ndfi.where(cloudMask2.eq(1), 202) # Apply cloud mask
+    #ndfi = ndfi.where(summed.lte(0.15), 255) # Apply water mask
     
-    return {'baseline': classification_baseline, 'ndfi': ndfi, 'ndfi_rgb': classification_ndfi, 'sma': unmixed.max(0).multiply(100).byte()}
-    
+    #return {'baseline': classification_baseline, 'ndfi': ndfi, 'ndfi_rgb': classification_ndfi, 'sma': unmixed.max(0).multiply(100).byte()}
+    return {'ndfi'        : ndfi,
+            'ndfi_rgb'    : ndfi_rgb,
+            'gv'          : gv,
+            'npv'         : npv,
+            'soil'        : soil,
+            'cloud'       : cloud,
+            'shade'       : shade,
+            'cloud_region': buffered,
+            'sma'         : unmixed.max(0).multiply(100).byte()} #TODO Remover o sma e ajustar com as variaves gv npv soil cloud
 
 
 def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):

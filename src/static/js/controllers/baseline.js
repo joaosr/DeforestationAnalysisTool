@@ -417,8 +417,8 @@ var PolygonToolbarBaseline = Backbone.View.extend({
         _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change');
         this.buttons = new ButtonGroup({el: this.$('#baseline_selection')});
         this.polytype = new ButtonGroup({el: this.$('#baseline_polytype')});
-        this.baseline_range = new RangeSliderBaseline({el: this.$("#baseline_slider")});
-        this.compare = new ButtonGroup({el: this.$("#compare_buttons")});
+        this.baseline_range = new RangeSliderBaseline({el: this.$("#slider_forest")});
+        this.compare = new ButtonGroup({el: $("#compare_buttons")});
         this.polytype.hide();
         this.buttons.bind('state', this.change_state);
     },
@@ -778,6 +778,8 @@ var Baseline = Backbone.View.extend({
 						'show_image_picker', 'visibility_change',
 						'setting_baseline_popup', 'show_imagepicker_search',
 						'set_selected', 'genarete_baseline');
+				var self = this;
+				
 				this.callerView = this.options.callerView;
 				this.polygon_tools = new PolygonToolbarBaseline();
 				
@@ -798,6 +800,9 @@ var Baseline = Backbone.View.extend({
 				this.baseline_layer = new BaselineLayer({mapview: this.map, report: this.report});
 				this.polygon_tools.baseline_range.bind('change', this.baseline_layer.apply_filter);
 				this.polygon_tools.bind('visibility_change', this.baseline_layer.class_visibility);
+				this.polygon_tools.compare.bind('state', function(change_state) {
+					self.trigger("compare_state", change_state);
+				});
 				this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
 				this.cell_polygons = new CellPolygons({mapview: this.map});
 				//this.polygon_tools.baseline_range.bind('stop', this.change_baseline);
@@ -1262,12 +1267,12 @@ var Baseline = Backbone.View.extend({
 				if (this.visibility) {
 					$(this.el).css("background-color", "rgba(0, 0, 0, 0)");
 					this.$("#baseline_select h3").css("color", "#999999");
-					this.$("#baseline_content").hide();
+					//this.$("#baseline_content").hide();
 					this.visibility = false;
 				} else {
 					$(this.el).css("background-color", "rgba(0, 0, 0, 1)");
 					this.$("#baseline_select h3").css("color", "white");
-					this.$("#baseline_content").show();
+					//this.$("#baseline_content").show();
 					this.visibility = true;
 					this.callerView.callback(this);
 					this.set_selected();

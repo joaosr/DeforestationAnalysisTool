@@ -242,7 +242,7 @@ var PolygonToolbar = Toolbar.extend({
     el: $("#work_toolbar"),
 
     events: {
-        'click #compare': 'none',
+        'click #header #tools #compare a#compare_select': 'none',
         'click #ndfirange': 'none',
         'click .class_selector': 'visibility_change'
     },
@@ -252,7 +252,7 @@ var PolygonToolbar = Toolbar.extend({
         this.buttons = new ButtonGroup({el: this.$('#selection')});
         this.polytype = new ButtonGroup({el: this.$('#polytype')});
         this.ndfi_range = new RangeSlider({el: this.$("#ndfi_slider")});
-        this.compare = new ButtonGroup({el: this.$("#compare_buttons")});
+        this.compare = new ButtonGroup({el: $("#compare_buttons")});
         this.polytype.hide();
         this.buttons.bind('state', this.change_state);
     },

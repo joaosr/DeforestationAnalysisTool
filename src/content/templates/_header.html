@@ -343,6 +343,17 @@
                     </span>
                 </div>
             </span>
+            
+            <div id="compare">
+                      <a href="#" id="compare_select">Compare View</a>
+                      <div id="compare_wrapper">
+                        <ul id="compare_buttons">
+                          <li><a id="one" href="#one" class="button one">one</a>
+                          <li><a id="two" href="#two" class="button two">two</a>
+                          <li><a id="four" href="#four" class="button four">four</a>
+                        </ul>
+                      </div>
+            </div>
 
             <div id="work_toolbar" class="hidden">
 
@@ -358,17 +369,7 @@
                     <li><a class="button" href="#" id="deg">deg</a></li>
                 </ul>
 
-                <ul id="maptools">
-                    <li id="compare_li">
-                      <a href="#compare" id="compare">Compare View</a>
-                      <div id="compare_wrapper">
-                        <ul id="compare_buttons">
-                          <li><a id="one" href="#one" class="button one">one</a>
-                          <li><a id="two" href="#two" class="button two">two</a>
-                          <li><a id="four" href="#four" class="button four">four</a>
-                        </ul>
-                      </div>
-                    </li>
+                <ul id="maptools">                    
                     <li class="sep">
                         <img src="/static/img/slider_separator.png"></img>
                     </li>
@@ -411,25 +412,55 @@
                     <li><a class="button" href="#" id="deg">deg</a></li>
                 </ul>
 
-                <ul id="baseline_maptools">
-                    <li id="compare_li">
-                      <a href="#compare" id="compare">Compare View</a>
-                      <div id="compare_wrapper">
-                        <ul id="compare_buttons">
-                          <li><a id="one" href="#one" class="button one">one</a>
-                          <li><a id="two" href="#two" class="button two">two</a>
-                          <li><a id="four" href="#four" class="button four">four</a>
-                        </ul>
-                      </div>
-                    </li>
+                <ul id="baseline_maptools">                   
                     <li class="sep">
                         <img src="/static/img/slider_separator.png"></img>
                     </li>
-                    <li id="range">
-                        <a href="#" id="baseline_range">Baseline settings</a>
+                    <li id="range_forest">
+                        <a href="#" id="range_forest_title">Forest</a>
                         <div id="slider_wrapper">
                             <h3 id="ndfi_text">Ranges value</h3>
-                            <div id="baseline_slider">
+                            <div id="slider_forest">
+                              <span class="hack_forest"></span>
+                            </div>
+                            <h3 id="baseline_visibility_text">Baseline visibility</h3>
+                            <div id="baseline_visibility">
+                                <div class="left">
+                                    <div id="degradation" class="class_selector check_selected">degradation</div>
+                                    <div id="deforestation" class="class_selector check_selected">deforestation</div>                                    
+                                </div>
+                                <div class="right">
+                                    <div id="forest" class="class_selector check_selected">forest</div>                                    
+                                </div>
+                            </div>
+
+                        </div>
+                    </li>
+                    <li id="range_mask_water">
+                        <a href="#" id="#range_mask_water_title">Water mask</a>
+                        <div id="slider_wrapper">
+                            <h3 id="ndfi_text">Ranges value</h3>
+                            <div id="slider_mask_water">
+                              <span class="hack_forest"></span>
+                            </div>
+                            <h3 id="baseline_visibility_text">Baseline visibility</h3>
+                            <div id="baseline_visibility">
+                                <div class="left">
+                                    <div id="degradation" class="class_selector check_selected">degradation</div>
+                                    <div id="deforestation" class="class_selector check_selected">deforestation</div>                                    
+                                </div>
+                                <div class="right">
+                                    <div id="forest" class="class_selector check_selected">forest</div>                                    
+                                </div>
+                            </div>
+
+                        </div>
+                    </li>
+                    <li id="range_mask_cloud">
+                        <a href="#" id="baseline_range">Cloud mask</a>
+                        <div id="slider_wrapper">
+                            <h3 id="ndfi_text">Ranges value</h3>
+                            <div id="slider_mask_cloud">
                               <span class="hack_forest"></span>
                             </div>
                             <h3 id="baseline_visibility_text">Baseline visibility</h3>

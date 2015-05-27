@@ -1475,8 +1475,14 @@ text-shadow: #000000 0px 1px 0px;
   padding: 0 30px 3px 4px;
   text-decoration: none;
 }
-#header #tools #maptools li a#compare {
+
+#header #tools #compare a#compare_select {
   background: url("../img/icons/compare.png") no-repeat right 0;
+  font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
+  color: white;
+  text-shadow: 0 1px black;
+  padding: 0 30px 3px 4px;
+  text-decoration: none;
 }
 #header #tools #maptools li a#ndfirange {
   background: url("../img/icons/range.png") no-repeat right 0;
@@ -1491,10 +1497,14 @@ text-shadow: #000000 0px 1px 0px;
   top: 10px;
   padding: 0 0px;
 }
-#header #tools #maptools #compare_li {
-  position: relative;
+#header #tools #compare {
+  display: none;
+  margin: 0 20px 0 150px;
+  padding: 20px 14px 23px 20px;
+  position: absolute;
+  left: 50%;
 }
-#header #tools #maptools div#compare_wrapper {
+#header #tools #compare div#compare_wrapper {
   display: none;
   position: absolute;
   top: 40px;
@@ -1503,18 +1513,18 @@ text-shadow: #000000 0px 1px 0px;
   height: 61px;
   background: url("../img/bottom_compare_wrapper.png") no-repeat center bottom;
 }
-#header #tools #maptools div#compare_wrapper ul {
+#header #tools #compare div#compare_wrapper ul {
   display: block;
   margin: 8px 0 0 27px;
 }
-#header #tools #maptools div#compare_wrapper ul li {
+#header #tools #compare div#compare_wrapper ul li {
   display: inline-block;
   height: 28px;
   width: 29px;
   padding: 0;
   margin: 0 13px 0 0;
 }
-#header #tools #maptools div#compare_wrapper ul li a {
+#header #tools #compare div#compare_wrapper ul li a {
   display: block;
   width: 27px;
   height: 27px;
@@ -1526,32 +1536,32 @@ text-shadow: #000000 0px 1px 0px;
   -webkit-radius: 3px;
   text-indent: -9999px;
 }
-#header #tools #maptools div#compare_wrapper ul li a:hover {
+#header #tools #compare div#compare_wrapper ul li a:hover {
   border-color: black;
   box-shadow: 0 1px #2A2C2E;
   cursor: pointer;
 }
-#header #tools #maptools div#compare_wrapper ul li a.selected {
+#header #tools #compare div#compare_wrapper ul li a.selected {
   border-color: black;
   box-shadow: 0 1px #2A2C2E;
   cursor: default;
 }
-#header #tools #maptools div#compare_wrapper ul li a.one {
+#header #tools #compare div#compare_wrapper ul li a.one {
   background: url("../img/icons/compare_single.png") center center no-repeat;
 }
-#header #tools #maptools div#compare_wrapper ul li a.two {
+#header #tools #compare div#compare_wrapper ul li a.two {
   background: url("../img/icons/compare_two.png") center center no-repeat;
 }
-#header #tools #maptools div#compare_wrapper ul li a.four {
+#header #tools #compare div#compare_wrapper ul li a.four {
   background: url("../img/icons/compare_four.png") center center no-repeat;
 }
-#header #tools #maptools #compare_li:hover {
+#header #tools #compare:hover {
   background: url("../img/over_header_settings.png") no-repeat -11px 0;
 }
-#header #tools #maptools #compare_li:hover #compare {
+#header #tools #compare:hover #compare {
   background-position: right -23px;
 }
-#header #tools #maptools #compare_li:hover #compare_wrapper {
+#header #tools #compare:hover #compare_wrapper {
   display: block;
 }
 #header #tools #maptools #range:hover {
@@ -1689,6 +1699,7 @@ text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #work_toolbar_baseline {
   padding-top: 13px;
+  position: absolute;
 }
 #header #tools #work_toolbar_baseline ul, #header #tools #work_toolbar_baseline li {
   display: inline;
@@ -1830,7 +1841,7 @@ text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #baseline_maptools {
   float: right;
-  margin: 10px 263px 0 0;
+  margin: 10px 0 0 100px;
 }
 #header #tools #baseline_maptools li {
   position: relative;
@@ -1845,12 +1856,6 @@ text-shadow: #000000 0px 1px 0px;
   padding: 0 30px 3px 4px;
   text-decoration: none;
 }
-#header #tools #baseline_maptools li a#compare {
-  background: url("../img/icons/compare.png") no-repeat right 0;
-}
-#header #tools #baseline_maptools li a#baseline_range {
-  background: url("../img/icons/range.png") no-repeat right 0;
-}
 #header #tools #baseline_maptools li.sep {
   padding: 0;
   width: 8px;
@@ -1861,81 +1866,37 @@ text-shadow: #000000 0px 1px 0px;
   top: 10px;
   padding: 0 0px;
 }
-#header #tools #baseline_maptools #compare_li {
-  position: relative;
+#header #tools #baseline_maptools li a#range_forest_title {
+  background: url("../img/icons/range.png") no-repeat right 0;
 }
-#header #tools #baseline_maptools div#compare_wrapper {
-  display: none;
-  position: absolute;
-  top: 40px;
-  left: -13px;
-  width: 168px;
-  height: 61px;
-  background: url("../img/bottom_compare_wrapper.png") no-repeat center bottom;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul {
-  display: block;
-  margin: 8px 0 0 27px;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul li {
-  display: inline-block;
-  height: 28px;
-  width: 29px;
-  padding: 0;
-  margin: 0 13px 0 0;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul li a {
-  display: block;
-  width: 27px;
-  height: 27px;
-  padding: 0;
-  margin: 0;
-  border: 1px solid rgba(0, 0, 0, 0);
-  border-radius: 3px;
-  -moz-border-radius: 3px;
-  -webkit-radius: 3px;
-  text-indent: -9999px;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul li a:hover {
-  border-color: black;
-  box-shadow: 0 1px #2A2C2E;
-  cursor: pointer;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul li a.selected {
-  border-color: black;
-  box-shadow: 0 1px #2A2C2E;
-  cursor: default;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul li a.one {
-  background: url("../img/icons/compare_single.png") center center no-repeat;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul li a.two {
-  background: url("../img/icons/compare_two.png") center center no-repeat;
-}
-#header #tools #baseline_maptools div#compare_wrapper ul li a.four {
-  background: url("../img/icons/compare_four.png") center center no-repeat;
-}
-#header #tools #baseline_maptools #compare_li:hover {
-  background: url("../img/over_header_settings.png") no-repeat -11px 0;
-}
-#header #tools #baseline_maptools #compare_li:hover #compare {
-  background-position: right -23px;
-}
-#header #tools #baseline_maptools #compare_li:hover #compare_wrapper {
-  display: block;
-}
-#header #tools #baseline_maptools #range:hover {
+#header #tools #baseline_maptools #range_forest:hover {
   background: url("../img/over_header_settings2.png") no-repeat -12px -4px;
 }
-#header #tools #baseline_maptools #range:hover #baseline_range {
+#header #tools #baseline_maptools #range_forest:hover #range_forest_title {
   background-position: right -30px;
 }
-#header #tools #baseline_maptools #range:hover #slider_wrapper {
+#header #tools #baseline_maptools #range_forest:hover #slider_wrapper {
   display: block;
 }
-#header #tools #baseline_maptools #range {
+#header #tools #baseline_maptools #range_forest {
   position: relative;
 }
+#header #tools #baseline_maptools li a#range_mask_water_title {
+  background: url("../img/icons/range.png") no-repeat right 0;
+}
+#header #tools #baseline_maptools #range_mask_water:hover {
+  background: url("../img/over_header_settings2.png") no-repeat -12px -4px;
+}
+#header #tools #baseline_maptools #range_mask_water:hover #range_mask_water_title {
+  background-position: right -30px;
+}
+#header #tools #baseline_maptools #range_mask_water:hover #slider_wrapper {
+  display: block;
+}
+#header #tools #baseline_maptools #range_mask_water {
+  position: relative;
+}
+
 #header #tools #baseline_maptools #slider_wrapper {
   position: absolute;
   display: none;
@@ -2009,7 +1970,7 @@ text-shadow: #000000 0px 1px 0px;
   width: 50%;
   float: right;
 }
-#header #tools #baseline_maptools #slider_wrapper div#baseline_slider {
+#header #tools #baseline_maptools #slider_wrapper div#slider_forest {
   position: absolute;
   top: 43px;
   left: 27px;
@@ -2018,7 +1979,7 @@ text-shadow: #000000 0px 1px 0px;
   height: 2px;
   background: rgb(0, 0, 0);
 }
-#header #tools #baseline_maptools #slider_wrapper div#baseline_slider span.hack_forest {
+#header #tools #baseline_maptools #slider_wrapper div#slider_forest span.hack_forest {
   position: absolute;
   top: 0;
   right: 0;
@@ -2026,7 +1987,7 @@ text-shadow: #000000 0px 1px 0px;
   height: 2px;
   background: rgb(0, 153, 77);
 }
-#header #tools #baseline_maptools #slider_wrapper div#baseline_slider p.tooltip {
+#header #tools #baseline_maptools #slider_wrapper div#slider_forest p.tooltip {
   position: absolute;
   top: -26px;
   width: 24px;
@@ -2038,7 +1999,7 @@ text-shadow: #000000 0px 1px 0px;
   color: #CCCCCC;
   text-align: center;
 }
-#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-slider-handle {
+#header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-slider-handle {
   top: -6px;
   width: 13px;
   height: 14px;
@@ -2047,14 +2008,14 @@ text-shadow: #000000 0px 1px 0px;
   outline: none;
   border: none;
 }
-#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-slider-handle:focus {
+#header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-slider-handle:focus {
   outline: none;
 }
-#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-state-hover {
+#header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-hover {
   background-position: 0 -14px;
   cursor: pointer;
 }
-#header #tools #baseline_maptools #slider_wrapper div#baseline_slider .ui-slider-range {
+#header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-slider-range {
   height: 2px;
   background: rgb(0,255,255);
 }
