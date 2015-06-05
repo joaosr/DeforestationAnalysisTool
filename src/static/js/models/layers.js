@@ -133,8 +133,10 @@ var LayerBaselineCollection = Backbone.Collection.extend({
         var lay;        
         this.each(function(m) {
             if(m.get('type') === 'custom') { 
-            	               
-                m.set({"layer": layer});                    
+            	
+            	if(m.get('id') === 'baseline'){
+                  m.set({"layer": layer});
+            	}
                 
             	lay = m;
             	
@@ -180,17 +182,20 @@ var LayerCollection = Backbone.Collection.extend({
             return lay;
         },
         set_canvas_in_custom_layer: function(layer) {
-            var lay;        
+            var lay = {};        
             this.each(function(m) {
                 if(m.get('type') === 'custom') { 
                 	               
-                    m.set({"layer": layer});                    
-                    
-                	lay = m;
+                	if(m.get('id') === 'baseline'){
+                        m.set({"layer": layer});
+                  	}                   
+                    lay[m.get('id')] = m;
+                	//lay.push("{"+eval(m.get('type'))+": "+m+"}");
                 	
                 }
                 
             });
+            console.log(lay);            
             return lay;
         },
         // return a new collection

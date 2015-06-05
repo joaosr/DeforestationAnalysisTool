@@ -1729,7 +1729,7 @@ def create_tile_baseline(start_date, end_date, cell):
                           })
             
             # TODO ajustar os nomes das variaveis
-            classifications = baseline_image(image, sensor, start_date, None, cell)
+            classifications = baseline_image(image, sensor, start_date, None, cell, tile_name)
             baselines.append(classifications['ndfi'])
             ndfis.append(classifications['ndfi_rgb'])
             smas.append(classifications['sma'])
@@ -1761,6 +1761,12 @@ def create_tile_baseline(start_date, end_date, cell):
         image_baseline  = images_baseline.mosaic()
         image_ndfi  = images_ndfi.mosaic()
         image_sma  = images_sma.mosaic()
+        image_gvs      = images_gvs.mosaic()
+        image_npvs     = images_npvs.mosaic()
+        image_soils    = images_soils.mosaic()
+        image_clouds   = images_clouds.mosaic()
+        image_shades   = images_shades.mosaic()
+        image_cloud_regions = images_cloud_regions.mosaic()
         
         cell_grid = CellGrid.find_by_name(cell)
         geo  = ast.literal_eval(cell_grid.geo)
@@ -1769,7 +1775,13 @@ def create_tile_baseline(start_date, end_date, cell):
         
         image_baseline = image_baseline.clip(polygon)
         image_ndfi     = image_ndfi.clip(polygon)
-        image_sma      = image_sma.clip(polygon) 
+        image_sma      = image_sma.clip(polygon)
+        image_gvs      = image_gvs.clip(polygon)
+        image_npvs     = image_npvs.clip(polygon)
+        image_soils    = image_soils.clip(polygon)
+        image_clouds   = image_clouds.clip(polygon)
+        image_shades   = image_shades.clip(polygon)
+        image_cloud_regions = image_cloud_regions.clip(polygon) 
         
 #         feature_baseline = ee.Image(image_baseline).getMapId({
 #                               'bands': 'nd', 
@@ -1824,19 +1836,75 @@ def create_tile_baseline(start_date, end_date, cell):
                         'url': 'https://earthengine.googleapis.com/map/'+feature_sma['mapid']+'/{Z}/{X}/{Y}?token='+feature_sma['token']
                         })
         
+        feature_gv = ee.Image(image_gvs).getMapId({
+                              'bands': 'band_0',                                                                                      
+                              })
+        
+        resutls.append({'mapid':          feature_gv['mapid'],
+                        'token':       feature_gv['token'],
+                        'id': 'gv',
+                        'type':        'custom',
+                        'visibility':  True,
+                        'description': 'GV band',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_gv['mapid']+'/{Z}/{X}/{Y}?token='+feature_gv['token']
+                        })
+        
+        feature_shade = ee.Image(image_shades).getMapId({
+                              'bands': 'band_0',                                                                                      
+                              })
+        
+        resutls.append({'mapid':          feature_shade['mapid'],
+                        'token':       feature_shade['token'],
+                        'id': 'shade',
+                        'type':        'custom',
+                        'visibility':  True,
+                        'description': 'Shade band',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_shade['mapid']+'/{Z}/{X}/{Y}?token='+feature_shade['token']
+                        })
+        
+        feature_soil = ee.Image(image_soils).getMapId({
+                              'bands': 'band_2',                                                                                      
+                              })
+        
+        resutls.append({'mapid':          feature_soil['mapid'],
+                        'token':       feature_soil['token'],
+                        'id': 'soil',
+                        'type':        'custom',
+                        'visibility':  True,
+                        'description': 'Soil band',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_soil['mapid']+'/{Z}/{X}/{Y}?token='+feature_soil['token']
+                        })
+        
+        
+        
+        
         return resutls
     else:
         return None
                 
             
     
-def baseline_image(image, sensor, start_date, end_date=None, cell=None):
+def baseline_image(image, sensor, start_date, end_date=None, cell=None, tile_name=None):
     ENDMEMBERS = [
                   [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
                   [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
                   [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], #SOIL
                   [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
-                 ]    
+                 ]
+        
+    image_year = str(start_date.year)
+    image_period_start = image_year + '-01-01'
+    image_period_end = image_year + '-12-31'
+    shade_collection = EELandsat.find_collection_tile(sensor, tile_name, image_period_start, image_period_end)
+    shade_image = shade_collection.filterMetadata('CLOUD_COVER', 'less_than', 50).median(); 
+    
+    ## SMA shade ===========================================================================
+    shade_unmixed = ee.Image(shade_image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS).max(0) # clamped
+    
+    shade_summed = shade_unmixed.expression('b(0) + b(1) + b(2) + b(3)')
+    
+    shade = shade_summed.subtract(1.0).abs()
+        
     
     ## SMA ===========================================================================
     unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS).max(0) # clamped
@@ -1848,8 +1916,7 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None):
     gv    = unmixed.select(0)
     npv   = unmixed.select(1)
     soil  = unmixed.select(2)
-    cloud = unmixed.select(3)
-    shade = summed.subtract(1.0).abs()
+    cloud = unmixed.select(3)    
     gv_shade = gv.divide(summed)
     
     npv_plus_soil = npv.add(soil)
@@ -2105,86 +2172,6 @@ def create_time_series(start_date, end_date, sensor=EELandsat.LANDSAT5):
     time_series = TimeSeries(added_by= users.get_current_user(), name=name, start= start_date.date(), end=end_date.date(), mapid=mapid, token=token)
     
     return time_series.save()
-    
-    """
-    for i in range(len(tiles)):
-        cumulated = None
-        collection = landstat.find_image_tile_from_L5(tiles[i])
-        
-        images = collection.getInfo().get('features')
-        
-        for i in range(len(images)):
-            nImages = nImages + 1
-            ## SMA ===========================================================================
-            unmixed = ee.Image(images[i]['id']).select([0,1,2,3,4,6]).unmix(ENDMEMBERS)
-            
-            ## NDFI calc =====================================================================
-            clamped = unmixed.max(0)
-            summed = clamped.expression('b(0) + b(1) + b(2) + b(3)')
-            gv_shade = clamped.select(0).divide(summed)
-        
-            npv_plus_soil = clamped.select(1).add(clamped.select(2))
-            raw_ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
-            ndfi = raw_ndfi.multiply(100).add(100).byte()
-            
-            ## Classification ================================================================
-            #classificationName = ''
-            classification = ndfi.multiply(0)
-            
-            if i == 0:
-                baseline = ndfi.multiply(0)
-                cumulated = ndfi.multiply(0)
-                
-                classification = classification.where(ndfi.gte(175), 1) #Forest
-                classification = classification.where(ndfi.gte(165).And(ndfi.lte(174)), 3) #Degradation
-                classification = classification.where(ndfi.lte(164), 4) #Non-Forest baseline
-                classification = classification.where(summed.lte(0.15), 5) #Water
-                classification = classification.where(clamped.select(3).gte(0.10), 6) #Cloud
-                
-                baseline = baseline.where(classification.eq(4), 1)
-                
-                cumulated = cumulated.where(classification.eq(4), i+1)
-                
-            else:
-                classification = classification.where(ndfi.gte(175), 1) #Forest
-                classification = classification.where(ndfi.gte(165).And(ndfi.lte(174)), 3) #Degradation
-                classification = classification.where(ndfi.lte(164), 7) #Deforestation
-                classification = classification.where(summed.lte(0.15), 5) #Water
-                classification = classification.where(clamped.select(3).gte(0.10), 6) #Cloud  
-                classification = classification.where(baseline.eq(1), 4) #Non-Forest 
-                
-                baseline = baseline.where(classification.eq(7), 1)
-                
-                cumulated = cumulated.where(classification.eq(7), i+1)
-                
-        
-        if cumulated:
-            noDeforestation = cumulated.neq(0)
-            cumulatedTile = cumulated.mask(noDeforestation)
-            images_cumulated.append(cumulatedTile)
-    
-    
-       
-    image = ee.ImageCollection(images_cumulated)    
-
-
-    
-    
-    
-    feature = ee.Image(image.mosaic()).getMapId({
-                                                'bands': 'nd',
-                                                'min': 1,
-                                                'max': nImages,
-                                                'palette': 'ffff00, ff0000'                            
-                                              })
-
-    mapid = feature['mapid']
-    token = feature['token']
-    name = 'TIME_SERIES/'+sensor+'/'+start_date.strftime("%Y-%b-%d")+' to '+end_date.date().strftime("%Y-%b-%d")
-
-    time_series = TimeSeries(added_by= users.get_current_user(), name=name, start= start_date.date(), end=end_date.date(), mapid=mapid, token=token)
-    
-    return time_series.save()"""
 
 
 def get_modis_location(cell):

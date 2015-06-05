@@ -1043,7 +1043,7 @@ text-shadow: #000000 0px 1px 0px;
   text-shadow: 0 1px #FFFFFF;
 }
 #header #tools #baseline #editor_image_picker #content label{
-  font: 14px "Helvetica Neue", Arial, Sans-Serif;
+  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
 }
 #header #tools #baseline #editor_image_picker #content #period {  
   padding: 20px 10px 20px 10px;
@@ -1054,7 +1054,7 @@ text-shadow: #000000 0px 1px 0px;
 }
 
 #header #tools #baseline #editor_image_picker #content  #period label{
-  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+  font: 14px "Helvetica Neue", Arial, Sans-Serif;
 }
 
 #header #tools #baseline #editor_image_picker #content #period input{
@@ -1071,6 +1071,10 @@ text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #baseline #editor_image_picker #content ul#cloud_cover li{  
   padding: 10px;    
+}
+
+#header #tools #baseline #editor_image_picker #content ul#cloud_cover li label{  
+  font: 14px "Helvetica Neue", Arial, Sans-Serif;
 }
 
 #header #tools #baseline #editor_image_picker #content ul#cloud_cover li input{
@@ -2019,6 +2023,154 @@ text-shadow: #000000 0px 1px 0px;
   height: 2px;
   background: rgb(0,255,255);
 }
+
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade {
+  position: absolute;
+  top: 43px;
+  left: 27px;
+  border: none;
+  width: 266px;
+  height: 2px;
+  background: rgba(211, 62, 62, 0);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade span.hack_forest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  height: 2px;
+  background: rgb(0, 153, 77);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade p.tooltip {
+  position: absolute;
+  top: -26px;
+  width: 24px;
+  height: 10px;
+  margin: 0 0 0 -7px;
+  padding: 4px 0 10px 1px;
+  background: url("../img/slider_tooltip_bkg.png") no-repeat 0 0;
+  font: normal 10px "Helvetica Neue", Arial, Sans-Serif;
+  color: #CCCCCC;
+  text-align: center;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-slider-handle {
+  top: -6px;
+  width: 13px;
+  height: 14px;
+  background: url("../img/icons/slider_handle.png") no-repeat 0 0;
+  padding: 0;
+  outline: none;
+  border: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-slider-handle:focus {
+  outline: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-hover {
+  background-position: 0 -14px;
+  cursor: pointer;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-slider-range {
+  height: 2px;
+  background: rgb(0,255,255);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv {
+  position: absolute;
+  top: 73px;
+  left: 27px;
+  border: none;
+  width: 266px;
+  height: 2px;
+  background: rgb(211, 62, 62);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv span.hack_forest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  height: 2px;
+  background: rgb(0, 153, 77);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv p.tooltip {
+  position: absolute;
+  top: -26px;
+  width: 24px;
+  height: 10px;
+  margin: 0 0 0 -7px;
+  padding: 4px 0 10px 1px;
+  background: url("../img/slider_tooltip_bkg.png") no-repeat 0 0;
+  font: normal 10px "Helvetica Neue", Arial, Sans-Serif;
+  color: #CCCCCC;
+  text-align: center;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-slider-handle {
+  top: -6px;
+  width: 13px;
+  height: 14px;
+  background: url("../img/icons/slider_handle.png") no-repeat 0 0;
+  padding: 0;
+  outline: none;
+  border: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-slider-handle:focus {
+  outline: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-hover {
+  background-position: 0 -14px;
+  cursor: pointer;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-slider-range {
+  height: 2px;
+  background: rgb(0,255,255);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil {
+  position: absolute;
+  top: 103px;
+  left: 27px;
+  border: none;
+  width: 266px;
+  height: 2px;
+  background: rgb(211, 62, 62);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil span.hack_forest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  height: 2px;
+  background: rgb(0, 153, 77);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil p.tooltip {
+  position: absolute;
+  top: -26px;
+  width: 24px;
+  height: 10px;
+  margin: 0 0 0 -7px;
+  padding: 4px 0 10px 1px;
+  background: url("../img/slider_tooltip_bkg.png") no-repeat 0 0;
+  font: normal 10px "Helvetica Neue", Arial, Sans-Serif;
+  color: #CCCCCC;
+  text-align: center;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-slider-handle {
+  top: -6px;
+  width: 13px;
+  height: 14px;
+  background: url("../img/icons/slider_handle.png") no-repeat 0 0;
+  padding: 0;
+  outline: none;
+  border: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-slider-handle:focus {
+  outline: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-hover {
+  background-position: 0 -14px;
+  cursor: pointer;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-slider-range {
+  height: 2px;
+  background: rgb(0,255,255);
+}
 #header #overview {
   position: absolute;
   right: 0;
@@ -2029,6 +2181,8 @@ text-shadow: #000000 0px 1px 0px;
   z-index: 10;
   background: -webkit-gradient(linear, left top, left bottom, from(#f14a30), to(#d14529));
 }
+
+
 #header #overview h3 {
   display: block;
   padding: 0 0 0 15px;

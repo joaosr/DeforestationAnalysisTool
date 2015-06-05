@@ -661,7 +661,7 @@ $(function() {
             			cell_operation = 'timeseries';
             		}
             		else{
-            			alert("One operation must be selected in Toolbar");
+            			alert("Please, ckeck an option (SAD, Baseline or Time Series).");
             		}
             	}
             	else if(cell.get('z') == '2'){
@@ -682,7 +682,7 @@ $(function() {
             			cell_operation = 'timeseries';
             		}
                     else{
-                    	alert("One operation must be selected in Toolbar");
+                    	alert("Please, ckeck an option (SAD, Baseline or Time Series).");
             		}            		
             	}
             	  	

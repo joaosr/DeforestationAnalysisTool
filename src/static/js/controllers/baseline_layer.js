@@ -26,12 +26,16 @@ var BaselineLayer = Backbone.View.extend({
         this.report = this.options.report;        
         this.layer = new CanvasTileLayer(this.canvas_setup, this.filter);
  
-        this.low = 165;
-        this.high = 175;
+        this.def_thresh = 165;
+        this.deg_thresh = 175;
+        this.shade_thresh = 70;
+        this.gv_thresh = 15; 
+        this.soil_thresh = 10;
         this.showing = false;
         this.inner_poly_sensibility = 10;
-        console.log("Report ID: "+this.report.id);
-
+        console.log("Report ID: "+this.report.id);        
+        this.extra_images_list = {};
+        this.extra_images_data = {};
         
 
         
@@ -69,11 +73,18 @@ var BaselineLayer = Backbone.View.extend({
 
     map_auth: function() {
         var self = this;
-        this.map_layer = this.mapview.layers.set_canvas_in_custom_layer(this.layer);        
+        this.map_layer = this.mapview.layers.set_canvas_in_custom_layer(this.layer); 
         
+        var map_layer_baseline = this.map_layer.baseline;
+
+        for(var key  in this.map_layer){
+            if(key !== "baseline"){
+                this.map_layer[key].set({"layer": new CanvasTileLayer(this.canvas_setup, this.filter)});
+            }
+        }
         
-        this.token = this.map_layer.get('token');
-        this.mapid = this.map_layer.get('mapid');
+        this.token =  map_layer_baseline.get('token');
+        this.mapid = map_layer_baseline.get('mapid');
         this.mapview.layers.trigger('reset');
     	
         console.log("Token: "+this.token+"Mapid: "+this.mapid);
@@ -123,7 +134,7 @@ var BaselineLayer = Backbone.View.extend({
 
     refrest: function() {
         if(this.showing) {
-            this.apply_filter(this.low, this.high);
+            this.apply_filter(this.def_thresh, this.deg_thresh);
         }
     },
 
@@ -238,20 +249,28 @@ var BaselineLayer = Backbone.View.extend({
         */
     },
 
-    apply_filter: function(low, high) {
-        this.low = low;
-        //console.log(low);
-        this.high = high;
-        this.layer.filter_tiles(low, high);
-        //this.layer.filter_tiles(low);
+    apply_filter: function(def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh) {
+        this.def_thresh   = def_thresh;        
+        this.deg_thresh   = deg_thresh;
+        this.shade_thresh = shade_thresh;
+        this.gv_thresh    = gv_thresh;
+        this.soil_thresh  = soil_thresh;
+
+        this.layer.filter = this.filter //TODO mater somente em versão debugg        
+        
+        this.layer.filter_tiles_canvas(this.extra_images_list, this.def_thresh, this.deg_thresh, this.shade_thresh, this.gv_thresh, this.soil_thresh);
+        //this.layer.filter_tiles(def_thresh);
     },
 
+    
+     
     canvas_setup: function (canvas, coord, zoom) {
       var EARTH_ENGINE_TILE_SERVER = 'https://earthengine.googleapis.com/map/';
       var self = this;
       if (zoom < 12) {
         //return;
       }
+      
       function load_finished() {
         window.loading_small.finished("canvas_setup:");
       }
@@ -259,36 +278,74 @@ var BaselineLayer = Backbone.View.extend({
       // sometimes due to browser limitation to get images from the same domain
       // images are not loaded, so start a timeout to finished the loading
       setTimeout(load_finished, 20*1000);
-      var image = new Image();
-
+      var image_baseline = new Image();
+      var extra_images = {}
+      
       //check if thereis support for corssOrigin images and use proxy if isn't available
-      if(image.crossOrigin !== undefined) {
-          image.crossOrigin = '';
-          image.src = EARTH_ENGINE_TILE_SERVER + this.mapid + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.token;          
+      var map_layer_baseline = this.map_layer.baseline;
+      
+      if(image_baseline.crossOrigin !== undefined) {
+          image_baseline.crossOrigin = '';
+          image_baseline.src = EARTH_ENGINE_TILE_SERVER + map_layer_baseline.get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + map_layer_baseline.get('token');          
       } else {
-        image.src = "/ee/tiles/" + this.mapid + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.token;        
+        image_baseline.src = "/ee/tiles/" + map_layer_baseline.get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + map_layer_baseline.get('token');        
+      }
+      
+      for(var key in this.map_layer){
+    	  if(key !== "baseline"){
+	    	  extra_images[key] = new Image();
+	    	  
+	    	  if(extra_images[key].crossOrigin !== undefined) {
+	    		  extra_images[key].crossOrigin = '';
+	    		  extra_images[key].src = EARTH_ENGINE_TILE_SERVER + this.map_layer[key].get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.map_layer[key].get('token');          
+	          } else {
+	        	  extra_images[key].src = "/ee/tiles/" + this.map_layer[key].get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + this.map_layer[key].get('token');        
+	          }  
+    	  }
       }
 
       var ctx = canvas.getContext('2d');
-      canvas.image = image;
+      canvas.image = image_baseline;
       canvas.coord = coord;
-      $(image).load(function() {
+    
+      image_baseline.onload = function() {
+          load_finished();
+          //ctx.globalAlpha = 0.5;
+          
+          
+          ctx.drawImage(this, 0, 0);
+          canvas.image_data = ctx.getImageData(0, 0, canvas.width, canvas.height);         
+
+          var canvas_name = coord.x + '_' + coord.y + '_' + zoom;
+
+          self.extra_images_list[canvas_name] = extra_images;
+                   
+          self.layer.filter_tile_canvas(canvas, extra_images, [self.def_thresh, self.deg_thresh, self.shade_thresh, self.gv_thresh, self.soil_thresh]);
+      };
+      
+      /*$(image).load(function() {
             load_finished();
             //ctx.globalAlpha = 0.5;
             ctx.drawImage(image, 0, 0);
             canvas.image_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            self.layer.filter_tile(canvas, [self.low, self.high]);
+            self.layer.filter_tile(canvas, [self.def_thresh, self.deg_thresh]);
       }).error(function() {
             console.log("server error loading image");
             load_finished();
-      });
+      });*/
     },
-
+    
     // filter image canvas based on thresholds
     // and color it
-    filter: function(image_data, w, h, low, high) {    
+    filter: function(ndfi_data, mask_images, w, h, def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh) {    
+        
+        //shade_thresh = 60
+        //gv_thresh    = 15
+        //soil_thresh  = 20
+
         var components = 4; //rgba
-          
+        
+        //console.log(mask_images.shade);        
         // yes, this variables are the same as declared on this view
         // this is because javascript looks like optimize if
         // variables are local and a constant
@@ -309,57 +366,79 @@ var BaselineLayer = Backbone.View.extend({
         var show_deforested = 255;
 
         var pixel_pos;
+        
+        // Converte os valores de grayscale para rgba (0-100 para 0-255)
+        var shade_thresh_rgb = 255 * shade_thresh / 100
+        var gv_thresh_rgb    = 255 * gv_thresh / 100
+        var soil_thresh_rgb  = 255 * soil_thresh / 100
 
         for(var i=0; i < w; ++i) {
             for(var j=0; j < h; ++j) {
                 pixel_pos = (j*w + i) * components;
-                var p = image_data[pixel_pos];
-                var a = image_data[pixel_pos + 3];
+                
+                var p = ndfi_data[pixel_pos];
+                
+                var p_gv    = mask_images.gv[pixel_pos];
+                var p_shade = mask_images.shade[pixel_pos];
+                var p_soil  = mask_images.soil[pixel_pos];
+
+
+                var a = ndfi_data[pixel_pos + 3];
                 // there is a better way to do this but this is fastest
                 if(a > 0) {
-                    if(p < low) {
-                    	image_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
-                        image_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
-                        image_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
-                        image_data[pixel_pos + 3] = show_deforestation;
-                    }else if(p > high) {
-                    	image_data[pixel_pos + 0] = FOREST_COLOR[0];
-                        image_data[pixel_pos + 1] = FOREST_COLOR[1];
-                        image_data[pixel_pos + 2] = FOREST_COLOR[2];
-                        image_data[pixel_pos + 3] = show_forest;                                            	
+                    // Classification (forest, degradation and deforestation)
+                    if(p < def_thresh) {
+                    	ndfi_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = show_deforestation;
+                    }else if(p > deg_thresh) {
+                    	ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = FOREST_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = FOREST_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = show_forest;                                            	
                     }else {
-                    	image_data[pixel_pos + 0] = DEGRADATION_COLOR[0];
-                        image_data[pixel_pos + 1] = DEGRADATION_COLOR[1];
-                        image_data[pixel_pos + 2] = DEGRADATION_COLOR[2];
-                        image_data[pixel_pos + 3] = show_degradation;                        
+                    	ndfi_data[pixel_pos + 0] = DEGRADATION_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = DEGRADATION_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = DEGRADATION_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = show_degradation;                        
                     }
                     
-                    if(p >= NDFI_ENCODING_LIMIT) {
-                        if (p == UNCLASSIFIED) {
-                            image_data[pixel_pos + 0] = 255;
-                            image_data[pixel_pos + 1] = 255;
-                            image_data[pixel_pos + 2] = 255;
-                            image_data[pixel_pos + 3] = 255;
-                        } 
-                        else if (p == CLOUD) {
-                        	image_data[pixel_pos + 0] = CLOUD_COLOR[0];
-                            image_data[pixel_pos + 1] = CLOUD_COLOR[1];
-                            image_data[pixel_pos + 2] = CLOUD_COLOR[2];
-                            image_data[pixel_pos + 3] = 255;
-                        }else if (p == WATER) {
-                        	image_data[pixel_pos + 0] = WATER_COLOR[0];
-                            image_data[pixel_pos + 1] = WATER_COLOR[1];
-                            image_data[pixel_pos + 2] = WATER_COLOR[2];
-                            image_data[pixel_pos + 3] = 255;
-                        }else {
-                          image_data[pixel_pos + 0] = FOREST_COLOR[0];
-                          image_data[pixel_pos + 1] = FOREST_COLOR[1];
-                          image_data[pixel_pos + 2] = FOREST_COLOR[2];
-                          image_data[pixel_pos + 3] = show_forest;
-                        }
-                    } else {
-                        //image_data[pixel_pos + 3] = 255;
+                    // Water and Cloud mask
+//                     if(p >= NDFI_ENCODING_LIMIT) {
+                    if (p == UNCLASSIFIED) {
+                        ndfi_data[pixel_pos + 0] = 255;
+                        ndfi_data[pixel_pos + 1] = 255;
+                        ndfi_data[pixel_pos + 2] = 255;
+                        ndfi_data[pixel_pos + 3] = 255;
+                    } 
+                    
+                    if (p_shade >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb){
+                        ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = WATER_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = 255;
                     }
+                    
+//                     if (p == CLOUD) {
+//                         ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
+//                         ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
+//                         ndfi_data[pixel_pos + 2] = CLOUD_COLOR[2];
+//                         ndfi_data[pixel_pos + 3] = 255;
+//                     }
+
+
+
+
+//                         else {
+//                           ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];
+//                           ndfi_data[pixel_pos + 1] = FOREST_COLOR[1];
+//                           ndfi_data[pixel_pos + 2] = FOREST_COLOR[2];
+//                           ndfi_data[pixel_pos + 3] = show_forest;
+//                         }
+//                     } else {
+//                         //ndfi_data[pixel_pos + 3] = 255;
+//                     }
                 }
             }
         }

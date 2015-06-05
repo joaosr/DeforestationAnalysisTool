@@ -417,7 +417,7 @@ var PolygonToolbarBaseline = Backbone.View.extend({
         _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change');
         this.buttons = new ButtonGroup({el: this.$('#baseline_selection')});
         this.polytype = new ButtonGroup({el: this.$('#baseline_polytype')});
-        this.baseline_range = new RangeSliderBaseline({el: this.$("#slider_forest")});
+        this.baseline_range = new RangeSliderBaseline({el: this.$("#baseline_maptools")});
         this.compare = new ButtonGroup({el: $("#compare_buttons")});
         this.polytype.hide();
         this.buttons.bind('state', this.change_state);
@@ -472,9 +472,9 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 		this.cell = this.options.cell;
 		this.bbox = this.options.bbox;
 		console.log(this.bbox);
-		var cell_name = ":: Cell " + this.cell.model.get('z') + "/"
+		var cell_name = "Define baseline features (Cell " + this.cell.model.get('z') + "/"
 				+ this.cell.model.get('x') + "/" + this.cell.model.get('y')
-				+ " ::";
+				+ ")";
 		this.el.find("#cell_name").html(cell_name);
 		this.cell_name = this.cell.model.get('z') + "_"
 				+ this.cell.model.get('x') + "_" + this.cell.model.get('y');
@@ -528,29 +528,43 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 		var date_start = moment().subtract(31, 'days').calendar();
 
 		var date_end = new Date();
+		
+		var minDate = new Date('1984-01-01');
 
 		var picker_start = new Pikaday({
 			field : this.$("#period_start")[0],
 			format : 'DD/MMM/YYYY',
-			minDate : new Date('1985-01-01'),
+			defaultDate: minDate,
+			minDate : minDate,
 			maxDate : new Date(date_start),
-			yearRange : [ 1985, date_end.getFullYear() ],
+			yearRange : [ 1984, date_end.getFullYear() ],
+			onSelect: function() {
+				picker_end.setMinDate(this.getDate());
+		    }/*,
 			onOpen : function() {
 				this.setMaxDate(new Date(self.$("#period_end").val()));
-			}
+			}*/
 
 		});
+		
+		
 
 		var picker_end = new Pikaday({
 			field : this.$("#period_end")[0],
 			format : 'DD/MMM/YYYY',
-			minDate : new Date('1985-01-01'),
+			defaultDate: new Date('1984-12-31'),
+			minDate : minDate,
 			maxDate : date_end,
-			yearRange : [ 1985, date_end.getFullYear() ],
+			yearRange : [ 1984, date_end.getFullYear() ],
+			onSelect: function() {
+				picker_end.setMinDate(this.getDate());
+		    }/*,
 			onOpen : function() {
 				this.setMinDate(new Date(self.$("#period_start").val()));
-			}
+			}*/
 		});
+		
+		
 
 		this.cloud_percent_list_ids = [];
 
@@ -737,9 +751,9 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 
 		this.list_tiles_name.push(tile_name);
 
-		ul.append('<li><p>' + tile['name']
-				+ ': <input type="number" id="cloud_cover_' + tile_name
-				+ '" value="0" min="0" max="100"></p></li>');
+		ul.append('<li><label for="cloud_cover_' + tile_name +'">' + tile['name']
+				+ ': </label><input type="number" id="cloud_cover_' + tile_name
+				+ '" value="30" min="0" max="100"></li>');
 
 	},
 	addTiles : function(tiles) {
@@ -1285,9 +1299,15 @@ var Baseline = Backbone.View.extend({
 //triggers change with values
 var RangeSliderBaseline = Backbone.View.extend({
  initialize: function() {
-     _.bind(this, 'slide', 'set_values');
+     _.bind(this, 'slide', 'slide_shade', 'slide_gv', 'slide_soil', 'set_values');
      var self = this;
-     this.el.slider({
+     this.low = 165;
+     this.high = 175;
+     this.shade = 70;
+     this.gv = 15;
+     this.soil = 10;
+     
+     this.$("#slider_forest").slider({
              range: true,
              min: 0,
              max: 200,
@@ -1296,40 +1316,128 @@ var RangeSliderBaseline = Backbone.View.extend({
              slide: function(event, ui) {
                  // Hack to get red bar resizing
 
-                 var low  = ui.values[0];
-                 var high = ui.values[1];
-                 self.slide(low, high);
+                 self.low  = ui.values[0];
+                 self.high = ui.values[1];
+                 self.slide(self.low, self.high);
              },
              stop: function(event, ui) {
-                 var low  = ui.values[0];
-                 var high = ui.values[1];
-                 self.trigger('stop', low, high);
+            	 self.low  = ui.values[0];
+            	 self.high = ui.values[1];
+                 self.trigger('stop', self.low, self.high);
                  //self.trigger('stop', low);
              },
              create: function(event,ui) {
                  // Hack to get red bar resizing
-                 var size = self.$('a.ui-slider-handle:eq(1)').css('left');
-                 self.$('span.hack_forest').css('left',size);
+                 var size = self.$('#slider_forest a.ui-slider-handle:eq(1)').css('left');
+                 self.$('#slider_forest span.hack_forest').css('left',size);
                  // Hack for handles tooltip
                  
-                 var size0 = self.$('a.ui-slider-handle:eq(0)').css('left');
+                 var size0 = self.$('#slider_forest a.ui-slider-handle:eq(0)').css('left');
 
-                 self.$('a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">165</p>');
-                 self.$('a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">175</p>');
+                 self.$('#slider_forest a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">165</p>');
+                 self.$('#slider_forest a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">175</p>');
              }
       });
+     
+      this.$("#slider_shade").slider({
+         range: "100",
+         min: 0,
+         max: 100,         
+         value: 70, //TODO: load from model
+         slide: function(event, ui) {
+             // Hack to get red bar resizing
+             self.shade  = ui.value;             
+             self.slide_shade(self.shade);
+         },
+         stop: function(event, ui) {
+        	 self.shade  = ui.value;             
+             self.trigger('stop', self.low, self.high, self.shade);
+         },
+         create: function(event,ui) {
+             
+             self.$('#slider_shade a.ui-slider-handle').append('<p id="ht0" class="tooltip">70</p>');             
+         }
+       });
+      
+      this.$("#slider_gv").slider({
+          range: "100",
+          min: 0,
+          max: 100,         
+          value: 15, //TODO: load from model
+          slide: function(event, ui) {
+              // Hack to get red bar resizing
+              self.gv  = ui.value;             
+              self.slide_gv(self.gv);
+          },
+          stop: function(event, ui) {
+         	 self.gv  = ui.value;             
+              self.trigger('stop', self.low, self.high, self.shade, self.gv);              
+          },
+          create: function(event,ui) {
+              self.$('#slider_gv a.ui-slider-handle').append('<p id="ht0" class="tooltip">15</p>');             
+          }
+        });
+      
+      this.$("#slider_soil").slider({
+          range: "100",
+          min: 0,
+          max: 100,         
+          value: 10, //TODO: load from model
+          slide: function(event, ui) {
+              // Hack to get red bar resizing
+              self.soil  = ui.value;             
+              self.slide_soil(self.soil);
+          },
+          stop: function(event, ui) {
+         	 self.soil  = ui.value;             
+              self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil); 
+          },
+          create: function(event,ui) {
+              self.$('#slider_soil a.ui-slider-handle').append('<p id="ht0" class="tooltip">10</p>');             
+          }
+        });
+     
  },
 
  slide: function(low, high, silent) {
-     var size = this.$('a.ui-slider-handle:eq(1)').css('left');
-     this.$('span.hack_forest').css('left',size);
+	 this.low = low;
+	 this.high = high;
+     var size = this.$('#slider_forest a.ui-slider-handle:eq(1)').css('left');
+     this.$('#slider_forest span.hack_forest').css('left',size);
      // Hack for handles tooltip
-     var size0 = this.$('a.ui-slider-handle:eq(0)').css('left');
+     var size0 = this.$('#slider_forest a.ui-slider-handle:eq(0)').css('left');
      //this.$('span.hack_degradation').css('left', size);
-     this.$('p#ht0').text(low);
-     this.$('p#ht1').text(high);
+     this.$('#slider_forest p#ht0').text(this.low);
+     this.$('#slider_forest p#ht1').text(this.high);
      if(silent !== true) {
-         this.trigger('change', low, high);
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
+     }
+ },
+ 
+ slide_shade: function(shade, silent) {
+	 this.shade = shade;
+ 
+     this.$('#slider_shade p#ht0').text(this.shade);     
+     if(silent !== true) {
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
+     }
+ },
+ 
+ slide_gv: function(gv, silent) {
+	 this.gv = gv;
+ 
+     this.$('#slider_gv p#ht0').text(this.gv);     
+     if(silent !== true) {
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
+     }
+ },
+ 
+ slide_soil: function(soil, silent) {
+	 this.soil = soil;
+
+     this.$('#slider_soil p#ht0').text(this.soil);     
+     if(silent !== true) {
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
      }
  },
 
