@@ -3,18 +3,13 @@
 
 
 # Using lowercase function naming to match the JavaScript names.
-# pylint: disable-msg=g-bad-name
+# pylint: disable=g-bad-name
 
 import datetime
 import numbers
 
 import computedobject
-import encodable
 
-# The name of the property inserted into objects created by
-# ee.CustomFunction.variable_() whose value is the type (class)
-# of the variable.
-VAR_TYPE_KEY = '__EE_VAR_TYPE'
 
 # A dictionary of the classes in the ee module.  Set by registerClasses.
 _registered_classes = {}
@@ -78,12 +73,11 @@ def isSubtype(firstType, secondType):
   if secondType == firstType:
     return True
 
-  if firstType == 'EEObject':
-    return secondType in ('Image', 'Feature', 'Collection', 'EECollection',
-                          'ImageCollection', 'FeatureCollection')
-  elif firstType in ('FeatureCollection', 'EECollection', 'Collection'):
-    return secondType in ('Collection', 'EECollection',
-                          'ImageCollection', 'FeatureCollection')
+  if firstType == 'Element':
+    return secondType in ('Element', 'Image', 'Feature',
+                          'Collection', 'ImageCollection', 'FeatureCollection')
+  elif firstType in ('FeatureCollection', 'Collection'):
+    return secondType in ('Collection', 'ImageCollection', 'FeatureCollection')
   elif firstType == object:
     return True
   else:
@@ -99,7 +93,9 @@ def isNumber(obj):
   Returns:
     Whether the object is a number or number variable.
   """
-  return isinstance(obj, numbers.Number) or isVarOfType(obj, numbers.Number)
+  return (isinstance(obj, numbers.Number) or
+          (isinstance(obj, computedobject.ComputedObject) and
+           obj.name() == 'Number'))
 
 
 def isString(obj):
@@ -111,7 +107,9 @@ def isString(obj):
   Returns:
     Whether the object is a string or string variable.
   """
-  return isinstance(obj, basestring) or isVarOfType(obj, basestring)
+  return (isinstance(obj, basestring) or
+          (isinstance(obj, computedobject.ComputedObject) and
+           obj.name() == 'String'))
 
 
 def isArray(obj):
@@ -124,22 +122,5 @@ def isArray(obj):
     Whether the object is an array or array variable.
   """
   return (isinstance(obj, (list, tuple)) or
-          isVarOfType(obj, list) or
-          isVarOfType(obj, tuple))
-
-
-def isVarOfType(obj, klass):
-  """Returns true if this object is an EE variable with the given type.
-
-  Args:
-    obj: The object to check.
-    klass: The class to check against.
-
-  Returns:
-    Whether the object is a variable of the given type.
-  """
-  if isinstance(obj, encodable.Encodable) and hasattr(obj, VAR_TYPE_KEY):
-    actual_klass = getattr(obj, VAR_TYPE_KEY)
-    return actual_klass is not None and issubclass(actual_klass, klass)
-  else:
-    return False
+          (isinstance(obj, computedobject.ComputedObject) and
+           obj.name() == 'List'))

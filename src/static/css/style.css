@@ -1900,15 +1900,33 @@ text-shadow: #000000 0px 1px 0px;
 #header #tools #baseline_maptools #range_mask_water {
   position: relative;
 }
+#header #tools #baseline_maptools li a#range_cloud_mask_title {
+  background: url("../img/icons/range.png") no-repeat right 0;
+}
+#header #tools #baseline_maptools #range_cloud_mask:hover {
+  background: url("../img/over_header_settings2.png") no-repeat -12px -4px;
+}
+#header #tools #baseline_maptools #range_cloud_mask:hover #range_cloud_mask_title {
+  background-position: right -30px;
+}
+#header #tools #baseline_maptools #range_cloud_mask:hover #slider_wrapper {
+  display: block;
+}
+#header #tools #baseline_maptools #range_cloud_mask {
+  position: relative;
+}
 
 #header #tools #baseline_maptools #slider_wrapper {
   position: absolute;
   display: none;
   top: 40px;
-  right: 8px;
-  width: 320px;
-  height: 164px;
-  background: url("../img/bottom_range_wrapper.png") no-repeat 0 0;
+  right: 0px;
+  padding: 10px;
+  min-width: 320px;
+  min-height: 164px;
+  /* max-height: 264px; */
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#343639), to(#28292D));  
+  -webkit-border-radius: 3px; -webkit-border-top-right-radius: 0; -moz-border-radius: 3px; -moz-border-radius-topright: 0; border-radius: 3px; border-top-right-radius: 0;  
   z-index: 2;
 }
 #header #tools #baseline_maptools #slider_wrapper h3 {
@@ -1978,7 +1996,8 @@ text-shadow: #000000 0px 1px 0px;
   position: absolute;
   top: 43px;
   left: 27px;
-  border: none;
+  border: 4px solid rgb(0, 0, 0);
+  box-shadow: 0 1px rgb(65, 65, 65);
   width: 266px;
   height: 2px;
   background: rgb(0, 0, 0);
@@ -2023,23 +2042,29 @@ text-shadow: #000000 0px 1px 0px;
   height: 2px;
   background: rgb(0,255,255);
 }
-
+#header #tools #baseline_maptools #slider_wrapper h3#shade_text {
+  position: absolute;
+  left: 17px;
+  top: 20px;
+}
 #header #tools #baseline_maptools #slider_wrapper div#slider_shade {
   position: absolute;
   top: 43px;
   left: 27px;
   border: none;
+  border: 4px solid rgb(0, 0, 0);   
+  box-shadow: 0 1px rgb(65, 65, 65);
   width: 266px;
   height: 2px;
-  background: rgba(211, 62, 62, 0);
+  background: rgba(115, 115, 115, 1);
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade span.hack_forest {
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade span.hack_shade {
   position: absolute;
   top: 0;
   right: 0;
   z-index: 1;
   height: 2px;
-  background: rgb(0, 153, 77);
+  background: rgb(0, 0, 255);
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_shade p.tooltip {
   position: absolute;
@@ -2065,7 +2090,7 @@ text-shadow: #000000 0px 1px 0px;
 #header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-slider-handle:focus {
   outline: none;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-hover {
+#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-state-hover {
   background-position: 0 -14px;
   cursor: pointer;
 }
@@ -2073,22 +2098,29 @@ text-shadow: #000000 0px 1px 0px;
   height: 2px;
   background: rgb(0,255,255);
 }
+#header #tools #baseline_maptools #slider_wrapper h3#gv_text {
+  position: absolute;
+  left: 17px;
+  top: 70px;
+}
 #header #tools #baseline_maptools #slider_wrapper div#slider_gv {
   position: absolute;
-  top: 73px;
+  top: 93px;
   left: 27px;
   border: none;
+  border: 4px solid rgb(0, 0, 0);   
+  box-shadow: 0px 1px rgb(65, 65, 65);
   width: 266px;
   height: 2px;
-  background: rgb(211, 62, 62);
+  background: rgb(0, 0, 255);
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_gv span.hack_forest {
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv span.hack_gv {
   position: absolute;
   top: 0;
   right: 0;
   z-index: 1;
   height: 2px;
-  background: rgb(0, 153, 77);
+  background: rgb(115, 115, 115);
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_gv p.tooltip {
   position: absolute;
@@ -2114,7 +2146,7 @@ text-shadow: #000000 0px 1px 0px;
 #header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-slider-handle:focus {
   outline: none;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-hover {
+#header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_gv .ui-state-hover {
   background-position: 0 -14px;
   cursor: pointer;
 }
@@ -2122,22 +2154,29 @@ text-shadow: #000000 0px 1px 0px;
   height: 2px;
   background: rgb(0,255,255);
 }
+#header #tools #baseline_maptools #slider_wrapper h3#soil_text {
+  position: absolute;
+  left: 17px;
+  top: 120px;
+}
 #header #tools #baseline_maptools #slider_wrapper div#slider_soil {
   position: absolute;
-  top: 103px;
+  top: 143px;
   left: 27px;
   border: none;
+  border: 4px solid rgb(0, 0, 0);   
+  box-shadow: 0 1px rgb(65, 65, 65);
   width: 266px;
   height: 2px;
-  background: rgb(211, 62, 62);
+  background: rgb(0, 0, 255);
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_soil span.hack_forest {
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil span.hack_soil {
   position: absolute;
   top: 0;
   right: 0;
   z-index: 1;
   height: 2px;
-  background: rgb(0, 153, 77);
+  background: rgb(115, 115, 115);
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_soil p.tooltip {
   position: absolute;
@@ -2163,11 +2202,61 @@ text-shadow: #000000 0px 1px 0px;
 #header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-slider-handle:focus {
   outline: none;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_forest .ui-state-hover {
+#header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-state-hover {
   background-position: 0 -14px;
   cursor: pointer;
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-slider-range {
+  height: 2px;
+  background: rgb(0,255,255);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_cloud {
+  position: absolute;
+  top: 43px;
+  left: 27px;
+  border: none;
+  border: 4px solid rgb(0, 0, 0);   box-shadow: 0 1px rgb(65, 65, 65);
+  width: 266px;
+  height: 2px;
+  background: rgb(0, 0, 255);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_cloud span.hack_cloud {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  height: 2px;
+  background: rgb(115, 115, 115);
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_cloud p.tooltip {
+  position: absolute;
+  top: -26px;
+  width: 24px;
+  height: 10px;
+  margin: 0 0 0 -7px;
+  padding: 4px 0 10px 1px;
+  background: url("../img/slider_tooltip_bkg.png") no-repeat 0 0;
+  font: normal 10px "Helvetica Neue", Arial, Sans-Serif;
+  color: #CCCCCC;
+  text-align: center;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_cloud .ui-slider-handle {
+  top: -6px;
+  width: 13px;
+  height: 14px;
+  background: url("../img/icons/slider_handle.png") no-repeat 0 0;
+  padding: 0;
+  outline: none;
+  border: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_cloud .ui-slider-handle:focus {
+  outline: none;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_cloud .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_cloud .ui-state-hover {
+  background-position: 0 -14px;
+  cursor: pointer;
+}
+#header #tools #baseline_maptools #slider_wrapper div#slider_cloud .ui-slider-range {
   height: 2px;
   background: rgb(0,255,255);
 }

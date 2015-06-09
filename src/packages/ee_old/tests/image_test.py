@@ -17,6 +17,12 @@ class ImageTestCase(apitestcase.ApiTestCase):
                       from_constant.func)
     self.assertEquals({'value': 1}, from_constant.args)
 
+    array_constant = ee.Array([1, 2])
+    from_array_constant = ee.Image(array_constant)
+    self.assertEquals(ee.ApiFunction.lookup('Image.constant'),
+                      from_array_constant.func)
+    self.assertEquals({'value': array_constant}, from_array_constant.args)
+
     from_id = ee.Image('abcd')
     self.assertEquals(ee.ApiFunction.lookup('Image.load'), from_id.func)
     self.assertEquals({'id': 'abcd'}, from_id.args)
@@ -44,6 +50,11 @@ class ImageTestCase(apitestcase.ApiTestCase):
     self.assertEquals({'id': 'abcd', 'version': 123},
                       from_id_and_version.args)
 
+    from_variable = ee.Image(ee.CustomFunction.variable(None, 'foo'))
+    self.assertTrue(isinstance(from_variable, ee.Image))
+    self.assertEquals({'type': 'ArgumentRef', 'value': 'foo'},
+                      from_variable.encode(None))
+
   def testImageSignatures(self):
     """Verifies that the API functions are added to ee.Image."""
     self.assertTrue(hasattr(ee.Image(1), 'addBands'))
@@ -61,16 +72,47 @@ class ImageTestCase(apitestcase.ApiTestCase):
     combined = ee.Image.combine_([image1, image2], ['a', 'b', 'c', 'd'])
 
     self.assertEquals(ee.ApiFunction.lookup('Image.select'), combined.func)
-    self.assertEquals(['.*'], combined.args['bandSelectors'])
-    self.assertEquals(['a', 'b', 'c', 'd'], combined.args['newNames'])
+    self.assertEquals(ee.List(['.*']), combined.args['bandSelectors'])
+    self.assertEquals(ee.List(['a', 'b', 'c', 'd']), combined.args['newNames'])
     self.assertEquals(ee.ApiFunction.lookup('Image.addBands'),
                       combined.args['input'].func)
     self.assertEquals({'dstImg': image1, 'srcImg': image2},
                       combined.args['input'].args)
 
+  def testSelect(self):
+    """Verifies regression in the behavior of empty ee.Image.select()."""
+    image = ee.Image([1, 2]).select()
+    self.assertEquals(ee.ApiFunction.lookup('Image.select'), image.func)
+    self.assertEquals(ee.List([]), image.args['bandSelectors'])
+
+  def testExpression(self):
+    """Verifies the behavior of ee.Image.expression()."""
+    image = ee.Image([1, 2]).expression('a', {'b': 'c'})
+    expression_func = image.func
+
+    # The call is buried in a one-time override of .encode so we have to call
+    # it rather than comparing the object structure.
+    def dummy_encoder(x):
+      if isinstance(x, ee.encodable.Encodable):
+        return x.encode(dummy_encoder)
+      else:
+        return x
+
+    self.assertEquals(
+        {
+            'type': 'Invocation',
+            'functionName': 'Image.parseExpression',
+            'arguments': {
+                'expression': 'a',
+                'argName': 'DEFAULT_EXPRESSION_IMAGE',
+                'vars': ['DEFAULT_EXPRESSION_IMAGE', 'b']
+            }
+        },
+        dummy_encoder(expression_func))
+
   def testDownload(self):
     """Verifies Download ID and URL generation."""
-    url = ee.Image(1).getDownloadUrl()
+    url = ee.Image(1).getDownloadURL()
 
     self.assertEquals('/download', self.last_download_call['url'])
     self.assertEquals(
@@ -83,7 +125,7 @@ class ImageTestCase(apitestcase.ApiTestCase):
 
   def testThumb(self):
     """Verifies Thumbnail ID and URL generation."""
-    url = ee.Image(1).getThumbUrl({'size': [13, 42]})
+    url = ee.Image(1).getThumbURL({'size': [13, 42]})
 
     self.assertEquals('/thumb', self.last_thumb_call['url'])
     self.assertEquals(
@@ -95,22 +137,6 @@ class ImageTestCase(apitestcase.ApiTestCase):
         },
         self.last_thumb_call['data'])
     self.assertEquals('/api/thumb?thumbid=3&token=4', url)
-
-  def testSet(self):
-    """Verifies Image.set() keyword argument interpretation."""
-
-    def AssertProperties(expected, image):
-      self.assertEquals(ee.ApiFunction.lookup('Image.set'), image.func)
-      self.assertEquals(expected, image.args['properties'])
-
-    image = ee.Image(1)
-
-    AssertProperties({'foo': 'bar'}, image.set({'foo': 'bar'}))
-    AssertProperties({'foo': 'bar'}, image.set({'properties': {'foo': 'bar'}}))
-    AssertProperties({'properties': 5}, image.set({'properties': 5}))
-    AssertProperties({'properties': image}, image.set({'properties': image}))
-    AssertProperties({'properties': {'foo': 'bar'}, 'baz': 'quux'},
-                     image.set({'properties': {'foo': 'bar'}, 'baz': 'quux'}))
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Singleton for all of the library's communcation with the Earth Engine API."""
 
 
@@ -441,6 +442,95 @@ def startProcessing(taskId, params):
   return send_('/processingrequest', args)
 
 
+def startIngestion(taskId, request):
+  """Creates an asset import task.
+
+  Args:
+    taskId: ID for the task (obtained using newTaskId).
+    request: The object that describes the import task, which can
+        have these fields:
+          name (string) The destination asset id (e.g. users/foo/bar).
+          filesets (array) A list of Google Cloud Storage source file paths
+            formatted like:
+              [{'sources': [
+                  {'primaryPath': 'foo.tif', 'additionalPaths': ['foo.prj']},
+                  {'primaryPath': 'bar.tif', 'additionalPaths': ['bar.prj'},
+              ]}]
+            Where path values correspond to source files' Google Cloud Storage
+            object names, e.g. 'gs://bucketname/filename.tif'
+          bands (array) An optional list of band names formatted like:
+            [{'name': 'R'}, {'name': 'G'}, {'name': 'B'}]
+          extensions (array) An optional list of file extensions formatted like:
+            ['tif', 'prj']. Useful if the file names in GCS lack extensions.
+
+  Returns:
+    A dict with optional notes about the created task.
+  """
+  args = {'id': taskId, 'request': json.dumps(request)}
+  return send_('/ingestionrequest', args)
+
+
+def getAssetRoots():
+  """Returns the list of the root folders the user owns.
+
+  Note: The "id" values for roots are two levels deep, e.g. "users/johndoe"
+        not "users/johndoe/notaroot".
+
+  Returns:
+    A list of folder descriptions formatted like:
+      [
+          {"type": "Folder", "id": "users/foo"},
+          {"type": "Folder", "id": "projects/bar"},
+      ]
+  """
+  return send_('/buckets', None, 'GET')
+
+
+def getAssetAcl(assetId):
+  """Returns the access control list of the asset with the given ID.
+
+  Args:
+    assetId: The ID of the asset to check.
+
+  Returns:
+    A dict describing the asset's ACL. Looks like:
+      {
+         "owners" : ["user@domain1.com"],
+         "writers": ["user2@domain1.com", "user3@domain1.com"],
+         "readers": ["some_group@domain2.com"],
+         "all_users_can_read" : True
+      }
+  """
+  return send_('/getacl', {'id': assetId}, 'GET')
+
+
+def setAssetAcl(assetId, aclUpdate):
+  """Sets the access control list of the asset with the given ID.
+
+  The owner ACL cannot be changed, and the final ACL of the asset
+  is constructed by merging the OWNER entries of the old ACL with
+  the incoming ACL record.
+
+  Args:
+    assetId: The ID of the asset to set the ACL on.
+    aclUpdate: The updated ACL for the asset. Must be formatted like the
+        value returned by getAssetAcl but without "owners".
+  """
+  send_('/setacl', {'id': assetId, 'value': aclUpdate})
+
+
+def createAssetHome(requestedId):
+  """Attempts to create a home root folder for the current user ("users/joe").
+
+  Results in an error if the user already has a home root folder or the
+  requested ID is unavailable.
+
+  Args:
+    requestedId: The requested ID of the home folder (e.g. "users/joe").
+  """
+  send_('/createbucket', {'id': requestedId})
+
+
 def send_(path, params, opt_method='POST', opt_raw=False):
   """Send an API call.
 
@@ -469,7 +559,7 @@ def send_(path, params, opt_method='POST', opt_raw=False):
     http = _credentials.authorize(http)
 
   if opt_method == 'GET':
-    url = url + '?' + payload
+    url = url + ('&' if '?' in url else '?') + payload
     payload = None
   elif opt_method == 'POST':
     headers['Content-type'] = 'application/x-www-form-urlencoded'
@@ -483,16 +573,31 @@ def send_(path, params, opt_method='POST', opt_raw=False):
     raise ee_exception.EEException(
         'Unexpected HTTP error: %s' % e.message)
 
-  if response.status != 200:
+  # Whether or not the response is an error, it may be JSON.
+  content_type = (response['content-type'] or 'application/json').split(';')[0]
+  if content_type in ('application/json', 'text/json') and not opt_raw:
+    try:
+      json_content = json.loads(content)
+    except Exception, e:
+      raise ee_exception.EEException('Invalid JSON: ' + content)
+    if 'error' in json_content:
+      raise ee_exception.EEException(json_content['error']['message'])
+    if 'data' not in content:
+      raise ee_exception.EEException('Malformed response: ' + content)
+  else:
+    json_content = None
+
+  if response.status < 100 or response.status >= 300:
+    # Note if the response is JSON and contains an error value, we raise that
+    # error above rather than this generic one.
     raise ee_exception.EEException('Server returned HTTP code: %d' %
                                    response.status)
 
+  # Now known not to be an error response...
   if opt_raw:
     return content
+  elif json_content is None:
+    raise ee_exception.EEException(
+        'Response was unexpectedly not JSON, but %s' % response['content-type'])
   else:
-    content = json.loads(content)
-    if 'error' in content:
-      raise ee_exception.EEException(content['error'])
-    if 'data' not in content:
-      raise ee_exception.EEException('Missing data in response: ' + content)
-    return content['data']
+    return json_content['data']

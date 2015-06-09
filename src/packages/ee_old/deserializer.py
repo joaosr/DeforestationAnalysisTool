@@ -5,13 +5,13 @@
 # Using lowercase function naming to match the JavaScript names.
 # pylint: disable=g-bad-name
 
-import datetime
 import json
 import numbers
 
 import apifunction
 import computedobject
 import customfunction
+import ee_date
 import ee_exception
 import encodable
 import function
@@ -92,12 +92,12 @@ def _decodeValue(json_obj, named_values):
     var_name = json_obj['value']
     if not isinstance(var_name, basestring):
       raise ee_exception.EEException('Invalid variable name: ' + var_name)
-    return customfunction.CustomFunction._variable(None, var_name)  # pylint: disable=protected-access
+    return customfunction.CustomFunction.variable(None, var_name)  # pylint: disable=protected-access
   elif type_name == 'Date':
     microseconds = json_obj['value']
     if not isinstance(microseconds, numbers.Number):
       raise ee_exception.EEException('Invalid date value: ' + microseconds)
-    return datetime.datetime.utcfromtimestamp(microseconds / 1e6)
+    return ee_date.Date(microseconds / 1e3)
   elif type_name == 'Bytes':
     result = encodable.Encodable()
     result.encode = lambda encoder: json_obj

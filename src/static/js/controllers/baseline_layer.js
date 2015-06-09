@@ -31,6 +31,7 @@ var BaselineLayer = Backbone.View.extend({
         this.shade_thresh = 70;
         this.gv_thresh = 15; 
         this.soil_thresh = 10;
+        this.cloud_thresh = 7;
         this.showing = false;
         this.inner_poly_sensibility = 10;
         console.log("Report ID: "+this.report.id);        
@@ -249,16 +250,17 @@ var BaselineLayer = Backbone.View.extend({
         */
     },
 
-    apply_filter: function(def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh) {
+    apply_filter: function(def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh, cloud_thresh) {
         this.def_thresh   = def_thresh;        
         this.deg_thresh   = deg_thresh;
         this.shade_thresh = shade_thresh;
         this.gv_thresh    = gv_thresh;
         this.soil_thresh  = soil_thresh;
+        this.cloud_thresh = cloud_thresh;
 
         this.layer.filter = this.filter //TODO mater somente em versão debugg        
         
-        this.layer.filter_tiles_canvas(this.extra_images_list, this.def_thresh, this.deg_thresh, this.shade_thresh, this.gv_thresh, this.soil_thresh);
+        this.layer.filter_tiles_canvas(this.extra_images_list, this.def_thresh, this.deg_thresh, this.shade_thresh, this.gv_thresh, this.soil_thresh, this.cloud_thresh);
         //this.layer.filter_tiles(def_thresh);
     },
 
@@ -320,7 +322,7 @@ var BaselineLayer = Backbone.View.extend({
 
           self.extra_images_list[canvas_name] = extra_images;
                    
-          self.layer.filter_tile_canvas(canvas, extra_images, [self.def_thresh, self.deg_thresh, self.shade_thresh, self.gv_thresh, self.soil_thresh]);
+          self.layer.filter_tile_canvas(canvas, extra_images, [self.def_thresh, self.deg_thresh, self.shade_thresh, self.gv_thresh, self.soil_thresh, self.cloud_thresh]);
       };
       
       /*$(image).load(function() {
@@ -337,11 +339,10 @@ var BaselineLayer = Backbone.View.extend({
     
     // filter image canvas based on thresholds
     // and color it
-    filter: function(ndfi_data, mask_images, w, h, def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh) {    
-        
-        //shade_thresh = 60
-        //gv_thresh    = 15
-        //soil_thresh  = 20
+    filter: function(ndfi_data, mask_images, w, h, def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh, cloud_thresh) {    
+        var temperature_thresh = 10;
+    	
+       
 
         var components = 4; //rgba
         
@@ -366,6 +367,8 @@ var BaselineLayer = Backbone.View.extend({
         var show_deforested = 255;
 
         var pixel_pos;
+        //console.log(mask_images.cloud);
+        //console.log(mask_images.cloud_regions);
         
         // Converte os valores de grayscale para rgba (0-100 para 0-255)
         var shade_thresh_rgb = 255 * shade_thresh / 100
@@ -379,9 +382,12 @@ var BaselineLayer = Backbone.View.extend({
                 var p = ndfi_data[pixel_pos];
                 
                 var p_gv    = mask_images.gv[pixel_pos];
-                var p_shade = mask_images.shade[pixel_pos];
+                var p_shd_md = mask_images.shade_median[pixel_pos];
                 var p_soil  = mask_images.soil[pixel_pos];
-
+                
+                var p_cloud        = mask_images.cloud[pixel_pos];
+                var p_cloud_region = mask_images.cloud_region[pixel_pos];
+                //var p_temperature  = mask_images.temperature[pixel_pos];
 
                 var a = ndfi_data[pixel_pos + 3];
                 // there is a better way to do this but this is fastest
@@ -412,23 +418,22 @@ var BaselineLayer = Backbone.View.extend({
                         ndfi_data[pixel_pos + 2] = 255;
                         ndfi_data[pixel_pos + 3] = 255;
                     } 
+
+                    if (p_cloud_region != 0 && p_cloud >= cloud_thresh){ //&& p_temperature <= temperature_thresh) {
+                       //console.log(p_temperature);
+                       ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
+                       ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
+                       ndfi_data[pixel_pos + 2] = CLOUD_COLOR[2];
+                       ndfi_data[pixel_pos + 3] = 255;
+                    }
+
                     
-                    if (p_shade >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb){
+                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb){
                         ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
                         ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
                         ndfi_data[pixel_pos + 2] = WATER_COLOR[2];
                         ndfi_data[pixel_pos + 3] = 255;
                     }
-                    
-//                     if (p == CLOUD) {
-//                         ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
-//                         ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
-//                         ndfi_data[pixel_pos + 2] = CLOUD_COLOR[2];
-//                         ndfi_data[pixel_pos + 3] = 255;
-//                     }
-
-
-
 
 //                         else {
 //                           ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];

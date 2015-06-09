@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Earth Engine OAuth2 client information."""
 
 import os
@@ -9,8 +10,6 @@ class OAuthInfo(object):
                'apps.googleusercontent.com')
   CLIENT_SECRET = 'RUP0RZ6e0pPhDzsqIJ7KlNd1'
 
-
   @classmethod
   def credentials_path(cls):
-    return  '/home/joao_manoel/.config/earthengine/credentials'
-    #return os.path.expanduser('~/.config/earthengine/credentials')
+    return os.path.expanduser('~/.config/earthengine/credentials')

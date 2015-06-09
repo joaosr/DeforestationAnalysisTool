@@ -1404,7 +1404,7 @@ class NDFI(object):
         #downscalling = Downscalling.find_by_compounddate(date) 
         #feature_collection = Downscalling.return_feature_collection(downscalling)
         #logging.info(type(feature_collection))
-        logging.info("Compounddate: "+date)
+        #logging.info("Compounddate: "+date)
         feature_collection = False
         params = ''
         
@@ -1417,7 +1417,10 @@ class NDFI(object):
             #Downscalling.save_feature_collection(params)
         
         mosaic = self._make_mosaic(period, long_span)
-        return ee.Algorithms.SAD.KrigeModis(mosaic, params)
+        image = ee.Algorithms.SAD.KrigeModis(mosaic, params)
+        logging.info("Krige Modis")
+        logging.info(image.getInfo())
+        return image
 
     def _make_mosaic(self, period, long_span=False):
         """Returns a mosaic of MODIS images for a given period.
@@ -1679,7 +1682,9 @@ def create_tile_baseline(start_date, end_date, cell):
     soils         = []
     clouds        = []
     shades        = []
+    shades_median = []
     cloud_regions = []
+    temperatures   = []
     smas          = [] #TODO Remover e ajustar as dependencias
     resutls       = []
     
@@ -1739,7 +1744,9 @@ def create_tile_baseline(start_date, end_date, cell):
             soils.append(classifications['soil'])
             clouds.append(classifications['cloud'])
             shades.append(classifications['shade'])
+            shades_median.append(classifications['shade_median'])
             cloud_regions.append(classifications['cloud_region'])
+            temperatures.append(classifications['temperature'])
             
         elif len(days) > 1 :
             resutls.append("Process with temporal composition")
@@ -1747,46 +1754,25 @@ def create_tile_baseline(start_date, end_date, cell):
             resutls.append(None)
 
     if len(baselines) > 0:                
-        images_baseline = ee.ImageCollection(baselines)
-        images_ndfi     = ee.ImageCollection(ndfis)
-        images_gvs      = ee.ImageCollection(gvs)
-        images_npvs     = ee.ImageCollection(npvs)
-        images_soils    = ee.ImageCollection(soils)
-        images_clouds   = ee.ImageCollection(clouds)
-        images_shades   = ee.ImageCollection(shades)
-        images_cloud_regions = ee.ImageCollection(cloud_regions)
-        
-        images_sma = ee.ImageCollection(smas) #TODO
-        
-        image_baseline  = images_baseline.mosaic()
-        image_ndfi  = images_ndfi.mosaic()
-        image_sma  = images_sma.mosaic()
-        image_gvs      = images_gvs.mosaic()
-        image_npvs     = images_npvs.mosaic()
-        image_soils    = images_soils.mosaic()
-        image_clouds   = images_clouds.mosaic()
-        image_shades   = images_shades.mosaic()
-        image_cloud_regions = images_cloud_regions.mosaic()
-        
         cell_grid = CellGrid.find_by_name(cell)
         geo  = ast.literal_eval(cell_grid.geo)
         polygon = ee.Geometry(ee.Geometry.Polygon(geo), "EPSG:4326")
         #polygon = ee.Geometry.Polygon(geo)
         
-        image_baseline = image_baseline.clip(polygon)
-        image_ndfi     = image_ndfi.clip(polygon)
-        image_sma      = image_sma.clip(polygon)
-        image_gvs      = image_gvs.clip(polygon)
-        image_npvs     = image_npvs.clip(polygon)
-        image_soils    = image_soils.clip(polygon)
-        image_clouds   = image_clouds.clip(polygon)
-        image_shades   = image_shades.clip(polygon)
-        image_cloud_regions = image_cloud_regions.clip(polygon) 
+        image_baseline = ee.ImageCollection(baselines).mosaic().clip(polygon)
         
-#         feature_baseline = ee.Image(image_baseline).getMapId({
-#                               'bands': 'nd', 
-#                               'palette': '000000,00994d,00ffff,000000,0000ff,666666'                            
-#                               })
+        image_ndfi         = ee.ImageCollection(ndfis).mosaic().clip(polygon)
+        image_gv           = ee.ImageCollection(gvs).mosaic().clip(polygon)
+        image_npv          = ee.ImageCollection(npvs).mosaic().clip(polygon)
+        image_soil         = ee.ImageCollection(soils).mosaic().clip(polygon)
+        image_cloud        = ee.ImageCollection(clouds).mosaic().clip(polygon)
+        image_shade        = ee.ImageCollection(shades).mosaic().clip(polygon)
+        image_shade_median = ee.ImageCollection(shades_median).mosaic().clip(polygon)
+        image_cloud_region = ee.ImageCollection(cloud_regions).mosaic().clip(polygon)
+        image_temperature  = ee.ImageCollection(temperatures).mosaic().clip(polygon)
+        
+        image_sma = ee.ImageCollection(smas).mosaic().clip(polygon) #TODO
+        
         feature_baseline = ee.Image(image_baseline).getMapId({
                               'bands': 'nd'}) #TODO aqui está o dado ndfi bruto
         
@@ -1836,7 +1822,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'url': 'https://earthengine.googleapis.com/map/'+feature_sma['mapid']+'/{Z}/{X}/{Y}?token='+feature_sma['token']
                         })
         
-        feature_gv = ee.Image(image_gvs).getMapId({
+        feature_gv = ee.Image(image_gv).getMapId({
                               'bands': 'band_0',                                                                                      
                               })
         
@@ -1849,7 +1835,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'url': 'https://earthengine.googleapis.com/map/'+feature_gv['mapid']+'/{Z}/{X}/{Y}?token='+feature_gv['token']
                         })
         
-        feature_shade = ee.Image(image_shades).getMapId({
+        feature_shade = ee.Image(image_shade).getMapId({
                               'bands': 'band_0',                                                                                      
                               })
         
@@ -1862,7 +1848,20 @@ def create_tile_baseline(start_date, end_date, cell):
                         'url': 'https://earthengine.googleapis.com/map/'+feature_shade['mapid']+'/{Z}/{X}/{Y}?token='+feature_shade['token']
                         })
         
-        feature_soil = ee.Image(image_soils).getMapId({
+        feature_shade_median = ee.Image(image_shade_median).getMapId({
+                              'bands': 'band_0',                                                                                      
+                              })
+        
+        resutls.append({'mapid':          feature_shade_median['mapid'],
+                        'token':       feature_shade_median['token'],
+                        'id': 'shade_median',
+                        'type':        'custom',
+                        'visibility':  True,
+                        'description': 'Shade median band',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_shade_median['mapid']+'/{Z}/{X}/{Y}?token='+feature_shade_median['token']
+                        })
+        
+        feature_soil = ee.Image(image_soil).getMapId({
                               'bands': 'band_2',                                                                                      
                               })
         
@@ -1875,8 +1874,44 @@ def create_tile_baseline(start_date, end_date, cell):
                         'url': 'https://earthengine.googleapis.com/map/'+feature_soil['mapid']+'/{Z}/{X}/{Y}?token='+feature_soil['token']
                         })
         
+        feature_cloud = ee.Image(image_cloud).getMapId({
+                              'bands': 'band_3',                                                                                      
+                              })
         
+        resutls.append({'mapid':          feature_cloud['mapid'],
+                        'token':       feature_cloud['token'],
+                        'id': 'cloud',
+                        'type':        'custom',
+                        'visibility':  True,
+                        'description': 'Cloud band',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_cloud['mapid']+'/{Z}/{X}/{Y}?token='+feature_cloud['token']
+                        })
         
+        feature_cloud_region = ee.Image(image_cloud_region).getMapId({
+                              'bands': 'band_3',                                                                                      
+                              })
+        
+        resutls.append({'mapid':          feature_cloud_region['mapid'],
+                        'token':       feature_cloud_region['token'],
+                        'id': 'cloud_region',
+                        'type':        'custom',
+                        'visibility':  True,
+                        'description': 'Cloud region band',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_cloud_region['mapid']+'/{Z}/{X}/{Y}?token='+feature_cloud_region['token']
+                        })
+        
+        feature_temperature = ee.Image(image_temperature).getMapId({
+                              'bands': 'B6',                                                                                      
+                              })
+        
+        resutls.append({'mapid':       feature_temperature['mapid'],
+                        'token':       feature_temperature['token'],
+                        'id': 'temperature',
+                        'type':        'custom',
+                        'visibility':  True,
+                        'description': 'Temperature band',
+                        'url': 'https://earthengine.googleapis.com/map/'+feature_temperature['mapid']+'/{Z}/{X}/{Y}?token='+feature_temperature['token']
+                        })
         
         return resutls
     else:
@@ -1885,26 +1920,13 @@ def create_tile_baseline(start_date, end_date, cell):
             
     
 def baseline_image(image, sensor, start_date, end_date=None, cell=None, tile_name=None):
+    
     ENDMEMBERS = [
                   [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
                   [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
                   [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], #SOIL
                   [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
                  ]
-        
-    image_year = str(start_date.year)
-    image_period_start = image_year + '-01-01'
-    image_period_end = image_year + '-12-31'
-    shade_collection = EELandsat.find_collection_tile(sensor, tile_name, image_period_start, image_period_end)
-    shade_image = shade_collection.filterMetadata('CLOUD_COVER', 'less_than', 50).median(); 
-    
-    ## SMA shade ===========================================================================
-    shade_unmixed = ee.Image(shade_image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS).max(0) # clamped
-    
-    shade_summed = shade_unmixed.expression('b(0) + b(1) + b(2) + b(3)')
-    
-    shade = shade_summed.subtract(1.0).abs()
-        
     
     ## SMA ===========================================================================
     unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS).max(0) # clamped
@@ -1916,7 +1938,8 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None, tile_nam
     gv    = unmixed.select(0)
     npv   = unmixed.select(1)
     soil  = unmixed.select(2)
-    cloud = unmixed.select(3)    
+    cloud = unmixed.select(3)
+    shade = summed.subtract(1.0).abs()    
     gv_shade = gv.divide(summed)
     
     npv_plus_soil = npv.add(soil)
@@ -1939,8 +1962,12 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None, tile_nam
     ## Cloud mask ====================================================================
     cloudThresh = [0.15, 0.07] # % 0-1
     bufferSize  = 10 #pixels
-
-    cloudMask1 = unmixed.select(3).gte(cloudThresh[0])
+    temperatureThresh = 22
+    
+    # Gera a imagem de temperatuira em celsius.
+    temperature = brightness_temperature(image)
+    
+    cloudMask1 = unmixed.select(3).gte(cloudThresh[0]).And(temperature.lte(temperatureThresh))
  
     kernel = ee.Kernel.circle(bufferSize, 'pixels')
 
@@ -1968,8 +1995,51 @@ def baseline_image(image, sensor, start_date, end_date=None, cell=None, tile_nam
             'soil'        : soil,
             'cloud'       : cloud,
             'shade'       : shade,
+            'shade_median': shade_median(image, sensor, start_date, tile_name),
             'cloud_region': buffered,
+            'temperature' : brightness_temperature(image),
             'sma'         : unmixed.max(0).multiply(100).byte()} #TODO Remover o sma e ajustar com as variaves gv npv soil cloud
+    
+def shade_median(image, sensor, start_date, tile_name, end_date=None):
+    ENDMEMBERS = [
+                  [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
+                  [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
+                  [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], #SOIL
+                  [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
+                 ]
+    
+    image_year = str(start_date.year)
+    image_period_start = image_year + '-01-01'
+    image_period_end = image_year + '-12-31'
+    shade_collection = EELandsat.find_collection_tile(sensor, tile_name, image_period_start, image_period_end)
+    logging.info("########### Shade Image ###########")
+    logging.info(len(shade_collection.getInfo().get('features')))  
+    shade_image = shade_collection.filterMetadata('CLOUD_COVER', 'less_than', 100).median()
+    
+       
+    
+    ## SMA shade ===========================================================================
+    shade_unmixed = ee.Image(shade_image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS).max(0) # clamped
+    
+    shade_summed = shade_unmixed.expression('b(0) + b(1) + b(2) + b(3)')
+        
+    return shade_summed.subtract(1.0).abs()
+
+def brightness_temperature(image):
+    
+    image_id = image.getInfo().get('id')
+    collection_name, scene_id = image_id.split('_SR/')
+    
+    image_TOA_id = "LT" + collection_name[1:len(collection_name)] +'_TOA/'+ scene_id
+    logging.info("Image TOA id");
+    logging.info(image_TOA_id);
+    
+    imageTOA = ee.Image(image_TOA_id);
+    
+    #Temperatura em graus celsius
+    temperature = imageTOA.select('B6').subtract(273.15);
+
+    return temperature
 
 
 def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):

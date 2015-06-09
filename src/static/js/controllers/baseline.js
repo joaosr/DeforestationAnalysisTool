@@ -1299,13 +1299,14 @@ var Baseline = Backbone.View.extend({
 //triggers change with values
 var RangeSliderBaseline = Backbone.View.extend({
  initialize: function() {
-     _.bind(this, 'slide', 'slide_shade', 'slide_gv', 'slide_soil', 'set_values');
+     _.bind(this, 'slide', 'slide_shade', 'slide_gv', 'slide_soil', 'slide_cloud', 'set_values');
      var self = this;
      this.low = 165;
      this.high = 175;
      this.shade = 70;
      this.gv = 15;
      this.soil = 10;
+     this.cloud = 7;
      
      this.$("#slider_forest").slider({
              range: true,
@@ -1354,7 +1355,8 @@ var RangeSliderBaseline = Backbone.View.extend({
              self.trigger('stop', self.low, self.high, self.shade);
          },
          create: function(event,ui) {
-             
+             var size = self.$('#slider_shade a.ui-slider-handle').css('left');
+             self.$('#slider_shade span.hack_shade').css('left',size);
              self.$('#slider_shade a.ui-slider-handle').append('<p id="ht0" class="tooltip">70</p>');             
          }
        });
@@ -1374,6 +1376,8 @@ var RangeSliderBaseline = Backbone.View.extend({
               self.trigger('stop', self.low, self.high, self.shade, self.gv);              
           },
           create: function(event,ui) {
+          	  var size = self.$('#slider_gv a.ui-slider-handle').css('left');
+              self.$('#slider_gv span.hack_gv').css('left',size);
               self.$('#slider_gv a.ui-slider-handle').append('<p id="ht0" class="tooltip">15</p>');             
           }
         });
@@ -1393,7 +1397,30 @@ var RangeSliderBaseline = Backbone.View.extend({
               self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil); 
           },
           create: function(event,ui) {
+          	  var size = self.$('#slider_soil a.ui-slider-handle').css('left');
+              self.$('#slider_soil span.hack_soil').css('left',size);
               self.$('#slider_soil a.ui-slider-handle').append('<p id="ht0" class="tooltip">10</p>');             
+          }
+        });
+
+        this.$("#slider_cloud").slider({
+          range: "100",
+          min: 0,
+          max: 100,         
+          value: 7, //TODO: load from model
+          slide: function(event, ui) {
+              // Hack to get red bar resizing
+              self.cloud  = ui.value;             
+              self.slide_cloud(self.cloud);
+          },
+          stop: function(event, ui) {
+         	 self.soil  = ui.value;             
+              self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil); 
+          },
+          create: function(event,ui) {
+          	  var size = self.$('#slider_cloud a.ui-slider-handle').css('left');
+              self.$('#slider_cloud span.hack_cloud').css('left',size);
+              self.$('#slider_cloud a.ui-slider-handle').append('<p id="ht0" class="tooltip">7</p>');             
           }
         });
      
@@ -1410,34 +1437,51 @@ var RangeSliderBaseline = Backbone.View.extend({
      this.$('#slider_forest p#ht0').text(this.low);
      this.$('#slider_forest p#ht1').text(this.high);
      if(silent !== true) {
-         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
      }
  },
  
  slide_shade: function(shade, silent) {
 	 this.shade = shade;
- 
+     var size = this.$('#slider_shade a.ui-slider-handle').css('left');
+     this.$('#slider_shade span.hack_shade').css('left',size);
+              
      this.$('#slider_shade p#ht0').text(this.shade);     
      if(silent !== true) {
-         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
      }
  },
  
  slide_gv: function(gv, silent) {
 	 this.gv = gv;
+	 var size = this.$('#slider_gv a.ui-slider-handle').css('left');
+     this.$('#slider_gv span.hack_gv').css('left',size);
  
      this.$('#slider_gv p#ht0').text(this.gv);     
      if(silent !== true) {
-         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
      }
  },
  
  slide_soil: function(soil, silent) {
 	 this.soil = soil;
+	 var size = this.$('#slider_soil a.ui-slider-handle').css('left');
+     this.$('#slider_soil span.hack_soil').css('left',size);
 
      this.$('#slider_soil p#ht0').text(this.soil);     
      if(silent !== true) {
-         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil);
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
+     }
+ },
+
+ slide_cloud: function(cloud, silent) {
+	 this.cloud = cloud;
+	 var size = this.$('#slider_cloud a.ui-slider-handle').css('left');
+     this.$('#slider_cloud span.hack_cloud').css('left',size);
+
+     this.$('#slider_cloud p#ht0').text(this.cloud);     
+     if(silent !== true) {
+         this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
      }
  },
 

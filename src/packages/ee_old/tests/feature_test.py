@@ -35,24 +35,32 @@ class FeatureTest(apitestcase.ApiTestCase):
                        'metadata': computed_properties},
                       from_computed_both.args)
 
+    from_variable = ee.Feature(ee.CustomFunction.variable(None, 'foo'))
+    self.assertTrue(isinstance(from_variable, ee.Feature))
+    self.assertEquals({'type': 'ArgumentRef', 'value': 'foo'},
+                      from_variable.encode(None))
+
     from_geo_json_feature = ee.Feature({
         'type': 'Feature',
+        'id': 'bar',
         'geometry': point.toGeoJSON(),
         'properties': {'foo': 42}
     })
     self.assertEquals(ee.ApiFunction('Feature'), from_geo_json_feature.func)
     self.assertEquals(point, from_geo_json_feature.args['geometry'])
-    self.assertEquals({'foo': 42}, from_geo_json_feature.args['metadata'])
+    self.assertEquals({'foo': 42, 'system:index': 'bar'},
+                      from_geo_json_feature.args['metadata'])
 
   def testGetMap(self):
     """Verifies that getMap() uses Collection.draw to rasterize Features."""
     feature = ee.Feature(None)
     mapid = feature.getMapId({'color': 'ABCDEF'})
-    manual = ee.ApiFunction.call_(
-        'Collection.draw', ee.FeatureCollection(feature), 'ABCDEF')
+    manual = ee.ApiFunction.apply_('Collection.draw', {
+        'collection': ee.FeatureCollection([feature]),
+        'color': 'ABCDEF'})
 
     self.assertEquals('fakeMapId', mapid['mapid'])
-    self.assertEquals(manual, mapid['image'])
+    self.assertEquals(manual.serialize(), mapid['image'].serialize())
 
 
 if __name__ == '__main__':

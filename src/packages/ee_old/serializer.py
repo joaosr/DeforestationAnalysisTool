@@ -19,6 +19,13 @@ import encodable
 _EPOCH_DATETIME = datetime.datetime.utcfromtimestamp(0)
 
 
+def DatetimeToMicroseconds(date):
+  """Convert a datetime to a timestamp, microseconds since the epoch."""
+  td = (date - _EPOCH_DATETIME)
+  microseconds = td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6
+  return math.floor(microseconds)
+
+
 class Serializer(object):
   """A serializer for EE object trees."""
 
@@ -94,18 +101,18 @@ class Serializer(object):
       # Primitives are encoded as is and not saved in the scope.
       return obj
     elif isinstance(obj, datetime.datetime):
-      # Dates are encoded as typed UTC microseconds since the Unix epoch.
-      # They are returned directly and not saved in the scope either.
-      td = (obj - _EPOCH_DATETIME)
-      microseconds = td.microseconds + (td.seconds + td.days * 24 * 3600) * 1e6
+      # A raw date slipped through. Wrap it. Calling ee.Date from here would
+      # cause a circular dependency, so we encode it manually.
       return {
-          'type': 'Date',
-          'value': math.floor(microseconds)
+          'type': 'Invocation',
+          'functionName': 'Date',
+          'arguments': {'value': DatetimeToMicroseconds(obj) / 1e3}
       }
     elif isinstance(obj, encodable.Encodable):
       # Some objects know how to encode themselves.
       result = obj.encode(self._encodeValue)
-      if not isinstance(result, dict) or result['type'] == 'ArgumentRef':
+      if (not isinstance(result, (list, tuple)) and
+          (not isinstance(result, (dict)) or result['type'] == 'ArgumentRef')):
         # Optimization: simple enough that adding it to the scope is probably
         # not worth it.
         return result
@@ -139,16 +146,17 @@ class Serializer(object):
       return result
 
 
-def encode(obj):
+def encode(obj, is_compound=True):
   """Serialize an object to a JSON-compatible structure for API calls.
 
   Args:
     obj: The object to serialize.
+    is_compound: Whether the encoding should factor out shared subtrees.
 
   Returns:
     A JSON-compatible structure representing the input.
   """
-  serializer = Serializer(True)
+  serializer = Serializer(is_compound)
   return serializer._encode(obj)  # pylint: disable=protected-access
 
 
