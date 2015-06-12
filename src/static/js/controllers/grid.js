@@ -16,7 +16,9 @@ var CellView = Backbone.View.extend({
     },
 
     initialize: function() {
-        _.bindAll(this, 'onmouseover', 'onmouseout', 'onclick');
+        _.bindAll(this, 'onmouseover', 'onmouseout', 'onclick', 'change_cell_action');
+        this.operation = this.options.operation;
+        this.in_action = false;
     },
 
     render: function(topx, topy, x, y, w, h) {
@@ -39,13 +41,18 @@ var CellView = Backbone.View.extend({
             if(this.model.get('done')) {
                 $(cell).addClass('finished');
                 cell.style['background-image'] = "url('/static/img/cell_completed_pattern.png')";
+            } else if(this.model.has_changes() && this.operation === 'baseline'){
+            	this.change_cell_action({color: "rgba(140, 224, 122, 0.8)", text_action: "Baseline available"});
             } else if(this.model.has_changes()) {
                 cell.style['background-image'] = "url('/static/img/cell_stripes.png')";
             }
             var t = 1.0 - this.model.ndfi_change();
-            var r = linear(t, 225, 224);
-            var g = linear(t, 125, 222);
-            var b = linear(t, 40, 122);
+          //var r = linear(t, 225, 224);
+            //var g = linear(t, 125, 222);
+            //var b = linear(t, 40, 122);
+            var r = linear(t, 225, 150);
+            var g = linear(t, 125, 150);
+            var b = linear(t, 40, 150);
             cell.style['background-color'] = "rgba(" + r + "," + g + "," + b +", 0.8)";
         } else {
             cell.style['background-color'] = "rgba(0, 0, 0, 0.8)";
@@ -59,7 +66,17 @@ var CellView = Backbone.View.extend({
 		});
         return this;
     },
-
+    change_cell_action: function(cell_setting) {
+    	var cell = this.el;
+    	cell.style['background-color'] = cell_setting.color;
+    	$(cell).find('.cell_actions').html(cell_setting.text_action);
+    	if(cell_setting.text_action === "Loading..."){
+    	    cell.style['transition'] = "background-color 4s infinite";
+    	    //cell.style['background-color'] = cell_setting.color_transition;
+    	}
+    	this.in_action = true;
+    	return this;
+    },
     border_size: 8,
     onmouseover: function(e) {
     	if(e) e.preventDefault();
@@ -77,7 +94,9 @@ var CellView = Backbone.View.extend({
         el.css({top: p.top - border_size/2, left: p.left - border_size/2});
         el.css({'z-index': 9});
         el.css({'border-size': border_size/2});
-        el[0].style['background-color'] = "rgba(0, 0, 0, 0)";
+        if(!this.in_action){
+        	el[0].style['background-color'] = "rgba(0, 0, 0, 0)";
+        }
         this.trigger('show_cell_popup', popup);
     },
 
@@ -96,10 +115,15 @@ var CellView = Backbone.View.extend({
         el.css({'z-index': 1});
 
         var t = 1.0 - this.model.ndfi_change();
-        var r = linear(t, 225, 224);
-        var g = linear(t, 125, 222);
-        var b = linear(t, 40, 122);
-        el[0].style['background-color'] = "rgba(" + r + "," + g + "," + b +", 0.8)";
+        //var r = linear(t, 225, 224);
+        //var g = linear(t, 125, 222);
+        //var b = linear(t, 40, 122);
+        var r = linear(t, 225, 150);
+        var g = linear(t, 125, 150);
+        var b = linear(t, 40, 150);
+        if(!this.in_action){
+           el[0].style['background-color'] = "rgba(" + r + "," + g + "," + b +", 0.8)";
+        }
     },
 
     onclick: function(e) {
@@ -152,12 +176,17 @@ var Grid = Backbone.View.extend({
 
         this.cells.each(function(c) {
             var pos = that.el.position();
-            var cellview = new CellView({model: c});            
+            var cellview = new CellView({model: c, operation: this.operation});            
             cellview.bind('show_cell_popup', function(popup) {
             	that.trigger('show_cell_popup', popup, this);
             	this.trigger('get_cell_bbox', that.cell_bbox(this));
-			});            
+			});			
+
+            //cellview.bind('change_cell_action', cellview.change_cell_action);            
+            
             that.el.append(cellview.render(p.x, p.y, marginx + (c.get('x') - srcx)*wc, marginy + (c.get('y') - srcy)*wh, wc, wh).el);
+            
+            
             cellview.bind('enter', that.cell_selected);            
         });
         var cell_bounds = this.bounds();

@@ -337,11 +337,13 @@
                    </div>
                    
                    <label for="cloud_cover">Max cloud percent:</label>
+
+                   <img id="loading_tiles" src="/static/img/loading_bar.gif" style="display: block; margin-left: auto; margin-right: auto; margin-top: 25px;">
                    <ul id="cloud_cover">
-                           
+                              
                    </ul>
                </div>
-               <button id="open_image_picker">Image Picker</button>&nbsp;&nbsp;&nbsp;<button id="genarete_baseline" disabled>Baseline</button>
+               <button id="open_image_picker">Load ImagePicker</button>&nbsp;&nbsp;&nbsp;<button id="genarete_baseline" disabled>Baseline</button>
         	
         </div>
 
@@ -378,6 +380,7 @@
         </div>
    </script>
    <script type="text/template" id="cell-template">
+      <p class="cell_actions"><p>
       <div class="cell_wrapper_info">
         <span class="arrow"></span>
         <div class="content">
@@ -403,8 +406,7 @@
                     print(added_by.split('@')[0]);
             %></h3>
         </div>
-        <div id="setting_baseline">
-			<button id="build_baseline">Build Baseline</button>
+        <div id="setting_baseline">			
     		<button id="rebuild_baseline" >Rebuild Baseline</button>
     		<button id="load_baseline" >Load Baseline</button>
         </div>

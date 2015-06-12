@@ -2,6 +2,9 @@
 var SPLITS = 5;
 
 var Cell = Backbone.Model.extend({
+    /*initialize: function() {
+        _.bindAll(this, 'bbox');
+    },*/
 
     defaults: {
         //TODO: remove this values from model
@@ -29,6 +32,28 @@ var Cell = Backbone.Model.extend({
         var t = this.get('ndfi_change_value');
         t = Math.min(1.0, t);
         return t;
+    },
+
+    bbox: function(mapview){
+    	var p = window.mapper.cell_position(this.get('x'), this.get('y'), this.get('z'));
+        // normalize
+        var x = Math.floor(p.x);
+        var y = Math.floor(p.y);
+        var w = Math.floor((p.width/5))*5;
+        var h = Math.floor((p.height/5))*5;
+        
+        var prj = mapview.projector;
+
+        bounds = new google.maps.LatLngBounds(
+            prj.untransformCoordinates(new google.maps.Point(x, y + h)),
+            prj.untransformCoordinates(new google.maps.Point(x + w, y))
+        );
+        
+        var sw = bounds.getSouthWest();
+        var ne = bounds.getNorthEast();
+
+        return sw.lng()+','+sw.lat()+';'+sw.lng()+','+ne.lat()+';'+ne.lng()+','+ne.lat()+';'+ne.lng()+','+sw.lat() +';'+sw.lng()+','+sw.lat();
+        
     },
 
     url: function() {

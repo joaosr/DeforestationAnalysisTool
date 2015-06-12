@@ -920,7 +920,7 @@ class ImagePicker(db.Model):
                 
             return result
         else:
-            return None
+            return []
         
      
 
@@ -1141,8 +1141,11 @@ class Baseline(db.Model):
         start_compounddate = '%04d%02d' % (self.start.year, self.start.month)
         end_compounddate   = '%04d%02d' % (self.end.year, self.end.month)
         tiles = Tile.find_by_cell_name(self.cell.name)
+        
         for tile in tiles:
             tile_name = tiles[tile]['name']
+            logging.info("======= Tiles =========");
+            logging.info(tiles[tile]['name']);
             list_image_picker = ImagePicker.list_by_period(start_compounddate, end_compounddate, tile_name)
             for i in range(len(list_image_picker)):
                 result.append(list_image_picker[i])

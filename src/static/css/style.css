@@ -1084,7 +1084,7 @@ text-shadow: #000000 0px 1px 0px;
   box-shadow: 0 0 3px rgba(255, 255, 255, 1);
 }
 #header #tools #baseline #editor_image_picker #open_image_picker{
-  float: right;
+  /* float: right; */
   padding: 5px 10px 5px 10px;
   border-radius: 4px;
   background-color: rgb(100, 157, 221);
@@ -1093,7 +1093,9 @@ text-shadow: #000000 0px 1px 0px;
   text-decoration: none;
   box-shadow: 0 0 1px rgb(0, 0, 0);
   border: 1px solid rgb(100, 157, 221);
-  margin: 10px;
+  margin-top: 20px;
+  /* margin: auto; */
+  width: 100%;
 }
 #header #tools #baseline #editor_image_picker #genarete_baseline{
   float: right;
@@ -1118,6 +1120,7 @@ text-shadow: #000000 0px 1px 0px;
   box-shadow: 0 0 1px rgb(0, 0, 0);
   border: 1px solid rgb(158, 158, 158);
   margin: 10px;
+  display: none;
 }
 #header #tools #baseline #image_picker_baseline{
   display: none;
@@ -1934,6 +1937,8 @@ text-shadow: #000000 0px 1px 0px;
   color: rgba(153, 153, 153, 0.9);
   text-shadow: #000000 0px 1px 0px;
 }
+
+h3#gv_text {}
 #header #tools #baseline_maptools #slider_wrapper h3#ndfi_text {
   position: absolute;
   left: 27px;
@@ -2046,6 +2051,8 @@ text-shadow: #000000 0px 1px 0px;
   position: absolute;
   left: 17px;
   top: 20px;
+  color: rgba(163, 163, 163, 0.9);
+  text-shadow: #000000 0px 1px 0px;
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_shade {
   position: absolute;
@@ -2102,6 +2109,7 @@ text-shadow: #000000 0px 1px 0px;
   position: absolute;
   left: 17px;
   top: 70px;
+  color: rgba(3, 213, 6, 1);
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_gv {
   position: absolute;
@@ -2158,6 +2166,8 @@ text-shadow: #000000 0px 1px 0px;
   position: absolute;
   left: 17px;
   top: 120px;
+  text-shadow: #000000 0px 1px 0px;
+  color: rgba(242, 25, 83, 0.9);
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_soil {
   position: absolute;
@@ -2209,6 +2219,13 @@ text-shadow: #000000 0px 1px 0px;
 #header #tools #baseline_maptools #slider_wrapper div#slider_soil .ui-slider-range {
   height: 2px;
   background: rgb(0,255,255);
+}
+#header #tools #baseline_maptools #slider_wrapper h3#cloud_text {
+  position: absolute;
+  left: 17px;
+  top: 120px;
+  text-shadow: #000000 0px 1px 0px;
+  color: rgba(242, 25, 83, 0.9);
 }
 #header #tools #baseline_maptools #slider_wrapper div#slider_cloud {
   position: absolute;
@@ -2950,6 +2967,16 @@ body, html {
 #grid .cell.hover {
   cursor: pointer;
   border: 4px solid #333;
+}
+
+#grid .cell .cell_actions {
+  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+  color: #FFFFFF;
+  text-shadow: 0px 7px 9px rgb(0, 0, 0);
+  text-align: center;
+  position: relative;
+  top: 40%;
+  pointer-events: none;
 }
 
 article.mamufas {

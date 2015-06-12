@@ -472,12 +472,12 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 		this.cell = this.options.cell;
 		this.bbox = this.options.bbox;
 		console.log(this.bbox);
-		var cell_name = "Define baseline features (Cell " + this.cell.model.get('z') + "/"
-				+ this.cell.model.get('x') + "/" + this.cell.model.get('y')
+		var cell_name = "Define baseline features (Cell " + this.cell.get('z') + "/"
+				+ this.cell.get('x') + "/" + this.cell.get('y')
 				+ ")";
 		this.el.find("#cell_name").html(cell_name);
-		this.cell_name = this.cell.model.get('z') + "_"
-				+ this.cell.model.get('x') + "_" + this.cell.model.get('y');
+		this.cell_name = this.cell.get('z') + "_"
+				+ this.cell.get('x') + "_" + this.cell.get('y');
 		
 		this.done = false;
 		this.baseline_response = null;
@@ -487,6 +487,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 		this.date_end = "";
 		this.list_cloud_percent = {};
 
+        this.$("#loading_tiles").show();   
 		var request = $.ajax({
 			url : "baseline_search_tiles/",
 			type : 'POST',
@@ -498,8 +499,9 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			async : true,
 			success : function(d) {
 				console.log(d.tiles);
+				self.$("#loading_tiles").hide();
 				self.addTiles(d.tiles);
-
+                      
 				return d;
 			},
 		}).responseText;
@@ -523,27 +525,23 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			self.genarete_baseline(e);
 		});
 
-		this.options.parent.append(this.el);
+		this.options.parent.append(this.el);		
 
-		var date_start = moment().subtract(31, 'days').calendar();
-
-		var date_end = new Date();
+		var date_end = moment().subtract(31, 'days').calendar();
+		date_end     = new Date(date_end); 
 		
 		var minDate = new Date('1984-01-01');
 
 		var picker_start = new Pikaday({
 			field : this.$("#period_start")[0],
-			format : 'DD/MMM/YYYY',
-			defaultDate: minDate,
+			format : 'DD/MMM/YYYY',			
 			minDate : minDate,
-			maxDate : new Date(date_start),
+			maxDate : date_end,
 			yearRange : [ 1984, date_end.getFullYear() ],
 			onSelect: function() {
 				picker_end.setMinDate(this.getDate());
-		    }/*,
-			onOpen : function() {
-				this.setMaxDate(new Date(self.$("#period_end").val()));
-			}*/
+				
+		    }
 
 		});
 		
@@ -551,17 +549,13 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 
 		var picker_end = new Pikaday({
 			field : this.$("#period_end")[0],
-			format : 'DD/MMM/YYYY',
-			defaultDate: new Date('1984-12-31'),
+			format : 'DD/MMM/YYYY',			
 			minDate : minDate,
 			maxDate : date_end,
 			yearRange : [ 1984, date_end.getFullYear() ],
 			onSelect: function() {
-				picker_end.setMinDate(this.getDate());
-		    }/*,
-			onOpen : function() {
-				this.setMinDate(new Date(self.$("#period_start").val()));
-			}*/
+				picker_start.setMaxDate(this.getDate());				
+		    }
 		});
 		
 		
@@ -598,34 +592,34 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			console.log(this.date_end);
 			console.log(this.list_cloud_percent);
 			this.$("#image_picker_baseline").show();
-			this.$("#image_picker_baseline ul.thumbnails.image_picker_selector").empty();
+			this.$("#image_picker_baseline ul.thumbnails.image_picker_selector").remove();
 			this.$("#image_picker_baseline #loading_image_picker").show();
 
 			request = $.ajax({
-				url : "/imagepicker_baseline/",
-				type : 'POST',
-				data : {
-					date_start : this.date_start,
-					date_end : this.date_end,
-					list_cloud_percent : JSON
-							.stringify(this.list_cloud_percent)
-				},
-				dataType : 'json',
-				async : true,
-				success : function(d) {
-					console.log(d.result);
-					self.$("#image_picker_baseline #loading_image_picker")
-							.hide();
-					self.$("#image_picker_baseline #send_image_picker").click(
-							function(e) {
-								if (e)
-									e.preventDefault();
-								self.send_image_picker(e);
-							});
-					self.addThumbs(d.result);
-					return d;
-				},
-			}).responseText;
+							url : "/imagepicker_baseline/",
+							type : 'POST',
+							data : {
+								date_start : this.date_start,
+								date_end : this.date_end,
+								list_cloud_percent : JSON
+										.stringify(this.list_cloud_percent)
+							},
+							dataType : 'json',
+							async : true,
+							success : function(d) {
+								console.log(d.result);
+								self.$("#image_picker_baseline #loading_image_picker")
+										.hide();
+								self.$("#image_picker_baseline #send_image_picker").click(
+										function(e) {
+											if (e)
+												e.preventDefault();
+											self.send_image_picker(e);
+										});
+								self.addThumbs(d.result);
+								return d;
+							},
+						}).responseText;
 
 		}
 
@@ -650,8 +644,9 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			async : true,
 			success : function(d) {
 				console.log(d.result);
-				alert(d.result);
-				self.$('#genarete_baseline')[0].disabled = false
+				//alert(d.result);
+				//self.$('#genarete_baseline')[0].disabled = false
+				self.genarete_baseline();
 				return d;
 			},
 		}).responseText;
@@ -753,7 +748,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 
 		ul.append('<li><label for="cloud_cover_' + tile_name +'">' + tile['name']
 				+ ': </label><input type="number" id="cloud_cover_' + tile_name
-				+ '" value="30" min="0" max="100"></li>');
+				+ '" value="30" min="0" max="100" step="5"></li>');
 
 	},
 	addTiles : function(tiles) {
@@ -832,10 +827,10 @@ var Baseline = Backbone.View.extend({
 			baselines_cell : function(cell_name) {
 				this.baselines.url = 'baseline/' + cell_name + '/';
 				this.baselines.fetch(/*
-										 * { success: function(){ self.done =
-										 * true; self.baseline_response = this;
-										 * self.trigger('baseline_success');
-										 * return this; } }
+										 { success: function(){ self.done =
+										  true; self.baseline_response = this;
+										  self.trigger('baseline_success');
+										  return this; } }
 										 */);
 
 			},
@@ -910,7 +905,7 @@ var Baseline = Backbone.View.extend({
 				this.report.set('str', new_start);
 				this.report.set('str_end', new_end);
 
-			},
+			},			
 			setting_baseline_popup : function(popup, cell) {
 				var self = this;
 				
@@ -932,11 +927,10 @@ var Baseline = Backbone.View.extend({
 						setting_baseline.find('#rebuild_baseline').click(
 								function(e) {
 									if (e){e.preventDefault();}
-									self.show_imagepicker_search(e, cell, cell_bbox);
+									self.show_imagepicker_search(cell.model, cell_bbox);
 								});
 
-						
-						console.log(cell_name);
+												
 						setting_baseline.find('#load_baseline').unbind('click');
 						setting_baseline.find('#load_baseline').click(
 								function(e) {
@@ -948,8 +942,9 @@ var Baseline = Backbone.View.extend({
 									
 									self.bind('load_success', function(){
 										$(that)[0].disabled = false;
-										
+										cell.change_cell_action({color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
 									})
+									cell.change_cell_action({color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});
 									
 									self.genarete_baseline(e, cell, baseline_lay.get('start'), baseline_lay.get('end'), cell_name, cell_bbox, this);
 								});
@@ -958,16 +953,7 @@ var Baseline = Backbone.View.extend({
 						setting_baseline.find('#rebuild_baseline').show();
 						setting_baseline.find('#build_baseline').hide();
 					} else {
-						setting_baseline.find('#build_baseline').unbind('click');
-						setting_baseline.find('#build_baseline').click(
-								function(e) {
-									if (e){e.preventDefault();}
-									    self.show_imagepicker_search(e, cell, cell_bbox);
-								});
-
-						setting_baseline.find('#load_baseline').hide();
-						setting_baseline.find('#rebuild_baseline').hide();
-						setting_baseline.find('#build_baseline').show();
+						
 					}
 
 					setting_baseline.show();
@@ -1117,11 +1103,14 @@ var Baseline = Backbone.View.extend({
 				}
 
 			},
-			show_imagepicker_search : function(e, cell, bbox) {
-				if (e)e.preventDefault();
+			show_imagepicker_search : function(cell, bbox) {				
 
-				var cell_name = cell.model.get('z') + "_" + cell.model.get('x')
-						+ "_" + cell.model.get('y');
+                var cell_bbox = bbox;   
+                cell.bind('bbox');
+				cell_bbox = cell.bbox(this.map);
+
+				var cell_name = cell.get('z') + "_" + cell.get('x')
+						+ "_" + cell.get('y');
 
 				this.editor_baseline_imagepicker = this.item_view_imagepicker[cell_name];
 				var that = this;
@@ -1130,7 +1119,7 @@ var Baseline = Backbone.View.extend({
 							{
 								parent: this.el,
 								cell: cell,
-								bbox: bbox
+								bbox: cell_bbox
 							});
 					this.editor_baseline_imagepicker
 							.bind(
@@ -1172,7 +1161,7 @@ var Baseline = Backbone.View.extend({
 					this.editor_baseline_imagepicker = new EditorBaselineImagePicker(
 							{
 								parent : this.el,
-								cell : cell,
+								cell : cell.model,
 								bbox: bbox
 							});
 					this.editor_baseline_imagepicker

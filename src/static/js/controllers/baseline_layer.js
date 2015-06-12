@@ -13,7 +13,7 @@ var BaselineLayer = Backbone.View.extend({
     DEGRADATION_COLOR: [0, 255, 254],
     PREVIOUS_DEFORESTATION_COLOR: [0, 0, 255],
     PREVIOUS_DEGRADATION_COLOR: [0, 255, 255],
-    FOREST_COLOR: [32, 224, 32],
+    FOREST_COLOR: [0, 153, 77],
     BASELINE_COLOR: [0, 0, 0],
     UNCLASSIFIED_COLOR: [255, 255, 255],
     NDFI_ENCODING_LIMIT: 201,
@@ -42,16 +42,6 @@ var BaselineLayer = Backbone.View.extend({
         
 
         this.mapview.bind('click', this.click);
-
-        
-
-        
-        /*this.map_layer =  new LayerModel({
-              id: 'Baselien',              
-              layer: this.layer,
-              visibility: true
-        });*/
-        
         
         this.mapview.layers.bind('change_layers_baseline', function() {        	
            self.map_auth();
@@ -392,13 +382,33 @@ var BaselineLayer = Backbone.View.extend({
                 var a = ndfi_data[pixel_pos + 3];
                 // there is a better way to do this but this is fastest
                 if(a > 0) {
+//                     if(p >= NDFI_ENCODING_LIMIT) 
+                    // Water and Cloud mask
+                    if (p == UNCLASSIFIED) {
+                        ndfi_data[pixel_pos + 0] = 255;
+                        ndfi_data[pixel_pos + 1] = 255;
+                        ndfi_data[pixel_pos + 2] = 255;
+                        ndfi_data[pixel_pos + 3] = 255;
+                    } else if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb) {
+                        ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = WATER_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = 255;
+                    } else if (p_cloud_region != 0 && p_cloud >= cloud_thresh){ //&& p_temperature <= temperature_thresh) {
+                        //console.log(p_temperature);
+                        ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = CLOUD_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = 255;
+                    //
                     // Classification (forest, degradation and deforestation)
-                    if(p < def_thresh) {
+                    //
+                    } else if (p < def_thresh) {
                     	ndfi_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = show_deforestation;
-                    }else if(p > deg_thresh) {
+                    }else if (p > deg_thresh) {
                     	ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];
                         ndfi_data[pixel_pos + 1] = FOREST_COLOR[1];
                         ndfi_data[pixel_pos + 2] = FOREST_COLOR[2];
@@ -409,31 +419,7 @@ var BaselineLayer = Backbone.View.extend({
                         ndfi_data[pixel_pos + 2] = DEGRADATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = show_degradation;                        
                     }
-                    
-                    // Water and Cloud mask
-//                     if(p >= NDFI_ENCODING_LIMIT) {
-                    if (p == UNCLASSIFIED) {
-                        ndfi_data[pixel_pos + 0] = 255;
-                        ndfi_data[pixel_pos + 1] = 255;
-                        ndfi_data[pixel_pos + 2] = 255;
-                        ndfi_data[pixel_pos + 3] = 255;
-                    } 
-
-                    if (p_cloud_region != 0 && p_cloud >= cloud_thresh){ //&& p_temperature <= temperature_thresh) {
-                       //console.log(p_temperature);
-                       ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
-                       ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
-                       ndfi_data[pixel_pos + 2] = CLOUD_COLOR[2];
-                       ndfi_data[pixel_pos + 3] = 255;
-                    }
-
-                    
-                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb){
-                        ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
-                        ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
-                        ndfi_data[pixel_pos + 2] = WATER_COLOR[2];
-                        ndfi_data[pixel_pos + 3] = 255;
-                    }
+                            
 
 //                         else {
 //                           ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];

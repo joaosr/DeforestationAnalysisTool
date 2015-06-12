@@ -675,7 +675,8 @@ $(function() {
                     	   
                     	}
                     	else{
-                    		alert("There is not baseline for this cell.");
+                    		self.main_operations.baseline.show_imagepicker_search(cell, undefined);
+                    		//alert("There is not baseline for this cell.");
                     	}
             		}
             		else if(self.main_operations.time_series.selected){
