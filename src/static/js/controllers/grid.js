@@ -180,9 +180,10 @@ var Grid = Backbone.View.extend({
             cellview.bind('show_cell_popup', function(popup) {
             	that.trigger('show_cell_popup', popup, this);
             	this.trigger('get_cell_bbox', that.cell_bbox(this));
-			});			
+			});
+			that.trigger('add_cell_intem', c);			
 
-            //cellview.bind('change_cell_action', cellview.change_cell_action);            
+            c.bind('change_cell_action', cellview.change_cell_action);            
             
             that.el.append(cellview.render(p.x, p.y, marginx + (c.get('x') - srcx)*wc, marginy + (c.get('y') - srcy)*wh, wc, wh).el);
             

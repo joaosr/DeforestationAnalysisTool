@@ -2054,7 +2054,7 @@ h3#gv_text {}
   color: rgba(163, 163, 163, 0.9);
   text-shadow: #000000 0px 1px 0px;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade {
+#header #tools #baseline_maptools #slider_wrapper span#slider_shade {
   position: absolute;
   top: 43px;
   left: 27px;
@@ -2065,7 +2065,7 @@ h3#gv_text {}
   height: 2px;
   background: rgba(115, 115, 115, 1);
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade span.hack_shade {
+#header #tools #baseline_maptools #slider_wrapper span#slider_shade span.hack_shade {
   position: absolute;
   top: 0;
   right: 0;
@@ -2073,7 +2073,7 @@ h3#gv_text {}
   height: 2px;
   background: rgb(0, 0, 255);
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade p.tooltip {
+#header #tools #baseline_maptools #slider_wrapper span#slider_shade p.tooltip {
   position: absolute;
   top: -26px;
   width: 24px;
@@ -2085,7 +2085,7 @@ h3#gv_text {}
   color: #CCCCCC;
   text-align: center;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-slider-handle {
+#header #tools #baseline_maptools #slider_wrapper span#slider_shade .ui-slider-handle {
   top: -6px;
   width: 13px;
   height: 14px;
@@ -2094,14 +2094,14 @@ h3#gv_text {}
   outline: none;
   border: none;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-slider-handle:focus {
+#header #tools #baseline_maptools #slider_wrapper span#slider_shade .ui-slider-handle:focus {
   outline: none;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-state-hover {
+#header #tools #baseline_maptools #slider_wrapper span#slider_shade .ui-state-focus, #header #tools #baseline_maptools #slider_wrapper span#slider_shade .ui-state-hover {
   background-position: 0 -14px;
   cursor: pointer;
 }
-#header #tools #baseline_maptools #slider_wrapper div#slider_shade .ui-slider-range {
+#header #tools #baseline_maptools #slider_wrapper span#slider_shade .ui-slider-range {
   height: 2px;
   background: rgb(0,255,255);
 }
@@ -3324,6 +3324,17 @@ article.login a.sign_in:hover {
 
 img.image_picker_image{
     width: 130px;
+}
+
+#loading_cover{
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(237, 237, 237, 0.5);  
+  z-index: 200;
 }
 
 

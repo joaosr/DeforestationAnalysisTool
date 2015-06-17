@@ -113,7 +113,7 @@ var LayerBaselineCollection = Backbone.Collection.extend({
         var lay;
         this.each(function(m) {
         	var baseline_name = m.get('description')
-        	var index_found = baseline_name.search(cell_name)
+        	var index_found = baseline_name.search(cell_name);
             if(index_found > -1) {
                 lay = m;
             }

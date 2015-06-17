@@ -606,6 +606,20 @@ $(function() {
             this.map.hide_zoom_control();
             this.map.show_sad_info(this.report_base.models[0], z);
             this.main_operations.listen_zoon(z);
+
+            if(this.main_operations.baseline.selected && z === 1){
+            	var cell = this.gridstack.current_cell;
+                console.log(cell);
+                var self = this    
+                this.main_operations.baseline.bind('load_success', function(){
+                	var response = self.main_operations.baseline.setting_baselines(cell);
+         	        self.map.reset_layers_map('1', response['baseline'], 'baseline');	
+                })   
+            	
+
+            }
+
+
             this.compare_view('one');
             this.polygon_tools.hide();
             this.main_operations.baseline.polygon_tools.hide();
@@ -654,7 +668,8 @@ $(function() {
             			cell_operation = 'sad';
             			
             		}else if(self.main_operations.baseline.selected){
-            			self.main_operations.baseline.baselines_cell(cell_name);
+            			self.main_operations.baseline.baselines_cell(cell_name, this);
+
             			cell_operation = 'baseline';
             		}
             		else if(self.main_operations.time_series.selected){
@@ -669,13 +684,13 @@ $(function() {
                     	cell_operation = 'sad';
             		}
                     else if(self.main_operations.baseline.selected){
-                    	if(self.main_operations.baseline.cell_done(cell_name)){
+                    	if(self.main_operations.baseline.is_baseline_load(cell_name)){
                     	   
                     		cell_operation = 'baseline';
                     	   
                     	}
                     	else{
-                    		self.main_operations.baseline.show_imagepicker_search(cell, undefined);
+                    		self.main_operations.baseline.enter_cell(cell);
                     		//alert("There is not baseline for this cell.");
                     	}
             		}

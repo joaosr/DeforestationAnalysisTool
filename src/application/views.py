@@ -563,14 +563,23 @@ def baseline_on_cell(date_start, date_end, cell_name):
         result = create_tile_baseline(start_date, end_date, cell_name)
         return jsonify({'result': result})
 
+@app.route('/baselines/<cell_name>/', methods=['POST', 'GET'])
+def baselines_cell(cell_name):
+    if request.method == 'POST':
+        return jsonify({'result': None})
+    else:
+        logging.info(cell_name)
+        result = Baseline.formated_by_cell_parent(cell_name)        
+        return jsonify({'result': result})
+
 @app.route('/baseline/<cell_name>/', methods=['POST', 'GET'])
 def baseline_cell(cell_name):
     if request.method == 'POST':
         return jsonify({'result': None})
     else:
         logging.info(cell_name)
-        result = Baseline.formated_by_cell_parent(cell_name)        
-        return jsonify({'result': result})            
+        result = Baseline.formated_by_cell_name(cell_name)        
+        return jsonify({'result': result})                
 
     
 @app.route('/imagepicker_baseline/', methods=['POST', 'GET'])

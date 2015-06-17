@@ -593,7 +593,8 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			console.log(this.list_cloud_percent);
 			this.$("#image_picker_baseline").show();
 			this.$("#image_picker_baseline ul.thumbnails.image_picker_selector").remove();
-			this.$("#image_picker_baseline #loading_image_picker").show();
+			//this.$("#image_picker_baseline #loading_image_picker").show();
+			this.$("#loading_cover").show();
 
 			request = $.ajax({
 							url : "/imagepicker_baseline/",
@@ -608,8 +609,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 							async : true,
 							success : function(d) {
 								console.log(d.result);
-								self.$("#image_picker_baseline #loading_image_picker")
-										.hide();
+								self.$("#loading_cover").hide();
 								self.$("#image_picker_baseline #send_image_picker").click(
 										function(e) {
 											if (e)
@@ -631,6 +631,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 		var thumbs_baseline = this.$("#thumbs_baseline").val();
 
 		console.log(thumbs_baseline);
+		this.$("#loading_cover").show();
 		var message = $.ajax({
 			url : "/imagepicker_baseline/",
 			type : 'POST',
@@ -646,7 +647,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 				console.log(d.result);
 				//alert(d.result);
 				//self.$('#genarete_baseline')[0].disabled = false
-				self.genarete_baseline();
+				self.genarete_baseline();				
 				return d;
 			},
 		}).responseText;
@@ -671,7 +672,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			success : function() {
 				self.done = true;
 				self.baseline_response = this;
-				alert("Baseline created.");
+				self.$("#loading_cover").hide();				
 				self.trigger('baseline_success');
 				return this;
 			}
@@ -785,8 +786,8 @@ var Baseline = Backbone.View.extend({
 				_.bindAll(this, 'callback', 'hide_report_tool_bar',
 						'show_report_tool_bar', 'hide_image_picker',
 						'show_image_picker', 'visibility_change',
-						'setting_baseline_popup', 'show_imagepicker_search',
-						'set_selected', 'genarete_baseline');
+						'setting_baseline_popup', 'enter_cell', 'show_imagepicker_search',
+						'set_selected', 'genarete_baseline', 'load_baseline');
 				var self = this;
 				
 				this.callerView = this.options.callerView;
@@ -800,9 +801,7 @@ var Baseline = Backbone.View.extend({
 					report : this.report,
 					url_send : '/baseline_report/',
 					callerView : this
-				});
-				// this.image_picker = new ImagePicker({el:
-				// this.$("#image_picker"), callerView: this});
+				});				
 				this.visibility = false;
 				this.selected = false;
 
@@ -822,16 +821,49 @@ var Baseline = Backbone.View.extend({
 				this.report_tool_bar.bind('send_success', function() {
 					that.baselines.add(that.report_tool_bar.data_request)
 				});
+				this.cell_items = {}
 				this.item_view_imagepicker = {};
 			},
-			baselines_cell : function(cell_name) {
-				this.baselines.url = 'baseline/' + cell_name + '/';
-				this.baselines.fetch(/*
-										 { success: function(){ self.done =
-										  true; self.baseline_response = this;
-										  self.trigger('baseline_success');
-										  return this; } }
-										 */);
+			baselines_cell : function(cell_name, cell) {
+				var self = this;
+
+				cell.bind('add_cell_intem', function(child){					
+					var child_name = child.get('z') + '_' + child.get('x') + '_' + child.get('y')				
+					if(self.cell_items[child_name] === undefined){
+					  self.cell_items[child_name] = {};	
+					  self.cell_items[child_name].cell = child;
+					  self.cell_items[child_name].layers = new LayerBaselineCollection();						  
+					}else if(self.cell_items[child_name].layers === undefined){
+                      self.cell_items[child_name].layers = new LayerBaselineCollection();    
+					}else if(self.cell_items[child_name].cell === undefined){
+                      self.cell_items[child_name].cell = child;    
+					}
+					
+					
+				});
+
+				this.baselines.url = 'baselines/' + cell_name + '/';
+				this.baselines.fetch({ 
+				                      success: function(){ 
+				                          self.baselines.trigger('start_baselines');
+				                          return this;
+				                          
+									  }});									  
+
+			   this.baselines.bind('start_baselines', function(){
+			   	    self.baselines.each(function(baseline){
+				                          	var cell_name = baseline.get('cell');
+				                          	
+				                          	if(self.cell_items[cell_name] === undefined){
+				                          	  self.cell_items[cell_name] = {};	
+				                          	  self.cell_items[cell_name].baseline = baseline;					                          	  	
+				                          	}else if(self.cell_items[cell_name].baseline === undefined){
+				                          	  	self.cell_items[cell_name].baseline = baseline;
+				                          	}
+				                          	console.log(self.cell_items[cell_name].cell); 
+				                          	self.load_baseline(self.cell_items[cell_name].cell); 
+				                          });            
+			   });							 
 
 			},
 			show_baseline_list : function(e) {
@@ -929,42 +961,19 @@ var Baseline = Backbone.View.extend({
 									if (e){e.preventDefault();}
 									self.show_imagepicker_search(cell.model, cell_bbox);
 								});
-
 												
-						setting_baseline.find('#load_baseline').unbind('click');
-						setting_baseline.find('#load_baseline').click(
-								function(e) {
-									e.preventDefault();
-									console.log(cell_name);
-									var that = this;
-									$(this)[0].disabled = true;
-									
-									
-									self.bind('load_success', function(){
-										$(that)[0].disabled = false;
-										cell.change_cell_action({color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
-									})
-									cell.change_cell_action({color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});
-									
-									self.genarete_baseline(e, cell, baseline_lay.get('start'), baseline_lay.get('end'), cell_name, cell_bbox, this);
-								});
-						
-						setting_baseline.find('#load_baseline').show();
-						setting_baseline.find('#rebuild_baseline').show();
-						setting_baseline.find('#build_baseline').hide();
-					} else {
-						
-					}
+						setting_baseline.find('#rebuild_baseline').show();						
+					} 
 
 					setting_baseline.show();
 
 				} else {
-					var setting_baseline = popup.find('#setting_baseline')
+					var setting_baseline = popup.find('#setting_baseline');
 					setting_baseline.hide();
 				}
 			},
-			cell_done : function(cell_name) {
-				var item = this.item_view_imagepicker[cell_name];
+			cell_done: function(cell_name) {				
+				var item = this.cell_items[cell_name].imagepicker;
 				if (item) {
 					return item.done;
 				} else {
@@ -972,14 +981,114 @@ var Baseline = Backbone.View.extend({
 				}
 
 			},
-			setting_baseline_layers : function(cell) {
+			is_baseline_load: function(cell_name) {
+				var baseline_loaded = this.cell_items[cell_name].layers.get_by_cell(cell_name);
+				
+				if (baseline_loaded) {
+					return true;
+				} else {
+					return false;
+				}
+
+			},
+			setting_baselines: function(cell){                
+			    var layers = new LayerBaselineCollection();
+				var map_one_layer_status = "";
+				var map_two_layer_status = "";
+				var map_three_layer_status = "";
+				var map_four_layer_status = "";
+
+				for(key in this.cell_items){   
+
+				   if (this.cell_items[key].layers) {
+					//console.log(this.cell_items[key].layers);															
+					this.cell_items[key].layers.each(function(layer) {
+						
+						if(layer.get('description').search("BASELINE/") > -1){
+							map_one_layer_status = map_one_layer_status + '"'
+									+ name + '","' + 'true' + '",';
+							map_two_layer_status = map_two_layer_status + '"'
+									+ name + '","' + 'false' + '",';
+							map_three_layer_status = map_three_layer_status
+									+ '"' + name + '","' + 'false' + '",';
+							map_four_layer_status = map_four_layer_status + '"'
+									+ name + '","' + 'false' + '",';
+							layers.add(layer);		
+
+						}
+						
+					  });
+										
+				    } 
+				 }	
+
+				 var available_maps=[
+										{
+										    id: '6',
+										    type: 'google_maps',
+										    map_id: 'TERRAIN',
+										      visibility: true,
+										  description: 'Terrain',
+										    enabled: true
+										}, 
+										{
+										    id: '7',
+										    type: 'google_maps',
+										    map_id: 'SATELLITE',
+										       visibility: true,
+										 description: 'Satellite'
+										},
+										{
+										    id: '9',
+										    type: 'google_maps',
+										    map_id: 'ROADMAP',
+										        visibility: true,
+										description: 'Roadmap'
+										}, {
+										    id: '8',
+										    type: 'google_maps',
+										    map_id: 'HYBRID',
+										     visibility: true,
+										   description: 'Hybrid',
+										}
+
+
+					                  ];
+
+				    layers.add(available_maps);
+
+				    map_one_layer_status = map_one_layer_status + '*';
+					map_two_layer_status = map_two_layer_status + '*';
+					map_three_layer_status = map_three_layer_status + '*';
+					map_four_layer_status = map_four_layer_status + '*';
+
+					cell.set({
+						"map_one_layer_status" : map_one_layer_status
+					});
+					cell.set({
+						"map_two_layer_status" : map_two_layer_status
+					});
+					cell.set({
+						"map_three_layer_status" : map_three_layer_status
+					});
+					cell.set({
+						"map_four_layer_status" : map_four_layer_status
+					});
+
+				   return {
+						'cell' : cell,
+						'baseline' : layers
+					};             					                  
+			},
+			setting_baseline_layers: function(cell) {
 				var self = this;
 				var cell_name = cell.get('z') + '_' + cell.get('x') + '_'
 						+ cell.get('y');
-				var item = this.item_view_imagepicker[cell_name];
+				//var item = this.cell_items[cell_name];
+				var layers = this.cell_items[cell_name].layers;
 
-				if (item) {
-					console.log(item.baseline_layers);
+				if (layers) {
+					console.log(layers);
 					// this.baselines = new
 					// LayerCollection(item.baseline_response);
 					var layer_names = [];
@@ -988,7 +1097,7 @@ var Baseline = Backbone.View.extend({
 					var map_three_layer_status = "";
 					var map_four_layer_status = "";
 										
-					item.baseline_layers.each(function(layer) {
+					layers.each(function(layer) {
 						// var layer_map = self.map.layers.get(layer.get('id'));
 						layer_names.push(layer.get('description'));
 						// if(layer_map){
@@ -1073,7 +1182,7 @@ var Baseline = Backbone.View.extend({
 
 					                  ];
 					
-					item.baseline_layers.add(available_maps);
+					layers.add(available_maps);
 					
 
 					map_one_layer_status = map_one_layer_status + '*';
@@ -1096,40 +1205,75 @@ var Baseline = Backbone.View.extend({
 
 					return {
 						'cell' : cell,
-						'baseline' : item.baseline_layers
+						'baseline' : layers
 					};
 				} else {
 					return false;
 				}
 
 			},
-			show_imagepicker_search : function(cell, bbox) {				
-
-                var cell_bbox = bbox;   
-                cell.bind('bbox');
-				cell_bbox = cell.bbox(this.map);
+			enter_cell: function(cell){                
+                /*cell.bind('bbox');
+				var cell_bbox = cell.bbox(this.map);*/ 
 
 				var cell_name = cell.get('z') + "_" + cell.get('x')
 						+ "_" + cell.get('y');
 
-				this.editor_baseline_imagepicker = this.item_view_imagepicker[cell_name];
+				//var baseline_lay = this.baselines.get_by_cell(cell_name);
+				var baseline = this.cell_items[cell_name].baseline;
+				
+				if(baseline){
+					this.load_baseline(cell);
+					
+				}else{
+					this.show_imagepicker_search(cell);
+					
+				}
+
+			},
+			load_baseline: function(cell){
+				    this.bind('load_success', function(){						
+						cell.trigger('change_cell_action', {color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
+					});
+					cell.trigger('change_cell_action', {color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});
+					
+					this.genarete_baseline(cell);
+
+			},
+			save_baseline: function(){
+				
+			},  
+			show_imagepicker_search : function(cell) {				
+                
+                cell.bind('bbox');
+				bbox = cell.bbox(this.map);
+								 
+				
+
+				var cell_name = cell.get('z') + "_" + cell.get('x')
+						+ "_" + cell.get('y');
+				
+
+				var editor_imagepicker = this.cell_items[cell_name].imagepicker;
 				var that = this;
-				if (this.editor_baseline_imagepicker === undefined) {
-					this.editor_baseline_imagepicker = new EditorBaselineImagePicker(
+				if (editor_imagepicker === undefined) {
+					editor_imagepicker = new EditorBaselineImagePicker(
 							{
 								parent: this.el,
 								cell: cell,
-								bbox: cell_bbox
+								bbox: bbox
 							});
-					this.editor_baseline_imagepicker
+					// TODO inserir os layers do response em uma nova lista		
+					editor_imagepicker
 							.bind(
 									'baseline_success',
 									function() {
 										that.baselines
-												.add(that.editor_baseline_imagepicker.baseline_layers
+												.add(editor_imagepicker.baseline_layers
 														.get_by_cell(this.cell_name))
 									});
-					this.item_view_imagepicker[cell_name] = this.editor_baseline_imagepicker;
+					this.cell_items[cell_name].imagepicker = editor_imagepicker;
+					this.cell_items[cell_name].layers = editor_imagepicker.baseline_layers;
 				}
 
 				/*
@@ -1137,7 +1281,7 @@ var Baseline = Backbone.View.extend({
 				 *  }
 				 */
 
-				if (this.editor_baseline_imagepicker.showing) {
+				if (editor_imagepicker.showing) {
 					// this.editor_baseline_imagepicker.close();
 				} else {
 					console.log(this.baselines);
@@ -1145,48 +1289,65 @@ var Baseline = Backbone.View.extend({
 					var that = this;
 
 					this.trigger('show_imagepicker_search');
-					this.editor_baseline_imagepicker.show();
+					editor_imagepicker.show();
 				}
-			},
-			genarete_baseline : function(e, cell, date_start, date_end, cell_name, bbox) {				
 				
+			},
+			genarete_baseline : function(cell){//, date_start, date_end, cell_name, bbox) {								
+                var cell_name = cell.get('z') + "_" + cell.get('x')
+						+ "_" + cell.get('y');        
+
+                var baseline = this.cell_items[cell_name].baseline;
+                var date_start = baseline.get('start');
+                var date_end = baseline.get('end');
+                       
+			 
 				date_start = date_start.split("/");
 				date_start = date_start.join("-");
 				date_end = date_end.split("/");
 				date_end = date_end.join("-");
+
+				cell.bind('bbox');
+				var bbox = cell.bbox(this.map); 
+
 				
-				this.editor_baseline_imagepicker = this.item_view_imagepicker[cell_name];
+
+				//var baseline_lay = this.baselines.get_by_cell(cell_name);
+				
+				
+				var editor_imagepicker = this.cell_items[cell_name].imagepicker;
 				var self = this;
-				if (this.editor_baseline_imagepicker === undefined) {
-					this.editor_baseline_imagepicker = new EditorBaselineImagePicker(
+				if (editor_imagepicker === undefined) {
+					editor_imagepicker = new EditorBaselineImagePicker(
 							{
 								parent : this.el,
-								cell : cell.model,
+								cell : cell,
 								bbox: bbox
 							});
-					this.editor_baseline_imagepicker
+					/*editor_imagepicker
 							.bind(
 									'baseline_success',
 									function() {
 										self.baselines
-												.add(self.editor_baseline_imagepicker.baseline_layers
+												.add(editor_imagepicker.baseline_layers
 														.get_by_cell(this.cell_name))
-									});
-					this.item_view_imagepicker[cell_name] = this.editor_baseline_imagepicker;
+									});*/
+					this.cell_items[cell_name].imagepicker = editor_imagepicker;
+					this.cell_items[cell_name].layers = editor_imagepicker.baseline_layers;
 				}
 
-				this.editor_baseline_imagepicker.baseline_layers.url = "/baseline_on_cell/"
+				this.cell_items[cell_name].layers.url = "/baseline_on_cell/"
 						+ date_start + "/" + date_end + "/" + cell_name + "/"
 						
                 						
-				this.editor_baseline_imagepicker.baseline_layers
+				this.cell_items[cell_name].layers
 						.fetch({
 							success : function() {
-								self.editor_baseline_imagepicker.done = true;
-								self.editor_baseline_imagepicker.baseline_response = this;
-								self.editor_baseline_imagepicker.trigger('baseline_success');
+								self.cell_items[cell_name].imagepicker.done = true;
+								self.cell_items[cell_name].imagepicker.baseline_response = this;								
+								self.cell_items[cell_name].imagepicker.trigger('baseline_success');
 								self.trigger('load_success');
-								alert("Baseline loaded.");
+								//alert("Baseline loaded.");
 								return this;
 							}
 						});
@@ -1313,7 +1474,7 @@ var RangeSliderBaseline = Backbone.View.extend({
              stop: function(event, ui) {
             	 self.low  = ui.values[0];
             	 self.high = ui.values[1];
-                 self.trigger('stop', self.low, self.high);
+                 self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);
                  //self.trigger('stop', low);
              },
              create: function(event,ui) {
@@ -1362,7 +1523,7 @@ var RangeSliderBaseline = Backbone.View.extend({
           },
           stop: function(event, ui) {
          	 self.gv  = ui.value;             
-              self.trigger('stop', self.low, self.high, self.shade, self.gv);              
+              self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);              
           },
           create: function(event,ui) {
           	  var size = self.$('#slider_gv a.ui-slider-handle').css('left');
@@ -1383,7 +1544,7 @@ var RangeSliderBaseline = Backbone.View.extend({
           },
           stop: function(event, ui) {
          	 self.soil  = ui.value;             
-              self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil); 
+              self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);
           },
           create: function(event,ui) {
           	  var size = self.$('#slider_soil a.ui-slider-handle').css('left');
@@ -1403,8 +1564,8 @@ var RangeSliderBaseline = Backbone.View.extend({
               self.slide_cloud(self.cloud);
           },
           stop: function(event, ui) {
-         	 self.soil  = ui.value;             
-              self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil); 
+         	  self.cloud  = ui.value;             
+              self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud); 
           },
           create: function(event,ui) {
           	  var size = self.$('#slider_cloud a.ui-slider-handle').css('left');

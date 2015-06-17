@@ -1134,6 +1134,13 @@ class Baseline(db.Model):
     cell         = db.ReferenceProperty(CellGrid)
     start        = db.DateProperty(required=True)
     end          = db.DateProperty()
+    defo         = db.FloatProperty(default=165.0)
+    deg          = db.FloatProperty(default=175.0)
+    shade        = db.FloatProperty(default=70.0)
+    gv           = db.FloatProperty(default=15.0)
+    soil         = db.FloatProperty(default=10.0)
+    cloud        = db.FloatProperty(default=7.0) 
+    
     
     @property
     def image_picker(self):
@@ -1154,12 +1161,19 @@ class Baseline(db.Model):
 
     def as_dict(self):
         return {
-                'id': str(self.key()),
                 'key': str(self.key()),
-                'start': self.start,
-                'end': self.end(),                
                 'added_on': timestamp(self.added_on),
-                'added_by': str(self.added_by.nickname())
+                'added_by': str(self.added_by.nickname()),                
+                'name': self.name,
+                'cell': self.cell.name,
+                'start': self.start.strftime("%d/%b/%Y"),
+                'end': self.end.strftime("%d/%b/%Y"),                                
+                'def': self.defo,
+                'deg': self.deg,
+                'shade': self.shade,
+                'gv': self.gv,
+                'soil': self.soil,
+                'cloud': self.cloud
         }
 
 
@@ -1227,23 +1241,35 @@ class Baseline(db.Model):
             
             if r:
                 for i in range(len(r)):
-                    result.append({
-                                   #'id':          r[i].mapid,
-                                   #'token':       r[i].token,
+                    result.append(r[i].as_dict());
+                return result
+            else:
+                return None
+        else:
+            return None
+    
+    @staticmethod
+    def formated_by_cell_name(cell_name):
+        result = []
+        cell = CellGrid.find_by_name(cell_name)
+        if cell: 
+            q = Baseline.all().filter('cell =', cell).order('-start')
+            r = q.fetch(1)
+            
+            if r:
+                for i in range(len(r)):
+                    result.append({                                   
                                    'type':        'baseline',
                                    'visibility':  True,
                                    'description': r[i].name,
                                    'start': r[i].start.strftime("%d/%b/%Y"),
-                                   'end': r[i].end.strftime("%d/%b/%Y")
-                                   #'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
+                                   'end': r[i].end.strftime("%d/%b/%Y")                                   
                                    })
                 return result
             else:
                 return None
         else:
             return None
-        
-            
 
     def save(self):
         q = ''
