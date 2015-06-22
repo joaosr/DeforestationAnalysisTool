@@ -833,18 +833,22 @@ class FustionTablesNames(db.Model):
 class ImagePicker(db.Model):
     """ images selected by user """
 
-    added_on = db.DateTimeProperty(auto_now_add=True)
-    added_by = db.UserProperty()
-    report = db.ReferenceProperty(Report)
-    sensor = db.StringProperty(required=True)
-    cell = db.StringProperty(required=True)
-    year = db.StringProperty(required=True)
-    month = db.StringProperty(required=True)
-    day = db.StringListProperty(required=True)
-    location = db.TextProperty(required=True)
-    compounddate = db.StringProperty(required=True)
+    added_on     = db.DateTimeProperty(auto_now_add=True)
+    added_by     = db.UserProperty()
+    report       = db.ReferenceProperty(Report)    
+    cell         = db.StringProperty(required=True)
+    location     = db.TextProperty(required=True)
+    sensor_dates = db.StringListProperty(required=True)
+    start        = db.DateTimeProperty(required=True)
+    end          = db.DateTimeProperty(required=True)
+    #year = db.StringProperty(required=True)
+    #month = db.StringProperty(required=True)
+    #day = db.StringListProperty(required=True)
+    
+    #compounddate = db.StringProperty(required=True)
 
     def as_dict(self):
+        
         return {
                 'id': str(self.key()),
                 'key': str(self.key()),
@@ -908,7 +912,7 @@ class ImagePicker(db.Model):
     @staticmethod
     def list_by_period(start_compounddate, end_compounddate, tile):
         q = ImagePicker.all().filter('compounddate >=', start_compounddate).filter('compounddate <=', end_compounddate).filter("cell =", tile)
-        r = q.fetch(10)
+        r = q.fetch(100)
         if r:
             result = []
             for i in range(len(r)):
@@ -917,6 +921,36 @@ class ImagePicker(db.Model):
                 #    date = r[i].year+'-'+r[i].month+'-'+r[i].day[j]
                 #    sensor = r[i].sensor
                 #    result[date] = sensor
+                
+            return result
+        else:
+            return []
+        
+    @staticmethod
+    def list_by_period_date(start, end, tile):
+        q = ImagePicker.all().filter("cell =", tile)
+        r = q.fetch(1)
+        if r:
+            result = []
+            for i in range(len(r[0].sensor_dates)):
+                sensor, date = r[0].sensor_dates[i].split('__')
+                date = datetime.strptime(date, '%Y-%m-%d').date()
+                
+                if date < end and date > start:
+                    result.append({
+                                   #'cell': str(self.cell.key()),
+                                   #'paths': json.loads(self.geo),
+                                   #'type': self.type,
+                                   'sensor': sensor,
+                                   'cell': r[0].cell,
+                                   'year': date.year,
+                                   'month': date.month,
+                                   'day': date.day,
+                                   'Location': json.loads(r[0].location),
+                                   'compounddate': '%04d%02d' % (date.year, date.month),
+                                   'added_on': timestamp(r[0].added_on),
+                                   'added_by': str(r[0].added_by.nickname())})
+                
                 
             return result
         else:
@@ -986,15 +1020,15 @@ class ImagePicker(db.Model):
             image_picker.save()
 
     def save(self):
-        q = ImagePicker.all().filter('compounddate =', self.compounddate).filter('cell =', self.cell)
+        q = ImagePicker.all().filter('cell =', self.cell).filter('start =', self.start).filter('end =', self.end)
         r = q.fetch(1)
 
         try:
             if r:
-                #r[0].day = self.day
-                for day in self.day: 
-                    if day not in r[0].day:
-                        r[0].day.append(day)               
+                
+                for index in range(len(self.sensor_dates)): 
+                    if self.sensor_dates[index] not in r[0].sensor_dates:
+                        r[0].sensor_dates.append(self.sensor_dates[index])               
                 r[0].put()
             else:
                 self.put()
@@ -1145,17 +1179,18 @@ class Baseline(db.Model):
     @property
     def image_picker(self):
         result = []
-        start_compounddate = '%04d%02d' % (self.start.year, self.start.month)
-        end_compounddate   = '%04d%02d' % (self.end.year, self.end.month)
+        #start_compounddate = '%04d%02d' % (self.start.year, self.start.month)
+        #end_compounddate   = '%04d%02d' % (self.end.year, self.end.month)
         tiles = Tile.find_by_cell_name(self.cell.name)
         
         for tile in tiles:
             tile_name = tiles[tile]['name']
             logging.info("======= Tiles =========");
             logging.info(tiles[tile]['name']);
-            list_image_picker = ImagePicker.list_by_period(start_compounddate, end_compounddate, tile_name)
-            for i in range(len(list_image_picker)):
-                result.append(list_image_picker[i])
+            list_image_picker = ImagePicker.list_by_period_date(self.start, self.end, tile_name)
+            result.append(list_image_picker)
+            #for i in range(len(list_image_picker)):
+                
             
         return result
 
@@ -1175,8 +1210,6 @@ class Baseline(db.Model):
                 'soil': self.soil,
                 'cloud': self.cloud
         }
-
-
 
     def as_json(self):
         return json.dumps(self.as_dict())
@@ -1305,35 +1338,92 @@ class Baseline(db.Model):
         except:
             return 'Could not save baseline.'
 
-
-
 class TimeSeries(db.Model):
     """ images selected by user """
 
     added_on = db.DateTimeProperty(auto_now_add=True)
     added_by = db.UserProperty(required=True)
     name     = db.StringProperty(required=True)
+    cell     = db.ReferenceProperty(CellGrid)
     start    = db.DateProperty(required=True)
     end      = db.DateProperty(required=True)
-    mapid    = db.StringProperty(required=True)
-    token    = db.StringProperty(required=True)
+    
+    
+    @property
+    def last_map_cell(self):
+        last_map_cell = Baseline.find_by_cell(self.cell.name)
+        return last_map_cell  
+    
+    @property
+    def image_picker(self):
+        result = []        
+        tiles = Tile.find_by_cell_name(self.cell.name)
+        
+        for tile in tiles:
+            tile_name = tiles[tile]['name']
+            logging.info("======= Tiles =========");
+            logging.info(tiles[tile]['name']);
+            list_image_picker = ImagePicker.list_by_period_date(self.start, self.end, tile_name)
+            result.append(list_image_picker)                            
+            
+        return result
 
     def as_dict(self):
-        return {
-                'id': str(self.key()),
+        return {                
                 'key': str(self.key()),
-                'start': self.start,
-                'end': self.end(),
-                'mapid': self.mapid,
-                'token': self.token,
                 'added_on': timestamp(self.added_on),
-                'added_by': str(self.added_by.nickname())
+                'added_by': str(self.added_by.nickname()),
+                'name': self.name,
+                'cell': self.cell.name,
+                'start': self.start.strftime("%d/%b/%Y"),
+                'end': self.end.strftime("%d/%b/%Y")
+                
+                
         }
-
-
 
     def as_json(self):
         return json.dumps(self.as_dict())
+    
+    @staticmethod
+    def formated_by_cell_parent(cell_name):
+        result = []
+        cell = CellGrid.find_by_parent_name(cell_name)
+        if cell: 
+            q = TimeSeries.all().filter('cell IN', cell).order('-start')
+            r = q.fetch(50)
+            
+            if r:
+                for i in range(len(r)):
+                    result.append(r[i].as_dict());
+                return result
+            else:
+                return None
+        else:
+            return None
+        
+    @staticmethod
+    def formated_by_cell_name(cell_name):
+        result = []
+        cell = CellGrid.find_by_name(cell_name)
+        if cell: 
+            q = TimeSeries.all().filter('cell =', cell).order('-start')
+            r = q.fetch(1)
+            
+            if r:
+                return r[0].as_dict()
+                #for i in range(len(r)):
+#                     result.append(r[0].as_dict(){                                   
+#                                    'type':        'baseline',
+#                                    'visibility':  True,
+#                                    'description': r[i].name,
+#                                    'start': r[i].start.strftime("%d/%b/%Y"),
+#                                    'end': r[i].end.strftime("%d/%b/%Y")                                   
+#                                    })
+                
+            else:
+                return None
+        else:
+            return None
 
     @staticmethod
     def all_formated():
@@ -1343,13 +1433,11 @@ class TimeSeries(db.Model):
         
         if r:
             for i in range(len(r)):
-                result.append({
-                               'id':          r[i].mapid,
-                               'token':       r[i].token,
+                result.append({                               
                                'type':        'time_series',
                                'visibility':  True,
-                               'description': r[i].name,
-                               'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
+                               'description': r[i].name
+                               #'url': 'https://earthengine.googleapis.com/map/'+r[i].mapid+'/{Z}/{X}/{Y}?token='+r[i].token
                                })
             return result
         else:
@@ -1361,30 +1449,26 @@ class TimeSeries(db.Model):
         r = q.fetch(1)
 
         try:
-            if r:
-               r[0].mapid   = self.mapid
-               r[0].token  = self.token
+            if r:               
                r[0].put()
                return {'message': 'Time series updated.', 
                        'data': {
-                                    'id':         r[0].mapid,
-                                    'token':      r[0].token,
+                                    
                                     'type':       'time_series',
                                     'visibility': True,
-                                    'description':  self.name,
-                                    'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
+                                    'description':  self.name
+                                    
                                    }
                        }
             else:
                self.put()
                return {'message': 'Time series created.', 
                        'data': {
-                                    'id':         self.mapid,
-                                    'token':      self.token,
+                                    
                                     'type':       'time_series',
                                     'visibility': True,
-                                    'description':  self.name,
-                                    'url': 'https://earthengine.googleapis.com/map/'+self.mapid+'/{Z}/{X}/{Y}?token='+self.token
+                                    'description':  self.name
+                                    
                                    }
                        }
 

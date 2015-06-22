@@ -461,7 +461,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 
 	showing : false,
 
-	template : _.template($('#editor-baseline-image-picker').html()),
+	template : _.template($('#editor-image-picker-tile').html()),
 
 	initialize : function() {
 		_.bindAll(this, 'show', 'addTile', 'addTiles', 'sortLayers',
@@ -489,7 +489,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 
         this.$("#loading_tiles").show();   
 		var request = $.ajax({
-			url : "baseline_search_tiles/",
+			url : "search_tiles_intersect/",
 			type : 'POST',
 			data : {
 				cell_name: this.cell_name,
@@ -591,13 +591,13 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			console.log(this.date_start);
 			console.log(this.date_end);
 			console.log(this.list_cloud_percent);
-			this.$("#image_picker_baseline").show();
-			this.$("#image_picker_baseline ul.thumbnails.image_picker_selector").remove();
-			//this.$("#image_picker_baseline #loading_image_picker").show();
+			this.$("#image_picker_tile").show();
+			this.$("#image_picker_tile ul.thumbnails.image_picker_selector").remove();
+			//this.$("#image_picker_tile #loading_image_picker").show();
 			this.$("#loading_cover").show();
 
 			request = $.ajax({
-							url : "/imagepicker_baseline/",
+							url : "/imagepicker_tile/",
 							type : 'POST',
 							data : {
 								date_start : this.date_start,
@@ -610,7 +610,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 							success : function(d) {
 								console.log(d.result);
 								self.$("#loading_cover").hide();
-								self.$("#image_picker_baseline #send_image_picker").click(
+								self.$("#image_picker_tile #send_image_picker").click(
 										function(e) {
 											if (e)
 												e.preventDefault();
@@ -628,15 +628,15 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 		if (e)
 			e.preventDefault();
 		var self = this;
-		var thumbs_baseline = this.$("#thumbs_baseline").val();
+		var thumbs_tile = this.$("#thumbs_tile").val();
 
-		console.log(thumbs_baseline);
+		console.log(thumbs_tile);
 		this.$("#loading_cover").show();
 		var message = $.ajax({
-			url : "/imagepicker_baseline/",
+			url : "/imagepicker_tile/",
 			type : 'POST',
 			data : {
-				thumbs_baseline : thumbs_baseline.join(),
+				thumbs_tile : thumbs_tile.join(),
 				date_start : this.date_start,
 				date_end : this.date_end,
 				cell_name : this.cell_name
@@ -680,12 +680,12 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 
 	},
 	addThumbs : function(thumbs_tiles) {
-		this.$("#thumbs_baseline").empty();
+		this.$("#thumbs_tile").empty();
 		this.$("ul.thumbnails.image_picker_selector").empty();
 		this.$("ul.thumbnails.image_picker_selector").attr('disabled', false);
 
 		for ( var thumbs in thumbs_tiles) {
-			this.$("#thumbs_baseline").append(
+			this.$("#thumbs_tile").append(
 					'<optgroup label="' + thumbs.replace("/", "_")
 							+ '" id="thumbs_' + thumbs.replace("/", "_")
 							+ '"></optgroup>');
@@ -697,7 +697,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 			thumbsViewBaseline.render();
 		}
 
-		this.$("#thumbs_baseline").imagepicker({
+		this.$("#thumbs_tile").imagepicker({
 			show_label : true,
 			hide_select : true
 		});

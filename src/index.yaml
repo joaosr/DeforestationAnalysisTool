@@ -37,3 +37,9 @@ indexes:
   - name: finished
   - name: start
     direction: desc
+
+- kind: TimeSeries
+  properties:
+  - name: cell
+  - name: start
+    direction: desc

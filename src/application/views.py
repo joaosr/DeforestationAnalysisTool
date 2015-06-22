@@ -15,7 +15,7 @@ from app import app
 from application import settings
 from application.api import landstat
 from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location, create_baseline, \
-    create_time_series, create_tile_baseline
+    create_time_series, create_tile_baseline, create_tile_timeseries
 from application.models import Baseline, Tile, TimeSeries, CellGrid
 from application.time_utils import timestamp, past_month_range
 from decorators import login_required, admin_required
@@ -521,8 +521,8 @@ def time_series():
     else:
         return jsonify({'result': 'Other method'})
     
-@app.route('/baseline_search_tiles/', methods=['POST', 'GET'])
-def baseline_search_tiles():
+@app.route('/search_tiles_intersect/', methods=['POST', 'GET'])
+def search_tiles_intersect():
     if request.method == 'POST':
         cell_name = request.form.get('cell_name')
         cell_grid = CellGrid.find_by_name(cell_name)
@@ -562,6 +562,49 @@ def baseline_on_cell(date_start, date_end, cell_name):
         
         result = create_tile_baseline(start_date, end_date, cell_name)
         return jsonify({'result': result})
+    
+
+@app.route('/timeseries_on_cell/<date_start>/<date_end>/<cell_name>/', methods=['POST', 'GET'])
+def timeseries_on_cell(date_start, date_end, cell_name):
+    if request.method == 'POST':
+        cell_name    = request.form.get('cell_name')
+        logging.info(cell_name)
+        start_date   = request.form.get('start_date')
+        end_date     = request.form.get('end_date')
+        start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
+        end_date = datetime.datetime.strptime(end_date,"%d/%b/%Y")
+        
+        result = create_tile_timeseries(start_date, end_date, cell_name)
+        return jsonify({'result': result})
+    else:
+        logging.info(cell_name)
+        start_date   = date_start.replace("-", "/")
+        end_date     = date_end.replace("-", "/")
+        start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
+        end_date = datetime.datetime.strptime(end_date,"%d/%b/%Y")
+        
+        result = create_tile_timeseries(start_date, end_date, cell_name)
+        return jsonify({'result': result})
+        
+
+@app.route('/timeseries/<cell_name>/', methods=['POST', 'GET'])
+def timeseries_cell(cell_name):
+    if request.method == 'POST':
+        return jsonify({'result': None})
+    else:
+        logging.info(cell_name)
+        result = TimeSeries.formated_by_cell_parent(cell_name)        
+        return jsonify({'result': result})
+    
+@app.route('/timeseries_tile/<cell_name>/', methods=['POST', 'GET'])
+def timeseries_tile(cell_name):
+    if request.method == 'POST':
+        return jsonify({'result': None})
+    else:
+        logging.info(cell_name)
+        result = TimeSeries.formated_by_cell_name(cell_name)        
+        return jsonify({'result': result})    
+
 
 @app.route('/baselines/<cell_name>/', methods=['POST', 'GET'])
 def baselines_cell(cell_name):
@@ -582,8 +625,8 @@ def baseline_cell(cell_name):
         return jsonify({'result': result})                
 
     
-@app.route('/imagepicker_baseline/', methods=['POST', 'GET'])
-def imagepicker_baseline():    
+@app.route('/imagepicker_tile/', methods=['POST', 'GET'])
+def imagepicker_tile():    
        
     if request.method == 'POST' and request.form.get('list_cloud_percent') and request.form.get('date_start') and request.form.get('date_end'):
         
@@ -600,28 +643,53 @@ def imagepicker_baseline():
         result = landstat.get_thumbs(list_cloud_percent)
                 
         return jsonify({'result': result})
-    elif request.method == 'POST' and request.form.get('thumbs_baseline'):
+    elif request.method == 'POST' and request.form.get('thumbs_tile'):
         
-        logging.info(request.form.get('thumbs_baseline'))
-        thumbs_baseline = request.form.get('thumbs_baseline')
-        thumbs_baseline = thumbs_baseline.split(',')
+        logging.info(request.form.get('thumbs_tile'))
+        thumbs_tile = request.form.get('thumbs_tile')        
+        thumbs_tile = thumbs_tile.split(',')
+        
+        date_start  = request.form.get('date_start')
+        date_end    = request.form.get('date_end')
+        date_start = datetime.datetime.strptime(date_start,"%d/%b/%Y")
+        date_end = datetime.datetime.strptime(date_end,"%d/%b/%Y")
+        
         result = ""
+        sensor_date = {}
         
-        for i in range(len(thumbs_baseline)):
-            date, tile, sensor = thumbs_baseline[i].split('__')
-            #logging.info(request.form.get('thumb'))
-
-            tile = tile.replace("_", "/")
-            year, month, day  = date.split("-")  
+        for i in range(len(thumbs_tile)):
+            date, tile, sensor = thumbs_tile[i].split('__')
             
-            compounddate = year + month
+            if tile not in sensor_date.keys():
+                sensor_date[tile]                = {}
+                sensor_date[tile]['location']    = Tile.find_geo_region(tile.replace("_", "/"))
+                sensor_date[tile]['sensor_date'] = []
+                sensor_date[tile]['sensor_date'].append(sensor+'__'+date)
+            else:
+                sensor_date[tile]['sensor_date'].append(sensor+'__'+date)
+                
+            
 
-            location = Tile.find_geo_region(tile)
-
-            report = Report.current()
-
-            imagePicker = ImagePicker(sensor=str(sensor), report=report, added_by= users.get_current_user(), cell=str(tile),  year=str(year), month=str(month), day=[day], location=str(location), compounddate=str(compounddate))
-            result = imagePicker.save()
+        report = Report.current()
+        
+        logging.info("===== sensor_date =====")
+        logging.info(sensor_date)
+        
+        for key in sensor_date:
+            imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(key.replace("_", "/")),  location=str(sensor_date[key]['location']), sensor_dates=sensor_date[key]['sensor_date'], start=date_start, end=date_end)
+            result = result + imagePicker.save()
+         
+#             tile = tile.replace("_", "/")
+#             year, month, day  = date.split("-")  
+#             
+#             compounddate = year + month
+# 
+#             location = Tile.find_geo_region(tile)
+# 
+#             report = Report.current()
+# 
+#             imagePicker = ImagePicker(sensor=str(sensor), report=report, added_by= users.get_current_user(), cell=str(tile),  year=str(year), month=str(month), day=[day], location=str(location), compounddate=str(compounddate))
+#             result = imagePicker.save()
             
         
         return jsonify({'result': result})

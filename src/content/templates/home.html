@@ -319,8 +319,8 @@
         </div>
    </script>
    
-   <script type="text/template" id="editor-baseline-image-picker">
-        <div id="editor_baseline_image_picker_outer" class="hidden">
+   <script type="text/template" id="editor-image-picker-tile">
+        <div id="editor_image_picker_tile_outer" class="hidden">
         <div id="editor_image_picker" class="hidden">
                <a class="close_editor" href="#">close</a>                 
                <p id="cell_name"></p>
@@ -347,13 +347,13 @@
         	
         </div>
 
-        <div id="image_picker_baseline" class="hidden">
+        <div id="image_picker_tile" class="hidden">
                <a class="close_image_picker" href="#">close</a>                                  
 
                <div id="content">
                       
-                      <div id="loading_cover"><img id="loading_image_picker" src="/static/img/loading_bar.gif" style="display: block; margin: auto;"></div>
-                      <select id="thumbs_baseline" name="thumb" class="image-picker show-labels show-html" multiple="multiple" style="display:none"> 
+                      <div id="loading_cover"><img id="loading_image_picker" src="/static/img/loading_bar.gif" style="display: block; position: absolute;top: 50%;left: 40%;"></div>
+                      <select id="thumbs_tile" name="thumb" class="image-picker show-labels show-html" multiple="multiple" style="display:none"> 
                       </select> 
                       
                </div>

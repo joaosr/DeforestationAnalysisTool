@@ -112,7 +112,10 @@ var LayerBaselineCollection = Backbone.Collection.extend({
     get_by_cell: function(cell_name) {
         var lay;
         this.each(function(m) {
-        	var baseline_name = m.get('description')
+        	var baseline_name = m.get('name');
+        	if(baseline_name === undefined){
+        	   baseline_name = m.get('description'); 
+        	}
         	var index_found = baseline_name.search(cell_name);
             if(index_found > -1) {
                 lay = m;
@@ -135,6 +138,74 @@ var LayerBaselineCollection = Backbone.Collection.extend({
             if(m.get('type') === 'custom') { 
             	
             	if(m.get('id') === 'baseline'){
+                  m.set({"layer": layer});
+            	}
+                
+            	lay = m;
+            	
+            }
+            
+        });
+        return lay;
+    },
+ // return a new collection
+    filter_by_type: function(callback) {
+        return _(this.filter(function(layer) {
+                return callback(layer.get('type'));
+               }));
+    },
+    base_layers: function() {
+        return this.filter_by_type(function(t) { return t === 'google_maps'; });
+    },
+
+    raster_layers: function() {
+        return this.filter_by_type(function(t) { return t !== 'google_maps'; });
+    }
+
+});
+
+var LayerTileSeriesCollection = Backbone.Collection.extend({
+
+    model: LayerModel,
+
+    initialize: function()  {
+
+    },
+    parse: function(result){
+        console.log(result.result);
+        return result.result;
+    },
+    get_by_cell: function(cell_name) {
+        var lay;
+        this.each(function(m) {
+            
+            var timeseries_name = m.get('name');
+            if(timeseries_name === undefined){
+                timeseries_name = m.get('description'); 
+            }
+            var index_found = timeseries_name.search(cell_name);
+            if(index_found > -1) {
+                lay = m;
+            }
+            
+        });
+        return lay;
+    },
+    get_by_name: function(name) {
+        var lay;
+        this.each(function(m) {
+            if(m.get('description') === name) {
+                lay = m;
+            }
+        });
+        return lay;
+    },
+    set_canvas_in_custom_layer: function(layer) {
+        var lay;        
+        this.each(function(m) {
+            if(m.get('type') === 'custom') { 
+            	
+            	if(m.get('id') === 'timeseries'){
                   m.set({"layer": layer});
             	}
                 

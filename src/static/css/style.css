@@ -925,7 +925,7 @@ text-shadow: #000000 0px 1px 0px;
 #header #tools #baseline #baseline_content #image_picker {
   margin: 0 20px 0 20px;
   padding: 16px 14px 11px 20px;
-  display: none;
+  display: block;
 }
 #header #tools #baseline #baseline_content #image_picker a#picker_select {
   font: bold 13px "Helvetica Neue", Arial, Sans-Serif;
@@ -997,7 +997,7 @@ text-shadow: #000000 0px 1px 0px;
     margin-top: 20px;
 }
 
-#header #tools #baseline #editor_baseline_image_picker_outer{
+#header #tools #baseline #editor_image_picker_tile_outer{
   display; block;
   position: fixed;
   top: 0;
@@ -1122,7 +1122,7 @@ text-shadow: #000000 0px 1px 0px;
   margin: 10px;
   display: none;
 }
-#header #tools #baseline #image_picker_baseline{
+#header #tools #baseline #image_picker_tile{
   display: none;
   position: absolute;
   width: 1150px;    
@@ -1138,7 +1138,7 @@ text-shadow: #000000 0px 1px 0px;
   border: 1px solid rgba(0, 0, 0, 1);  
 }
 
-#header #tools #baseline #image_picker_baseline a.close_image_picker{
+#header #tools #baseline #image_picker_tile a.close_image_picker{
   position: absolute;
   right: 5px;
   top: 5px;
@@ -1148,7 +1148,7 @@ text-shadow: #000000 0px 1px 0px;
   background: url("../img/close_notes.png") no-repeat 0 0;
 }
 
-#header #tools #baseline #image_picker_baseline #content ul.thumbnails.image_picker_selector ul{
+#header #tools #baseline #image_picker_tile #content ul.thumbnails.image_picker_selector ul{
   overflow: auto;
   height: 400px;
   width: 500px;
@@ -1165,7 +1165,7 @@ text-shadow: #000000 0px 1px 0px;
   box-shadow: 0 0 4px rgb(255, 255, 255);
 }
 
-#header #tools #baseline #image_picker_baseline #content ul.thumbnails.image_picker_selector li.group_title{
+#header #tools #baseline #image_picker_tile #content ul.thumbnails.image_picker_selector li.group_title{
   float: none;
   position: absolute;
   margin-top: -27px;
@@ -1175,7 +1175,7 @@ text-shadow: #000000 0px 1px 0px;
   border: 1px solid rgb(103, 103, 103);
   box-shadow: 0 0 4px rgb(94, 94, 94);
 }
-#header #tools #baseline #image_picker_baseline #send_image_picker{
+#header #tools #baseline #image_picker_tile #send_image_picker{
   float: right;
   padding: 5px 10px 5px 10px;
   border-radius: 4px;
@@ -1324,6 +1324,197 @@ text-shadow: #000000 0px 1px 0px;
 #header #tools #time_series #time_series_content #time_series_historical_results #layer_time_series_dialog ul li a:hover{
   color: #333333;
 }
+#header #tools #time_series #editor_image_picker_tile_outer{
+  display; block;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+}
+
+#header #tools #time_series #editor_image_picker{
+  display: block;
+  position: absolute;  
+  padding: 20px 20px 20px 20px;
+  left: 30px;
+  top: 200px;
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#EBEBEB), to(#D1D1D1));
+  border-radius: 4px;
+  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+  color: #3D3D3D;
+  text-shadow: 0 1px #FFFFFF;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 1);  
+}
+
+#header #tools #time_series #editor_image_picker a.close_editor{
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 11px;
+  height: 11px;
+  text-indent: -9999px;
+  background: url("../img/close_notes.png") no-repeat 0 0;
+}
+
+#header #tools #time_series #editor_image_picker #cell_name{  
+  text-align: center;
+  margin-bottom: 20px;
+}
+#header #tools #time_series #editor_image_picker #content{
+  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+  color: #575757;
+  text-shadow: 0 1px #FFFFFF;
+}
+#header #tools #time_series #editor_image_picker #content label{
+  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+}
+#header #tools #time_series #editor_image_picker #content #period {  
+  padding: 20px 10px 20px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 1);  
+  margin-bottom: 20px;
+  font: bold 14px "Helvetica Neue", Arial, Sans-Serif;
+}
+
+#header #tools #time_series #editor_image_picker #content  #period label{
+  font: 14px "Helvetica Neue", Arial, Sans-Serif;
+}
+
+#header #tools #time_series #editor_image_picker #content #period input{
+  padding: 4px 4px 4px 7px;
+  min-width: 90px;
+  width: 90px;
+  border-radius: 3px;
+  border: 1px solid rgba(155, 155, 155, 1);
+  box-shadow: 0 0 3px rgba(255, 255, 255, 1);
+}
+
+#header #tools #time_series #editor_image_picker #content #cloud_cover {  
+  padding: 20px 0 10px 0;    
+}
+#header #tools #time_series #editor_image_picker #content ul#cloud_cover li{  
+  padding: 10px;    
+}
+
+#header #tools #time_series #editor_image_picker #content ul#cloud_cover li label{  
+  font: 14px "Helvetica Neue", Arial, Sans-Serif;
+}
+
+#header #tools #time_series #editor_image_picker #content ul#cloud_cover li input{
+  padding: 4px 4px 4px 7px;
+  border-radius: 3px;
+  border: 1px solid rgba(155, 155, 155, 1);
+  box-shadow: 0 0 3px rgba(255, 255, 255, 1);
+}
+#header #tools #time_series #editor_image_picker #open_image_picker{
+  /* float: right; */
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(100, 157, 221);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(63, 84, 98);
+  text-decoration: none;
+  box-shadow: 0 0 1px rgb(0, 0, 0);
+  border: 1px solid rgb(100, 157, 221);
+  margin-top: 20px;
+  /* margin: auto; */
+  width: 100%;
+}
+#header #tools #time_series #editor_image_picker #genarete_baseline{
+  float: right;
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(100, 157, 221);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(63, 84, 98);
+  text-decoration: none;
+  box-shadow: 0 0 1px rgb(0, 0, 0);
+  border: 1px solid rgb(100, 157, 221);
+  margin: 10px;
+}
+#header #tools #time_series #editor_image_picker #genarete_baseline:disabled{
+  float: right;
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(158, 158, 158);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(68, 68, 68);
+  text-decoration: none;
+  box-shadow: 0 0 1px rgb(0, 0, 0);
+  border: 1px solid rgb(158, 158, 158);
+  margin: 10px;
+  display: none;
+}
+#header #tools #time_series #image_picker_tile{
+  display: none;
+  position: absolute;
+  width: 1150px;    
+  padding: 20px 20px 20px 20px;
+  left: 400px;
+  top: 200px;
+  background: -webkit-gradient(linear, 50% 0%, 50% 100%, from(#EBEBEB), to(#D1D1D1));
+  border-radius: 4px;
+  font: bold 15px "Helvetica Neue", Arial, Sans-Serif;
+  color: #3D3D3D;
+  text-shadow: 0 1px #FFFFFF;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 1);  
+}
+
+#header #tools #time_series #image_picker_tile a.close_image_picker{
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 11px;
+  height: 11px;
+  text-indent: -9999px;
+  background: url("../img/close_notes.png") no-repeat 0 0;
+}
+
+#header #tools #time_series #image_picker_tile #content ul.thumbnails.image_picker_selector ul{
+  overflow: auto;
+  height: 400px;
+  width: 500px;
+  list-style-image: none;
+  list-style-position: outside;
+  position: relative;
+  list-style-type: none;
+  padding: 0px;
+  margin: 0px;
+  background-color: rgb(131, 131, 131);
+  padding: 20px;
+  border-radius: 4px;
+  border: 1px solid rgb(98, 98, 98);
+  box-shadow: 0 0 4px rgb(255, 255, 255);
+}
+
+#header #tools #time_series #image_picker_tile #content ul.thumbnails.image_picker_selector li.group_title{
+  float: none;
+  position: absolute;
+  margin-top: -27px;
+  background-color: rgb(234, 234, 234);
+  padding: 5px 10px 5px 10px;
+  border-radius: 5px;
+  border: 1px solid rgb(103, 103, 103);
+  box-shadow: 0 0 4px rgb(94, 94, 94);
+}
+#header #tools #time_series #image_picker_tile #send_image_picker{
+  float: right;
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(100, 157, 221);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(63, 84, 98);
+  text-decoration: none;
+  box-shadow: 0 0 1px rgb(0, 0, 0);
+  border: 1px solid rgb(100, 157, 221);
+  margin: 10px;
+}
+
 #header #tools #work_toolbar {
   padding-top: 13px;
 }
@@ -3333,7 +3524,7 @@ img.image_picker_image{
   right: 0;
   bottom: 0;
   left: 0;
-  background: rgba(237, 237, 237, 0.5);  
+  background: rgba(255, 255, 255, 0.8);  
   z-index: 200;
 }
 

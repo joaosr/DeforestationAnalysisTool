@@ -453,6 +453,12 @@ $(function() {
                     	m.crosshair(true);
                     	
                     }
+                    else if(self.main_operations.time_series.selected){
+                    	m.layers.reset(self.map.layers.toJSON());
+                    	
+                    	m.crosshair(true);
+                    	
+                    }
                                         
                     m.layers.trigger('reset');
                     _.each(self.compare_maps, function(other) {
@@ -573,6 +579,29 @@ $(function() {
               
                 this.main_operations.baseline.start_editing_tools(true);
                 this.get_status_layer_map(cell.get('compare_view'));
+            }else if(this.main_operations.time_series.selected){
+            	//this.main_operations.baseline.polygon_tools.show();
+            	console.log("time_series mode");
+            	var response = this.main_operations.time_series.setting_timeseries_layers(cell);
+            	cell = response['cell'];
+          	    console.log(response['cell']);
+          	    console.log(response['time_series']);
+          	    this.map.reset_layers_map('2', response['time_series'], 'time_series');         	    
+//          	    //this.map.layers.trigger('change_layers_baseline');
+//          	    this.main_operations.baseline.baseline_layer.map_auth();
+         	    
+//          	    this.compare_view(cell.get('compare_view'));
+         	    
+          	   _.each(this.compare_maps, function(m) {
+	           		  m.zoom_level = '2';
+    	      		  m.operation_map = 'time_series';
+          	   });
+         	   
+        	    this.map.show_zoom_control();
+                this.map.show_layers_control();
+              
+//                 this.main_operations.baseline.start_editing_tools(true);
+//                 this.get_status_layer_map(cell.get('compare_view'));
             }
             
         },
@@ -673,6 +702,8 @@ $(function() {
             			cell_operation = 'baseline';
             		}
             		else if(self.main_operations.time_series.selected){
+            			self.main_operations.time_series.timeseries_cell(cell_name, this);
+            			
             			cell_operation = 'timeseries';
             		}
             		else{
@@ -690,12 +721,19 @@ $(function() {
                     	   
                     	}
                     	else{
-                    		self.main_operations.baseline.enter_cell(cell);
-                    		//alert("There is not baseline for this cell.");
+                    		self.main_operations.baseline.enter_cell(cell);                    		
                     	}
             		}
             		else if(self.main_operations.time_series.selected){
-            			cell_operation = 'timeseries';
+            			if(self.main_operations.time_series.is_timeseries_load(cell_name)){
+                     	   
+            				cell_operation = 'timeseries';
+                    	   
+                    	}
+                    	else{
+                    		self.main_operations.time_series.enter_cell(cell);                    		
+                    	}
+            			
             		}
                     else{
                     	alert("Please, ckeck an option (SAD, Baseline or Time Series).");
