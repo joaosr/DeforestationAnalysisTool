@@ -164,7 +164,7 @@ var LayerBaselineCollection = Backbone.Collection.extend({
 
 });
 
-var LayerTileSeriesCollection = Backbone.Collection.extend({
+var LayerTimeSeriesCollection = Backbone.Collection.extend({
 
     model: LayerModel,
 
@@ -205,7 +205,7 @@ var LayerTileSeriesCollection = Backbone.Collection.extend({
         this.each(function(m) {
             if(m.get('type') === 'custom') { 
             	
-            	if(m.get('id') === 'timeseries'){
+            	if(m.get('id') === 'time_series'){
                   m.set({"layer": layer});
             	}
                 

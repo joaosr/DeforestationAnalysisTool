@@ -239,7 +239,7 @@ var EditorTimeSeriesImagePicker = Backbone.View.extend({
 		
 		this.done = false;
 		this.timeseries_response = null;
-		this.timeseries_layers = new LayerTileSeriesCollection();
+		this.timeseries_layers = new LayerTimeSeriesCollection();
 		this.list_tiles_name = [];
 		this.date_start = "";
 		this.date_end = "";
@@ -549,73 +549,32 @@ var TimeSeries = Backbone.View.extend({
         this.range_date = new Period_Time_Series({el: this.$("#date_range"), report: this.report, url_send: '/time_series/', callerView: this});
         this.visibility = false;
         this.selected = false;
-        this.time_series = new LayerTileSeriesCollection();
+        
+        this.timeseries_layer = new TimeSeriesLayer({mapview: this.map, report: this.report});
+        this.time_series = new LayerTimeSeriesCollection();
         this.time_series.url = 'time_series_historical_results/';
         this.time_series.fetch();
         var that = this;
         this.cell_items = {}
         this.range_date.bind('send_success', function(){that.time_series.add(that.range_date.data_response)});
     },
-    timeseries_cell : function(cell_name, cell) {
-		var self = this;
+    create_cell_items : function(cell) {
+				var self = this;
 
-		cell.bind('add_cell_intem', function(child){					
-			var child_name = child.get('z') + '_' + child.get('x') + '_' + child.get('y')				
-			if(self.cell_items[child_name] === undefined){
-			  self.cell_items[child_name] = {};	
-			  self.cell_items[child_name].cell = child;
-			  self.cell_items[child_name].layers = new LayerTileSeriesCollection();
-			  self.cell_items[child_name].layers.url = 'timeseries_tile/' + child_name + '/';
-		      self.cell_items[child_name].layers.fetch({ 
-		                          success: function(layer){ 
-		                          if(layer !== null){
-		                          	self.cell_items[child_name].time_series = layer;
-		                          	self.load_timeseries(self.cell_items[child_name].cell);
-		                          }
-		                          //self.time_series.trigger('start_time_series');
-		                          return this;
-		                          
-							  }});
-			  						  
-			}else if(self.cell_items[child_name].layers === undefined){
-              self.cell_items[child_name].layers = new LayerTileSeriesCollection();    
-			}else if(self.cell_items[child_name].cell === undefined){
-              self.cell_items[child_name].cell = child;    
-			}
-			console.log("Cell ===================");
-			console.log(self.cell_items[child_name].cell); 
-			console.log("Layer ===================");
-			console.log(self.cell_items[child_name].layers); 
-			
-			
-		});
+				cell.bind('add_cell_intem', function(child){					
+					var child_name = child.get('z') + '_' + child.get('x') + '_' + child.get('y')	
+								
+					if(self.cell_items[child_name] === undefined){
+					  	
+					  self.cell_items[child_name] = {};	
+					  self.cell_items[child_name]['cell'] = child;
+					  self.cell_items[child_name]['layers'] = new LayerTimeSeriesCollection();						  
+					}
+					
+					
+				});
 
-
-
-// 		this.time_series.url = 'timeseries/' + cell_name + '/';
-// 		this.time_series.fetch({ 
-// 		                      success: function(){ 
-// 		                          self.time_series.trigger('start_time_series');
-// 		                          return this;
-		                          
-// 							  }});									  
-
-// 	   this.time_series.bind('start_time_series', function(){
-// 	   	    self.time_series.each(function(layers){
-// 		                          	var cell_name = layers.get('cell');
-		                          	
-// 		                          	if(self.cell_items[cell_name] === undefined){
-// 		                          	  self.cell_items[cell_name] = {};	
-// 		                          	  self.cell_items[cell_name].time_series = layers;					                          	  	
-// 		                          	}else if(self.cell_items[cell_name].time_series === undefined){
-// 		                          	  	self.cell_items[cell_name].time_series = layers;
-// 		                          	}
-// 		                          	console.log(self.cell_items[cell_name].cell); 
-// 		                          	self.load_timeseries(self.cell_items[cell_name].cell); 
-// 		                          });            
-//	   });							 
-
-	},
+	},    
 	enter_cell: function(cell){                
         /*cell.bind('bbox');
 		var cell_bbox = cell.bbox(this.map);*/ 
@@ -633,6 +592,32 @@ var TimeSeries = Backbone.View.extend({
 			this.show_imagepicker_search(cell);
 			
 		}
+
+	},
+	load_baselines_saved: function(cell){
+		var self = this;
+
+		var timeseries_saved = new LayerTimeSeriesCollection();
+
+
+
+		timeseries_saved.url = 'timeseries/' + cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y') + '/';
+		timeseries_saved.fetch({
+		   success: function(result){
+			   timeseries_saved.each(function(time_series){
+				 var cell_name = time_series.get('cell');				                          		                          	
+				 console.log(self.cell_items[cell_name].cell); 
+				 self.cell_items[cell_name].time_series = time_series;
+
+
+				 self.load_baseline(self.cell_items[cell_name].cell);
+			   });
+			   return this;
+		   }	
+		});
+
+
+
 
 	},
 	load_timeseries: function(cell){

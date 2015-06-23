@@ -1753,9 +1753,9 @@ def create_tile_baseline(start_date, end_date, cell):
             temperatures.append(landsat_data_stack['temperature'])
             
         elif len(tile_image_picker[i]) > 1 :
-            resutls.append("Process with temporal composition")
+            pass 
         else:
-            resutls.append(None)
+            pass 
 
     if len(baselines) > 0:                
         cell_grid = CellGrid.find_by_name(cell)
@@ -2208,7 +2208,7 @@ def create_tile_timeseries(start_date, end_date, cell):
         ndfi_result['mapid'] = mapid
         ndfi_result['token'] = token
         ndfi_result['type']  = 'custom'
-        ndfi_result['id']    = 'baseline' 
+        ndfi_result['id']    = 'time_series' 
         ndfi_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 
         
         resutls.append(ndfi_result)
@@ -2333,7 +2333,10 @@ def create_tile_timeseries(start_date, end_date, cell):
                         })
         
         feature_last_map = ee.Image(image_last_map).getMapId({
-                              'bands': 'nd',                                                                                      
+                              'bands': 'nd', 
+                              'palette':'ffffff,00ff00,00ffff,000000,00ff00,666666', #TODO: ajustar a tabela de cores do last map
+                              'min':0,
+                              'max':5                                                                                      
                               })
         
         resutls.append({'mapid':       feature_last_map['mapid'],
@@ -2341,7 +2344,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'id': 'last_map',
                         'type':        'custom',
                         'visibility':  True,
-                        'description': 'Last map band',
+                        'description': 'Last map',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_last_map['mapid']+'/{Z}/{X}/{Y}?token='+feature_last_map['token']
                         })
         return resutls

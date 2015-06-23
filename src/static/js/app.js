@@ -529,8 +529,7 @@ $(function() {
             
             
             //update slider with current cell values
-            var cell = this.gridstack.current_cell;
-            console.log(cell);
+            var cell = this.gridstack.current_cell;            
             
             if(this.main_operations.sad.selected){            	
             	this.polygon_tools.show();	
@@ -559,12 +558,9 @@ $(function() {
             }
             else if(this.main_operations.baseline.selected){      
             	this.main_operations.baseline.polygon_tools.show();
-                var response = this.main_operations.baseline.setting_baseline_layers(cell);
-         	    //cell = response['cell'];
-         	    console.log(response['cell']);
-         	    console.log(response['baseline']);
-         	    this.map.reset_layers_map('2', response['baseline'], 'baseline');         	    
-         	    //this.map.layers.trigger('change_layers_baseline');
+                var response = this.main_operations.baseline.setting_baseline_layers(cell);         	    
+         	    
+         	    this.map.reset_layers_map('2', response['baseline'], 'baseline');         	             	    
          	    this.main_operations.baseline.baseline_layer.map_auth();
          	    
          	    this.compare_view(cell.get('compare_view'));
@@ -583,14 +579,12 @@ $(function() {
             	//this.main_operations.baseline.polygon_tools.show();
             	console.log("time_series mode");
             	var response = this.main_operations.time_series.setting_timeseries_layers(cell);
-            	cell = response['cell'];
-          	    console.log(response['cell']);
-          	    console.log(response['time_series']);
+            	
           	    this.map.reset_layers_map('2', response['time_series'], 'time_series');         	    
-//          	    //this.map.layers.trigger('change_layers_baseline');
-//          	    this.main_operations.baseline.baseline_layer.map_auth();
+          	    //this.map.layers.trigger('change_layers_baseline');
+          	    this.main_operations.time_series.timeseries_layer.map_auth();
          	    
-//          	    this.compare_view(cell.get('compare_view'));
+         	    this.compare_view(cell.get('compare_view'));
          	    
           	   _.each(this.compare_maps, function(m) {
 	           		  m.zoom_level = '2';
@@ -637,17 +631,34 @@ $(function() {
             this.main_operations.listen_zoon(z);
 
             if(this.main_operations.baseline.selected && z === 1){
-            	var cell = this.gridstack.current_cell;
+            	var cell = this.gridstack.current_cell;            	
                 console.log(cell);
                 var self = this    
+
+                this.main_operations.baseline.load_baselines_saved(cell); 
+
                 this.main_operations.baseline.bind('load_success', function(){
                 	var response = self.main_operations.baseline.setting_baselines(cell);
          	        self.map.reset_layers_map('1', response['baseline'], 'baseline');	
                 })   
             	
 
-            }
+            }else if(this.main_operations.time_series.selected && z === 1){
+            	var cell = this.gridstack.current_cell;            	
+                console.log(cell);
+                var self = this    
 
+                this.main_operations.time_series.load_baselines_saved(cell); 
+
+//                 this.main_operations.time_series.bind('load_success', function(){
+//                 	var response = self.main_operations.baseline.setting_baselines(cell);
+//          	        self.map.reset_layers_map('1', response['baseline'], 'baseline');	
+//                 })   
+            	
+
+            }
+            	
+           
 
             this.compare_view('one');
             this.polygon_tools.hide();
@@ -689,7 +700,7 @@ $(function() {
 
             // bindings
             this.gridstack.grid.bind('enter_cell', function(cell) {
-            	var cell_name = cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y')
+            	var cell_name = cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y');
             	var cell_operation = '';
             	
             	if(cell.get('z') == '1'){
@@ -697,12 +708,12 @@ $(function() {
             			cell_operation = 'sad';
             			
             		}else if(self.main_operations.baseline.selected){
-            			self.main_operations.baseline.baselines_cell(cell_name, this);
+            			self.main_operations.baseline.create_cell_items(this);
 
             			cell_operation = 'baseline';
             		}
             		else if(self.main_operations.time_series.selected){
-            			self.main_operations.time_series.timeseries_cell(cell_name, this);
+            			self.main_operations.time_series.create_cell_items(this);
             			
             			cell_operation = 'timeseries';
             		}

@@ -841,11 +841,7 @@ class ImagePicker(db.Model):
     sensor_dates = db.StringListProperty(required=True)
     start        = db.DateTimeProperty(required=True)
     end          = db.DateTimeProperty(required=True)
-    #year = db.StringProperty(required=True)
-    #month = db.StringProperty(required=True)
-    #day = db.StringListProperty(required=True)
-    
-    #compounddate = db.StringProperty(required=True)
+
 
     def as_dict(self):
         
@@ -928,7 +924,7 @@ class ImagePicker(db.Model):
         
     @staticmethod
     def list_by_period_date(start, end, tile):
-        q = ImagePicker.all().filter("cell =", tile)
+        q = ImagePicker.all().filter("cell =", tile).filter("start =", start).filter("end =", end)
         r = q.fetch(1)
         if r:
             result = []
@@ -937,10 +933,7 @@ class ImagePicker(db.Model):
                 date = datetime.strptime(date, '%Y-%m-%d').date()
                 
                 if date < end and date > start:
-                    result.append({
-                                   #'cell': str(self.cell.key()),
-                                   #'paths': json.loads(self.geo),
-                                   #'type': self.type,
+                    result.append({                                  
                                    'sensor': sensor,
                                    'cell': r[0].cell,
                                    'year': date.year,
@@ -1179,17 +1172,15 @@ class Baseline(db.Model):
     @property
     def image_picker(self):
         result = []
-        #start_compounddate = '%04d%02d' % (self.start.year, self.start.month)
-        #end_compounddate   = '%04d%02d' % (self.end.year, self.end.month)
+        
         tiles = Tile.find_by_cell_name(self.cell.name)
         
         for tile in tiles:
             tile_name = tiles[tile]['name']
             logging.info("======= Tiles =========");
-            logging.info(tiles[tile]['name']);
+            logging.info(tile_name);
             list_image_picker = ImagePicker.list_by_period_date(self.start, self.end, tile_name)
-            result.append(list_image_picker)
-            #for i in range(len(list_image_picker)):
+            result.append(list_image_picker)            
                 
             
         return result

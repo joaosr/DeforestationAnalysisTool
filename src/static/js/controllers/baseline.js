@@ -479,8 +479,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 		this.cell_name = this.cell.get('z') + "_"
 				+ this.cell.get('x') + "_" + this.cell.get('y');
 		
-		this.done = false;
-		this.baseline_response = null;
+		this.done = false;		
 		this.baseline_layers = new LayerBaselineCollection();
 		this.list_tiles_name = [];
 		this.date_start = "";
@@ -670,8 +669,7 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 				+ date_end + "/" + this.cell_name + "/"
 		this.baseline_layers.fetch({
 			success : function() {
-				self.done = true;
-				self.baseline_response = this;
+				self.done = true;				
 				self.$("#loading_cover").hide();				
 				self.trigger('baseline_success');
 				return this;
@@ -786,7 +784,7 @@ var Baseline = Backbone.View.extend({
 				_.bindAll(this, 'callback', 'hide_report_tool_bar',
 						'show_report_tool_bar', 'hide_image_picker',
 						'show_image_picker', 'visibility_change',
-						'setting_baseline_popup', 'enter_cell', 'show_imagepicker_search',
+						'setting_baseline_popup', 'show_imagepicker_search',
 						'set_selected', 'genarete_baseline', 'load_baseline');
 				var self = this;
 				
@@ -806,6 +804,7 @@ var Baseline = Backbone.View.extend({
 				this.selected = false;
 
 				this.baseline_layer = new BaselineLayer({mapview: this.map, report: this.report});
+				
 				this.polygon_tools.baseline_range.bind('change', this.baseline_layer.apply_filter);
 				this.polygon_tools.bind('visibility_change', this.baseline_layer.class_visibility);
 				this.polygon_tools.compare.bind('state', function(change_state) {
@@ -824,47 +823,48 @@ var Baseline = Backbone.View.extend({
 				this.cell_items = {}
 				this.item_view_imagepicker = {};
 			},
-			baselines_cell : function(cell_name, cell) {
+			create_cell_items : function(cell) {
 				var self = this;
 
 				cell.bind('add_cell_intem', function(child){					
-					var child_name = child.get('z') + '_' + child.get('x') + '_' + child.get('y')				
+					var child_name = child.get('z') + '_' + child.get('x') + '_' + child.get('y')	
+								
 					if(self.cell_items[child_name] === undefined){
+					  	
 					  self.cell_items[child_name] = {};	
-					  self.cell_items[child_name].cell = child;
-					  self.cell_items[child_name].layers = new LayerBaselineCollection();						  
-					}else if(self.cell_items[child_name].layers === undefined){
-                      self.cell_items[child_name].layers = new LayerBaselineCollection();    
-					}else if(self.cell_items[child_name].cell === undefined){
-                      self.cell_items[child_name].cell = child;    
+					  self.cell_items[child_name]['cell'] = child;
+					  self.cell_items[child_name]['layers'] = new LayerBaselineCollection();						  
 					}
 					
 					
 				});
 
-				this.baselines.url = 'baselines/' + cell_name + '/';
-				this.baselines.fetch({ 
-				                      success: function(){ 
-				                          self.baselines.trigger('start_baselines');
-				                          return this;
-				                          
-									  }});									  
+			},
+			load_baselines_saved: function(cell){
+				var self = this;
 
-			   this.baselines.bind('start_baselines', function(){
-			   	    self.baselines.each(function(baseline){
-				                          	var cell_name = baseline.get('cell');
-				                          	
-				                          	if(self.cell_items[cell_name] === undefined){
-				                          	  self.cell_items[cell_name] = {};	
-				                          	  self.cell_items[cell_name].baseline = baseline;					                          	  	
-				                          	}else if(self.cell_items[cell_name].baseline === undefined){
-				                          	  	self.cell_items[cell_name].baseline = baseline;
-				                          	}
-				                          	console.log(self.cell_items[cell_name].cell); 
-				                          	self.load_baseline(self.cell_items[cell_name].cell); 
-				                          });            
-			   });							 
+				var baselines_saved = new LayerBaselineCollection();
+               
+                  
 
+ 				baselines_saved.url = 'baselines/' + cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y') + '/';
+   				baselines_saved.fetch({
+ 				   success: function(result){
+ 					   baselines_saved.each(function(baseline){
+ 						 var cell_name = baseline.get('cell');				                          		                          	
+                         console.log(self.cell_items[cell_name].cell); 
+ 						 self.cell_items[cell_name].baseline = baseline;
+
+ 						  
+ 						 self.load_baseline(self.cell_items[cell_name].cell);
+ 					   });
+ 					   return this;
+ 				   }	
+  				});
+
+
+ 				                      
+                
 			},
 			show_baseline_list : function(e) {
 				if (e)
@@ -1084,13 +1084,12 @@ var Baseline = Backbone.View.extend({
 				var self = this;
 				var cell_name = cell.get('z') + '_' + cell.get('x') + '_'
 						+ cell.get('y');
-				//var item = this.cell_items[cell_name];
+				
 				var layers = this.cell_items[cell_name].layers;
 
 				if (layers) {
 					console.log(layers);
-					// this.baselines = new
-					// LayerCollection(item.baseline_response);
+					
 					var layer_names = [];
 					var map_one_layer_status = "";
 					var map_two_layer_status = "";
@@ -1244,7 +1243,6 @@ var Baseline = Backbone.View.extend({
 				
 			},  
 			show_imagepicker_search : function(cell) {				
-                
                 cell.bind('bbox');
 				bbox = cell.bbox(this.map);
 								 
@@ -1343,8 +1341,7 @@ var Baseline = Backbone.View.extend({
 				this.cell_items[cell_name].layers
 						.fetch({
 							success : function() {
-								self.cell_items[cell_name].imagepicker.done = true;
-								self.cell_items[cell_name].imagepicker.baseline_response = this;								
+								self.cell_items[cell_name].imagepicker.done = true;																
 								self.cell_items[cell_name].imagepicker.trigger('baseline_success');
 								self.trigger('load_success');
 								//alert("Baseline loaded.");

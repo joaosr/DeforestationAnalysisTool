@@ -678,19 +678,6 @@ def imagepicker_tile():
         for key in sensor_date:
             imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(key.replace("_", "/")),  location=str(sensor_date[key]['location']), sensor_dates=sensor_date[key]['sensor_date'], start=date_start, end=date_end)
             result = result + imagePicker.save()
-         
-#             tile = tile.replace("_", "/")
-#             year, month, day  = date.split("-")  
-#             
-#             compounddate = year + month
-# 
-#             location = Tile.find_geo_region(tile)
-# 
-#             report = Report.current()
-# 
-#             imagePicker = ImagePicker(sensor=str(sensor), report=report, added_by= users.get_current_user(), cell=str(tile),  year=str(year), month=str(month), day=[day], location=str(location), compounddate=str(compounddate))
-#             result = imagePicker.save()
-            
         
         return jsonify({'result': result})
     else:     
