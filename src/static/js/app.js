@@ -576,12 +576,11 @@ $(function() {
                 this.main_operations.baseline.start_editing_tools(true);
                 this.get_status_layer_map(cell.get('compare_view'));
             }else if(this.main_operations.time_series.selected){
-            	//this.main_operations.baseline.polygon_tools.show();
+            	this.main_operations.time_series.polygon_tools.show();
             	console.log("time_series mode");
             	var response = this.main_operations.time_series.setting_timeseries_layers(cell);
             	
-          	    this.map.reset_layers_map('2', response['time_series'], 'time_series');         	    
-          	    //this.map.layers.trigger('change_layers_baseline');
+          	    this.map.reset_layers_map('2', response['time_series'], 'time_series');         	              	    
           	    this.main_operations.time_series.timeseries_layer.map_auth();
          	    
          	    this.compare_view(cell.get('compare_view'));
@@ -594,7 +593,7 @@ $(function() {
         	    this.map.show_zoom_control();
                 this.map.show_layers_control();
               
-//                 this.main_operations.baseline.start_editing_tools(true);
+//                 this.main_operations.time_series.start_editing_tools(true);
 //                 this.get_status_layer_map(cell.get('compare_view'));
             }
             
@@ -620,6 +619,11 @@ $(function() {
         	//this.status_layer_map_save('two');
         	//this.get_status_layer_map('one');
             var p = this.gridstack.current_cell.parent_cell();
+            
+            if(p.get('z') === 0){
+            	this.map.reset_layers_map('0', this.available_layers, 'sad');
+            }
+            
             this.to_cell(p.get('z'), p.get('x'), p.get('y'));
             router.navigate('cell/' +  p.get('z') + "/" + p.get('x') + "/" + p.get('y'));            
         },
@@ -635,7 +639,7 @@ $(function() {
                 console.log(cell);
                 var self = this    
 
-                this.main_operations.baseline.load_baselines_saved(cell); 
+                //this.main_operations.baseline.load_baselines_saved(cell); 
 
                 this.main_operations.baseline.bind('load_success', function(){
                 	var response = self.main_operations.baseline.setting_baselines(cell);
@@ -648,7 +652,7 @@ $(function() {
                 console.log(cell);
                 var self = this    
 
-                this.main_operations.time_series.load_baselines_saved(cell); 
+                //this.main_operations.time_series.load_baselines_saved(cell); 
 
 //                 this.main_operations.time_series.bind('load_success', function(){
 //                 	var response = self.main_operations.baseline.setting_baselines(cell);
@@ -732,7 +736,7 @@ $(function() {
                     	   
                     	}
                     	else{
-                    		self.main_operations.baseline.enter_cell(cell);                    		
+                    		self.main_operations.baseline.genarete_baseline(cell);                    		
                     	}
             		}
             		else if(self.main_operations.time_series.selected){
@@ -742,7 +746,7 @@ $(function() {
                     	   
                     	}
                     	else{
-                    		self.main_operations.time_series.enter_cell(cell);                    		
+                    		self.main_operations.time_series.show_imagepicker_search(cell);                    		
                     	}
             			
             		}
@@ -772,6 +776,8 @@ $(function() {
             this.init_ui();
             
             this.gridstack.grid.bind('show_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);
+            this.gridstack.grid.bind('show_cell_popup', this.main_operations.time_series.setting_timeseries_popup, this);
+            
             this.gridstack.grid.bind('hide_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);
 
             // init the map

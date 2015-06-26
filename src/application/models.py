@@ -1201,6 +1201,20 @@ class Baseline(db.Model):
                 'soil': self.soil,
                 'cloud': self.cloud
         }
+    
+    @staticmethod    
+    def change_baseline(baseline):
+        q = Baseline.all().filter("name =", baseline['name'])
+        r = q.fetch(1)
+        if r:
+            r[0].defo = float(baseline['defo'])
+            r[0].deg = float(baseline['deg'])
+            r[0].shade = float(baseline['shade'])
+            r[0].gv = float(baseline['gv'])
+            r[0].soil = float(baseline['soil'])
+            r[0].cloud = float(baseline['cloud'])
+        else:
+            pass    
 
     def as_json(self):
         return json.dumps(self.as_dict())
@@ -1234,7 +1248,7 @@ class Baseline(db.Model):
             r = q.fetch(1)
             
             if r:
-                return r[0]
+                return r[0] 
             else:
                 return None
         else:
@@ -1273,23 +1287,14 @@ class Baseline(db.Model):
             return None
     
     @staticmethod
-    def formated_by_cell_name(cell_name):
-        result = []
+    def formated_by_cell_name(cell_name):        
         cell = CellGrid.find_by_name(cell_name)
         if cell: 
             q = Baseline.all().filter('cell =', cell).order('-start')
             r = q.fetch(1)
             
-            if r:
-                for i in range(len(r)):
-                    result.append({                                   
-                                   'type':        'baseline',
-                                   'visibility':  True,
-                                   'description': r[i].name,
-                                   'start': r[i].start.strftime("%d/%b/%Y"),
-                                   'end': r[i].end.strftime("%d/%b/%Y")                                   
-                                   })
-                return result
+            if r:                
+                return r[0].as_dict();
             else:
                 return None
         else:
@@ -1337,13 +1342,30 @@ class TimeSeries(db.Model):
     name     = db.StringProperty(required=True)
     cell     = db.ReferenceProperty(CellGrid)
     start    = db.DateProperty(required=True)
-    end      = db.DateProperty(required=True)
+    end      = db.DateProperty(required=True)    
+    defo     = db.FloatProperty(default=165.0)
+    deg      = db.FloatProperty(default=175.0)
+    shade    = db.FloatProperty(default=70.0)
+    gv       = db.FloatProperty(default=15.0)
+    soil     = db.FloatProperty(default=10.0)
+    cloud    = db.FloatProperty(default=7.0)
     
     
     @property
     def last_map_cell(self):
-        last_map_cell = Baseline.find_by_cell(self.cell.name)
-        return last_map_cell  
+        q = TimeSeries.all().filter('cell = ', self.cell).filter('start <', self.start).order('start') 
+        r = q.fetch(100)
+        
+        if r:
+            logging.info(len(r))
+            result = []
+            result.append(Baseline.find_by_cell(self.cell.name))            
+            for i in range(len(r)):
+                result.append(r[i])
+            
+            return result
+        else:
+            return [Baseline.find_by_cell(self.cell.name)]        
     
     @property
     def image_picker(self):
@@ -1367,14 +1389,34 @@ class TimeSeries(db.Model):
                 'name': self.name,
                 'cell': self.cell.name,
                 'start': self.start.strftime("%d/%b/%Y"),
-                'end': self.end.strftime("%d/%b/%Y")
-                
-                
+                'end': self.end.strftime("%d/%b/%Y"),
+                'def': self.defo,
+                'deg': self.deg,
+                'shade': self.shade,
+                'gv': self.gv,
+                'soil': self.soil,
+                'cloud': self.cloud                                
         }
 
     def as_json(self):
         return json.dumps(self.as_dict())
     
+    @staticmethod
+    def find_last_maps(cell_name):
+        cell = CellGrid.find_by_name(cell_name)
+        if cell:
+            q = TimeSeries.all().filter('cell =', cell).order('-start')
+            r = q.fetch(100)
+            if r:
+                result = []
+                for i in range(len(r)):
+                    result.append(r[i].as_dict())
+                return result
+            else:
+                return None
+        else:
+            return None
+        
     @staticmethod
     def formated_by_cell_parent(cell_name):
         result = []
@@ -1402,19 +1444,27 @@ class TimeSeries(db.Model):
             
             if r:
                 return r[0].as_dict()
-                #for i in range(len(r)):
-#                     result.append(r[0].as_dict(){                                   
-#                                    'type':        'baseline',
-#                                    'visibility':  True,
-#                                    'description': r[i].name,
-#                                    'start': r[i].start.strftime("%d/%b/%Y"),
-#                                    'end': r[i].end.strftime("%d/%b/%Y")                                   
-#                                    })
                 
             else:
                 return None
         else:
             return None
+        
+    @staticmethod
+    def find_cell_period(cell_name, start, end):
+        result = []
+        cell = CellGrid.find_by_name(cell_name)
+        if cell: 
+            q = TimeSeries.all().filter('cell =', cell).filter('start =', start).filter('end =', end)
+            r = q.fetch(1)
+            
+            if r:
+                return r[0]
+                
+            else:
+                return None
+        else:
+            return None        
 
     @staticmethod
     def all_formated():

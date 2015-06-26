@@ -1976,20 +1976,6 @@ def get_landsat_data_stack(image, sensor, start_date, end_date=None, cell=None, 
     buffered = cloudMask1.convolve(kernel)
     buffered = (buffered.add(cloudMask1)).gt(0)
 
-    #cloudMask2 = buffered.eq(1).And(unmixed.select([3]).gte(cloudThresh[1]))
-
-    ## Classification =================================================================
-    #classification_baseline = ndfi.multiply(0)
-    #classification_baseline = classification_baseline.where(ndfi.gte(175), 1) #Forest
-    #classification_baseline = classification_baseline.where(ndfi.gte(165).And(ndfi.lte(174)), 2) #Degradation
-    #classification_baseline = classification_baseline.where(ndfi.lte(164), 3) #Deforestation
-    #classification_baseline = classification_baseline.where(summed.lte(0.15), 4) #Water
-    #classification_baseline = classification_baseline.where(cloudMask2.eq(1), 5) #Cloud
-    
-    #ndfi = ndfi.where(cloudMask2.eq(1), 202) # Apply cloud mask
-    #ndfi = ndfi.where(summed.lte(0.15), 255) # Apply water mask
-    
-    #return {'baseline': classification_baseline, 'ndfi': ndfi, 'ndfi_rgb': classification_ndfi, 'sma': unmixed.max(0).multiply(100).byte()}
     return {'ndfi'        : ndfi,
             'ndfi_rgb'    : ndfi_rgb,
             'gv'          : gv,
@@ -1997,7 +1983,7 @@ def get_landsat_data_stack(image, sensor, start_date, end_date=None, cell=None, 
             'soil'        : soil,
             'cloud'       : cloud,
             'shade'       : shade,
-            'shade_median': shade_median(image, sensor, start_date, tile_name),
+            'shade_median': shade_median(image, sensor, str(start_date.year), tile_name),
             'cloud_region': buffered,
             'temperature' : brightness_temperature(image),
             'sma'         : unmixed.max(0).multiply(100).byte()} #TODO: Remover o sma e ajustar com as variaves gv npv soil cloud
@@ -2006,16 +1992,16 @@ def get_landsat_data_stack(image, sensor, start_date, end_date=None, cell=None, 
 #TODO: Precisamos pensar melhor como tratar essa função quando tivermos varias imagens 
 #TODO: classificadas na série
 
-def make_last_map(last_map_info, tile_name=None):
+def make_last_map(last_map_info, baseline_image = None):
+    
     last_map_class_list = []
     
     ENDMEMBERS = [
                   [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
                   [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
                   [1799.0, 2479.0, 3158.0, 5437.0, 7707.0, 6646.0], #SOIL
-                  [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
+                  [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  #CLOUD
                  ]
-    
     
     tile_image_picker = last_map_info.image_picker
     
@@ -2030,9 +2016,9 @@ def make_last_map(last_map_info, tile_name=None):
             month = str(image_picker['month']).zfill(2)
             year  = str(image_picker['year'])
                 
-            date_star  = year+'-'+month+'-'+day
-                
-            collection = EELandsat.find_collection_tile(sensor, tile_name, date_star)
+            start_date  = year+'-'+month+'-'+day
+            
+            collection = EELandsat.find_collection_tile(sensor, tile_name, start_date)
             
             image = ee.Image(collection.getInfo()['features'][0]['id'])
     
@@ -2055,35 +2041,36 @@ def make_last_map(last_map_info, tile_name=None):
             ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
             ndfi = ndfi.multiply(100).add(100).byte()
             
-            ## Cloud mask ====================================================================
-            cloudThresh = [0.15, 0.07] # % 0-1
-            bufferSize  = 10 #pixels
-            temperatureThresh = 22
+            ## Valores default para cloud mask ====================================================================
+            cloud_thresh = [0.15] # % 0-1
+            buffer_size  = 10 #pixels
+            temperature_thresh = 22
             
             # Gera a imagem de temperatuira em celsius.
             temperature = brightness_temperature(image)
             
-            cloudMask1 = unmixed.select(3).gte(cloudThresh[0]).And(temperature.lte(temperatureThresh))
+            # Cloud mask
+            cloud_mask1 = unmixed.select(3).gte(cloud_thresh[0]).And(temperature.lte(temperature_thresh))
          
-            kernel = ee.Kernel.circle(bufferSize, 'pixels')
+            kernel = ee.Kernel.circle(buffer_size, 'pixels')
         
-            buffered = cloudMask1.convolve(kernel)
-            buffered = (buffered.add(cloudMask1)).gt(0)
+            buffered = cloud_mask1.convolve(kernel)
+            buffered = (buffered.add(cloud_mask1)).gt(0)
         
-            cloudMask = buffered.eq(1).And(unmixed.select([3]).gte(last_map_info.cloud))
+            cloud_mask = buffered.eq(1).And(unmixed.select([3]).gte(last_map_info.cloud))
             
             ## Water mask ====================================================================
+            #_shade_median = shade_median(image, sensor, datetime.datetime.strptime(start_date, "%Y-%b-%d").date(), tile_name)
+            _shade_median = shade_median(image, sensor, year, tile_name)
+            water_mask    = (_shade_median.gte(last_map_info.shade)).And(gv.lte(last_map_info.gv)).And(soil.lte(last_map_info.soil)) 
             
-            #TODO: The water mask code goes here
-            
-            
-            ## last map classification =================================================================
-            last_map_class = ndfi.multiply(0)
-            last_map_class = last_map_class.where(ndfi.gte(last_map_info.deg), 1) #Forest
-            last_map_class = last_map_class.where(ndfi.gte(last_map_info.defo).And(ndfi.lt(last_map_info.deg)), 2) #Degradation
+            ## Last map classification =================================================================
+            last_map_class = ee.Image(0).mask(image.select(0)) #ndfi.multiply(0)
             last_map_class = last_map_class.where(ndfi.lt(last_map_info.defo), 3) #Deforestation
-        #    last_map_class = last_map_class.where(waterMask.eq(1), 4) #Water
-            last_map_class = last_map_class.where(cloudMask.eq(1), 5) #Cloud
+            last_map_class = last_map_class.where(ndfi.gte(last_map_info.defo).And(ndfi.lt(last_map_info.deg)), 2) #Degradation
+            last_map_class = last_map_class.where(ndfi.gte(last_map_info.deg), 1) #Forest
+            last_map_class = last_map_class.where(cloud_mask.eq(1), 5) #Cloud
+            last_map_class = last_map_class.where(water_mask.eq(1), 4) #Water
             last_map_class_list.append(last_map_class)
     
     
@@ -2091,14 +2078,27 @@ def make_last_map(last_map_info, tile_name=None):
     polygon = ee.Geometry(ee.Geometry.Polygon(geo), "EPSG:4326")
         
     last_map_class_mosaic = ee.ImageCollection(last_map_class_list).mosaic().clip(polygon)
+    
+    if baseline_image:
+        last_map_class_mosaic = last_map_class_mosaic.where((baseline_image.eq(3)).Or(baseline_image.eq(6)), 3) # Old deforestation
         
     return last_map_class_mosaic     
 
+##
+
 def create_tile_timeseries(start_date, end_date, cell):
-    cell_grid = CellGrid.find_by_name(cell)
-    time_series = TimeSeries(added_by=users.get_current_user(), cell=cell_grid, name='null', start=start_date.date(), end=end_date.date())
     
-    tile_image_picker = time_series.image_picker
+    time_series = TimeSeries.find_cell_period(cell, start_date, end_date)
+    tile_image_picker = ''
+    
+    if time_series:
+        tile_image_picker = time_series.image_picker
+    else:
+        cell_grid = CellGrid.find_by_name(cell)
+        time_series = TimeSeries(added_by=users.get_current_user(), cell=cell_grid, name='null', start=start_date.date(), end=end_date.date())
+        tile_image_picker = time_series.image_picker
+    
+    
     logging.info(tile_image_picker)
     
     #  Get the new time series classifcation applying the baseline deforestation mask
@@ -2148,7 +2148,10 @@ def create_tile_timeseries(start_date, end_date, cell):
                             'url': 'https://earthengine.googleapis.com/map/'+feature_image['mapid']+'/{Z}/{X}/{Y}?token='+feature_image['token']
                           })
             
+            ##
             landsat_data_stack = get_landsat_data_stack(image, sensor, start_date, None, cell, tile_name)
+            ##
+            
             ndfis.append(landsat_data_stack['ndfi'])
             ndfi_rgbs.append(landsat_data_stack['ndfi_rgb'])
             smas.append(landsat_data_stack['sma'])
@@ -2189,8 +2192,19 @@ def create_tile_timeseries(start_date, end_date, cell):
         image_sma = ee.ImageCollection(smas).mosaic().clip(polygon) #TODO: remover
         
         # Get the last map classification
-        last_map_cell = time_series.last_map_cell
-        image_last_map = make_last_map(last_map_cell)
+        registers = time_series.last_map_cellc
+        
+        ## Gera a imagem classificada do baseline para esta data.
+        
+        for ii in range(len(registers)):
+            if ii == 0:
+                image_last_map = make_last_map(registers[ii])
+            else:
+                image_last_map = make_last_map(registers[ii], image_last_map)
+        #image_last_map = make_last_map(last_map_cell)
+        ##
+        image_last_map = image_last_map.clip(polygon)
+        image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
         
         feature_ndfi = ee.Image(image_ndfi).getMapId({
                               'bands': 'nd'}) #TODO: aqui está o dado ndfi bruto
@@ -2236,7 +2250,7 @@ def create_tile_timeseries(start_date, end_date, cell):
         resutls.append({'id':          feature_sma['mapid'],
                         'token':       feature_sma['token'],
                         'type':        'xyz',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'SMA',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_sma['mapid']+'/{Z}/{X}/{Y}?token='+feature_sma['token']
                         })
@@ -2249,7 +2263,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'token':       feature_gv['token'],
                         'id': 'gv',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'GV band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_gv['mapid']+'/{Z}/{X}/{Y}?token='+feature_gv['token']
                         })
@@ -2262,7 +2276,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'token':       feature_shade['token'],
                         'id': 'shade',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Shade band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_shade['mapid']+'/{Z}/{X}/{Y}?token='+feature_shade['token']
                         })
@@ -2275,7 +2289,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'token':       feature_shade_median['token'],
                         'id': 'shade_median',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Shade median band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_shade_median['mapid']+'/{Z}/{X}/{Y}?token='+feature_shade_median['token']
                         })
@@ -2288,7 +2302,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'token':       feature_soil['token'],
                         'id': 'soil',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Soil band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_soil['mapid']+'/{Z}/{X}/{Y}?token='+feature_soil['token']
                         })
@@ -2301,7 +2315,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'token':       feature_cloud['token'],
                         'id': 'cloud',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Cloud band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_cloud['mapid']+'/{Z}/{X}/{Y}?token='+feature_cloud['token']
                         })
@@ -2314,7 +2328,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'token':       feature_cloud_region['token'],
                         'id': 'cloud_region',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Cloud region band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_cloud_region['mapid']+'/{Z}/{X}/{Y}?token='+feature_cloud_region['token']
                         })
@@ -2327,14 +2341,14 @@ def create_tile_timeseries(start_date, end_date, cell):
                         'token':       feature_temperature['token'],
                         'id': 'temperature',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Temperature band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_temperature['mapid']+'/{Z}/{X}/{Y}?token='+feature_temperature['token']
                         })
         
         feature_last_map = ee.Image(image_last_map).getMapId({
-                              'bands': 'nd', 
-                              'palette':'ffffff,00ff00,00ffff,000000,00ff00,666666', #TODO: ajustar a tabela de cores do last map
+                              'bands': 'constant', 
+                              'palette':'ffffff,00994D,00FFFE,000000,0000ff,666666', 
                               'min':0,
                               'max':5                                                                                      
                               })
@@ -2342,9 +2356,9 @@ def create_tile_timeseries(start_date, end_date, cell):
         resutls.append({'mapid':       feature_last_map['mapid'],
                         'token':       feature_last_map['token'],
                         'id': 'last_map',
-                        'type':        'custom',
+                        'type':        'xyz',
                         'visibility':  True,
-                        'description': 'Last map',
+                        'description': 'Last Map (#Development#)',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_last_map['mapid']+'/{Z}/{X}/{Y}?token='+feature_last_map['token']
                         })
         return resutls
@@ -2352,7 +2366,7 @@ def create_tile_timeseries(start_date, end_date, cell):
         return None
 
     
-def shade_median(image, sensor, start_date, tile_name, end_date=None):
+def shade_median(image, sensor, year, tile_name, end_date=None):
     ENDMEMBERS = [
                   [ 119.0,  475.0,  169.0, 6250.0, 2399.0,  675.0], #GV
                   [1514.0, 1597.0, 1421.0, 3053.0, 7707.0, 1975.0], #NPV
@@ -2360,9 +2374,8 @@ def shade_median(image, sensor, start_date, tile_name, end_date=None):
                   [4031.0, 8714.0, 7900.0, 8989.0, 7002.0, 6607.0]  # CLOUD
                  ]
     
-    image_year = str(start_date.year)
-    image_period_start = image_year + '-01-01'
-    image_period_end = image_year + '-12-31'
+    image_period_start = year + '-01-01'
+    image_period_end = year + '-12-31'
     shade_collection = EELandsat.find_collection_tile(sensor, tile_name, image_period_start, image_period_end)
     logging.info("########### Shade Image ###########")
     logging.info(len(shade_collection.getInfo().get('features')))  

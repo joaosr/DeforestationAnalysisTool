@@ -42,4 +42,9 @@ indexes:
   properties:
   - name: cell
   - name: start
+
+- kind: TimeSeries
+  properties:
+  - name: cell
+  - name: start
     direction: desc

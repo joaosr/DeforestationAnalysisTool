@@ -215,6 +215,292 @@ var LayerEditorTimeSeries = Backbone.View.extend({
 
 });
 
+var PolygonToolbarTimeSeries = Backbone.View.extend({
+
+    el: $("#work_toolbar_timeseries"),
+
+    events: {
+        'click #compare': 'none',
+        'click #ndfirange': 'none',
+        'click .class_selector': 'visibility_change'
+    },
+
+    initialize: function() {
+        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change', 'update_timeseries');        
+        this.buttons = new ButtonGroup({el: this.$('#timeseries_selection')});
+        this.polytype = new ButtonGroup({el: this.$('#timeseries_polytype')});
+        this.timeseries_range = new RangeSliderTimeSeries({el: this.$("#timeseries_maptools")});
+        this.timeseries = {}          
+        this.timeseries_range.bind('stop', this.update_timeseries);
+        this.compare = new ButtonGroup({el: $("#compare_buttons")});
+        this.polytype.hide();
+        this.buttons.bind('state', this.change_state);
+        
+
+    },
+    update_timeseries: function(low, high, shade, gv, soil, cloud){
+    	this.timeseries.def = low;
+    	this.timeseries.deg = high;
+    	this.timeseries.shade = shade;
+    	this.timeseries.gv = gv;
+    	this.timeseries.soil = soil;
+    	this.timeseries.cloud = cloud;
+
+      	this.trigger('send_timeseries', this.timeseries);
+    },
+    visibility_change: function(e) {
+        var el = $(e.target);
+        var what = $(e.target).attr('id');
+        var selected = false;
+        if(el.hasClass('check_selected')) {
+            el.removeClass('check_selected');
+        } else {
+            el.addClass('check_selected');
+            selected = true;
+        }
+        this.trigger('visibility_change', what, selected);
+        e.preventDefault();
+    },
+
+    none: function(e) { e.preventDefault();},
+
+    change_state: function(st) {
+        this.trigger('state', st);
+    },
+
+    reset: function() {
+        this.polytype.unselect_all();
+        this.buttons.unselect_all();
+    },
+    show: function() {
+        this.el.show();
+    },
+
+    hide: function() {
+        this.el.hide();
+    }
+
+});
+
+var RangeSliderTimeSeries = Backbone.View.extend({
+	 initialize: function() {
+		 _.bind(this, 'slide', 'slide_shade', 'slide_gv', 'slide_soil', 'slide_cloud', 'set_values', 'render');
+
+		 this.low = 165;
+		 this.high = 175;
+		 this.shade = 65;
+		 this.gv = 19;
+		 this.soil = 4;
+		 this.cloud = 7;
+
+
+		 this.render();
+	 },
+	 render: function(timeseries){
+		var self = this;     
+		if(timeseries){
+		 this.low = timeseries.def;
+		 this.high = timeseries.deg;
+		 this.shade = timeseries.shade;
+		 this.gv = timeseries.gv;
+		 this.soil = timeseries.soil;
+		 this.cloud = timeseries.cloud;
+		}
+
+		this.$("#slider_forest").slider({
+				 range: true,
+				 min: 0,
+				 max: 200,
+				 //values: [40, 60], //TODO: load from model
+				 values: [self.low, self.high], //TODO: load from model
+				 slide: function(event, ui) {
+					 // Hack to get red bar resizing
+
+					 self.low  = ui.values[0];
+					 self.high = ui.values[1];
+					 self.slide(self.low, self.high);
+				 },
+				 stop: function(event, ui) {
+					 self.low  = ui.values[0];
+					 self.high = ui.values[1];            	 
+					 self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);
+					 //self.trigger('stop', low);
+				 },
+				 create: function(event,ui) {
+					 // Hack to get red bar resizing
+					 var size = self.$('#slider_forest a.ui-slider-handle:eq(1)').css('left');
+					 self.$('#slider_forest span.hack_forest').css('left',size);
+					 // Hack for handles tooltip
+
+					 var size0 = self.$('#slider_forest a.ui-slider-handle:eq(0)').css('left');
+
+					 self.$('#slider_forest a.ui-slider-handle:eq(0)').empty();
+					 self.$('#slider_forest a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">'+self.low+'</p>');
+					 self.$('#slider_forest a.ui-slider-handle:eq(1)').empty();
+					 self.$('#slider_forest a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">'+self.high+'</p>');
+				 }
+		  });
+
+		  this.$("#slider_shade").slider({
+			 range: "100",
+			 min: 0,
+			 max: 100,         
+			 value: self.shade, //TODO: load from model
+			 slide: function(event, ui) {
+				 // Hack to get red bar resizing
+				 self.shade  = ui.value;             
+				 self.slide_shade(self.shade);
+			 },
+			 stop: function(event, ui) {
+				 self.shade  = ui.value;             
+				 self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);
+			 },
+			 create: function(event,ui) {
+				 var size = self.$('#slider_shade a.ui-slider-handle').css('left');
+				 self.$('#slider_shade span.hack_shade').css('left',size);
+				 self.$('#slider_shade a.ui-slider-handle').empty();
+				 self.$('#slider_shade a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.shade+'</p>');             
+			 }
+		   });
+
+		  this.$("#slider_gv").slider({
+			  range: "100",
+			  min: 0,
+			  max: 100,         
+			  value: self.gv, //TODO: load from model
+			  slide: function(event, ui) {
+				  // Hack to get red bar resizing
+				  self.gv  = ui.value;             
+				  self.slide_gv(self.gv);
+			  },
+			  stop: function(event, ui) {
+				 self.gv  = ui.value;             
+				  self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);              
+			  },
+			  create: function(event,ui) {
+				  var size = self.$('#slider_gv a.ui-slider-handle').css('left');
+				  self.$('#slider_gv span.hack_gv').css('left',size);
+				  self.$('#slider_gv a.ui-slider-handle').empty();
+				  self.$('#slider_gv a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.gv+'</p>');             
+			  }
+			});
+
+		  this.$("#slider_soil").slider({
+			  range: "100",
+			  min: 0,
+			  max: 100,         
+			  value: self.soil, //TODO: load from model
+			  slide: function(event, ui) {
+				  // Hack to get red bar resizing
+				  self.soil  = ui.value;             
+				  self.slide_soil(self.soil);
+			  },
+			  stop: function(event, ui) {
+				 self.soil  = ui.value;             
+				  self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);
+			  },
+			  create: function(event,ui) {
+				  var size = self.$('#slider_soil a.ui-slider-handle').css('left');
+				  self.$('#slider_soil span.hack_soil').css('left',size);
+				  self.$('#slider_soil a.ui-slider-handle').empty();
+				  self.$('#slider_soil a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.soil+'</p>');             
+			  }
+			});
+
+			this.$("#slider_cloud").slider({
+			  range: "100",
+			  min: 0,
+			  max: 100,         
+			  value: self.cloud, //TODO: load from model
+			  slide: function(event, ui) {
+				  // Hack to get red bar resizing
+				  self.cloud  = ui.value;             
+				  self.slide_cloud(self.cloud);
+			  },
+			  stop: function(event, ui) {
+				  self.cloud  = ui.value;             
+				  self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud); 
+			  },
+			  create: function(event,ui) {
+				  var size = self.$('#slider_cloud a.ui-slider-handle').css('left');
+				  self.$('#slider_cloud span.hack_cloud').css('left',size);
+				  self.$('#slider_cloud a.ui-slider-handle').empty();
+				  self.$('#slider_cloud a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.cloud+'</p>');             
+			  }
+			});
+	 },
+	 slide: function(low, high, silent) {
+		 this.low = low;
+		 this.high = high;
+		 var size = this.$('#slider_forest a.ui-slider-handle:eq(1)').css('left');
+		 this.$('#slider_forest span.hack_forest').css('left',size);
+		 // Hack for handles tooltip
+		 var size0 = this.$('#slider_forest a.ui-slider-handle:eq(0)').css('left');
+		 //this.$('span.hack_degradation').css('left', size);
+		 this.$('#slider_forest p#ht0').text(this.low);
+		 this.$('#slider_forest p#ht1').text(this.high);
+		 if(silent !== true) {
+			 this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
+		 }
+	 },
+
+	 slide_shade: function(shade, silent) {
+		 this.shade = shade;
+		 var size = this.$('#slider_shade a.ui-slider-handle').css('left');
+		 this.$('#slider_shade span.hack_shade').css('left',size);
+
+		 this.$('#slider_shade p#ht0').text(this.shade);     
+		 if(silent !== true) {
+			 this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
+		 }
+	 },
+
+	 slide_gv: function(gv, silent) {
+		 this.gv = gv;
+		 var size = this.$('#slider_gv a.ui-slider-handle').css('left');
+		 this.$('#slider_gv span.hack_gv').css('left',size);
+
+		 this.$('#slider_gv p#ht0').text(this.gv);     
+		 if(silent !== true) {
+			 this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
+		 }
+	 },
+
+	 slide_soil: function(soil, silent) {
+		 this.soil = soil;
+		 var size = this.$('#slider_soil a.ui-slider-handle').css('left');
+		 this.$('#slider_soil span.hack_soil').css('left',size);
+
+		 this.$('#slider_soil p#ht0').text(this.soil);     
+		 if(silent !== true) {
+			 this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
+		 }
+	 },
+
+	 slide_cloud: function(cloud, silent) {
+		 this.cloud = cloud;
+		 var size = this.$('#slider_cloud a.ui-slider-handle').css('left');
+		 this.$('#slider_cloud span.hack_cloud').css('left',size);
+
+		 this.$('#slider_cloud p#ht0').text(this.cloud);     
+		 if(silent !== true) {
+			 this.trigger('change', this.low, this.high, this.shade, this.gv, this.soil, this.cloud);
+		 }
+	 },
+
+	 // set_values([0, 1.0],[0, 1.0])
+	 set_values: function(low, high) {
+		 low = Math.floor(low*200);
+		 high =  Math.floor(high*200);
+
+		 this.el.slider( "values" , 0, low);
+		 this.el.slider( "values" , 1, high);
+		 //launch an event
+		 this.slide(low, high, false);//true);
+	 }
+});
+
+
 var EditorTimeSeriesImagePicker = Backbone.View.extend({
 
 	showing : false,
@@ -276,12 +562,6 @@ var EditorTimeSeriesImagePicker = Backbone.View.extend({
 			if (e)e.preventDefault();
 			self.search_image_tiles(e);
 		});
-
-		/*this.$('#make_timeseries').click(function(e) {
-			if (e)e.preventDefault();
-			console.log('Baseline make_timeseries');
-			self.make_timeseries(e);
-		});*/
 
 		this.options.parent.append(this.el);		
 
@@ -350,8 +630,7 @@ var EditorTimeSeriesImagePicker = Backbone.View.extend({
 			console.log(this.date_end);
 			console.log(this.list_cloud_percent);
 			this.$("#image_picker_tile").show();
-			this.$("#image_picker_tile ul.thumbnails.image_picker_selector").remove();
-			//this.$("#image_picker_baseline #loading_image_picker").show();
+			this.$("#image_picker_tile ul.thumbnails.image_picker_selector").remove();			
 			this.$("#loading_cover").show();
 
 			request = $.ajax({
@@ -542,8 +821,10 @@ var TimeSeries = Backbone.View.extend({
         'click #time_series_historical_results_select': 'show_time_series_historical_results'
     },
     initialize: function(){
-        _.bindAll(this, 'visibility_change', 'set_selected', 'is_timeseries_load', 'enter_cell', 'show_imagepicker_search', 'setting_timeseries_layers');
+        _.bindAll(this, 'visibility_change', 'set_selected', 'is_timeseries_load', 'show_imagepicker_search', 'setting_timeseries_layers', 'genarete_timeseries', 'load_timeseries', 'setting_timeseries_popup');
         this.callerView = this.options.callerView;
+        this.polygon_tools = new PolygonToolbarTimeSeries();  
+
         this.report     = this.options.report;
         this.map        = this.options.mapview;
         this.range_date = new Period_Time_Series({el: this.$("#date_range"), report: this.report, url_send: '/time_series/', callerView: this});
@@ -551,6 +832,8 @@ var TimeSeries = Backbone.View.extend({
         this.selected = false;
         
         this.timeseries_layer = new TimeSeriesLayer({mapview: this.map, report: this.report});
+        
+        this.polygon_tools.timeseries_range.bind('change', this.timeseries_layer.apply_filter);
         this.time_series = new LayerTimeSeriesCollection();
         this.time_series.url = 'time_series_historical_results/';
         this.time_series.fetch();
@@ -567,68 +850,77 @@ var TimeSeries = Backbone.View.extend({
 					if(self.cell_items[child_name] === undefined){
 					  	
 					  self.cell_items[child_name] = {};	
-					  self.cell_items[child_name]['cell'] = child;
-					  self.cell_items[child_name]['layers'] = new LayerTimeSeriesCollection();						  
+					  self.cell_items[child_name].cell = child;
+					  self.cell_items[child_name].layers = new LayerTimeSeriesCollection();						  
+					  $.ajax({							
+							url : "/timeseries_last_maps/",
+							type : 'POST',
+							data : {
+								cell_name : child_name
+							},
+							dataType : 'json',
+							async : true,
+							success : function(time_series) {
+																
+								if(time_series.result){
+									
+									self.cell_items[child_name].time_series = time_series.result;
+									//self.genarete_timeseries(self.cell_items[child_name].cell); 
+									return time_series;
+								}
+							}
+					  });
 					}
 					
 					
 				});
 
-	},    
-	enter_cell: function(cell){                
-        /*cell.bind('bbox');
-		var cell_bbox = cell.bbox(this.map);*/ 
-
-		var cell_name = cell.get('z') + "_" + cell.get('x')
-				+ "_" + cell.get('y');
-
-		//var baseline_lay = this.baselines.get_by_cell(cell_name);
-		var ts = this.cell_items[cell_name].time_series;
-		
-		if(ts){
-			this.load_timeseries(this.cell_items[cell_name].cell);
-			
-		}else{
-			this.show_imagepicker_search(cell);
-			
-		}
-
-	},
-	load_baselines_saved: function(cell){
-		var self = this;
-
-		var timeseries_saved = new LayerTimeSeriesCollection();
-
-
-
-		timeseries_saved.url = 'timeseries/' + cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y') + '/';
-		timeseries_saved.fetch({
-		   success: function(result){
-			   timeseries_saved.each(function(time_series){
-				 var cell_name = time_series.get('cell');				                          		                          	
-				 console.log(self.cell_items[cell_name].cell); 
-				 self.cell_items[cell_name].time_series = time_series;
-
-
-				 self.load_baseline(self.cell_items[cell_name].cell);
-			   });
-			   return this;
-		   }	
-		});
-
-
-
-
-	},
+	},    	
 	load_timeseries: function(cell){
 	    this.bind('load_success', function(){						
 			cell.trigger('change_cell_action', {color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
 		});
 		cell.trigger('change_cell_action', {color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});
 		
-		this.genarete_timeseries(cell);
-
     },
+    setting_timeseries_popup : function(popup, cell) {
+		var self = this;
+
+        
+          
+		var cell_bbox = "";
+		cell.bind("get_cell_bbox", function(bbox) {
+			cell_bbox = bbox;	
+		});
+
+		var cell_name = cell.model.get('z') + '_' + cell.model.get('x')
+				+ '_' + cell.model.get('y');
+          				
+        
+		if (this.selected && cell.model.get('z') === 2) {
+									
+			var popup_el = popup.find('#timeseries_actions');
+			var time_series = this.cell_items[cell_name].time_series;
+
+			if (time_series) {
+				popup_el.find('#load_timeseries').unbind('click');
+				popup_el.find('#load_timeseries').click(
+						function(e) {
+							if (e){e.preventDefault();}
+							self.genarete_timeseries(cell.model);
+						});
+
+				popup_el.find('#load_timeseries').show();						
+			}else{
+				popup_el.find('#load_timeseries').hide();
+			} 
+
+			popup_el.show();
+
+		} else {			
+			popup.find('#timeseries_actions').hide();
+		}
+	},
     show_imagepicker_search : function(cell) {				
         
         cell.bind('bbox');
@@ -679,64 +971,42 @@ var TimeSeries = Backbone.View.extend({
 		}
 		
 	},
-    genarete_timeseries : function(cell){								
+    genarete_timeseries : function(cell){		
+        var self = this;						
         var cell_name = cell.get('z') + "_" + cell.get('x')
 				+ "_" + cell.get('y');        
 
         var ts = this.cell_items[cell_name].time_series;
-        var date_start = ts.get('start');
-        var date_end = ts.get('end');
-               
-	 
-		date_start = date_start.split("/");
-		date_start = date_start.join("-");
-		date_end = date_end.split("/");
-		date_end = date_end.join("-");
 
-		cell.bind('bbox');
-		var bbox = cell.bbox(this.map); 
+        if(ts){
+			var date_start = ts[0].start;
+			var date_end = ts[0].end;
 
-		
 
-		//var baseline_lay = this.baselines.get_by_cell(cell_name);
-		
-		
-		var editor_imagepicker = this.cell_items[cell_name].imagepicker;
-		var self = this;
-		if (editor_imagepicker === undefined) {
-			editor_imagepicker = new EditorBaselineImagePicker(
-					{
-						parent : this.el,
-						cell : cell,
-						bbox: bbox
-					});
-			/*editor_imagepicker
-					.bind(
-							'time_series_success',
-							function() {
-								self.time_series
-										.add(editor_imagepicker.timeseries_layers
-												.get_by_cell(this.cell_name))
-							});*/
-			this.cell_items[cell_name].imagepicker = editor_imagepicker;
-			this.cell_items[cell_name].layers = editor_imagepicker.timeseries_layers;
-		}
+			date_start = date_start.split("/");
+			date_start = date_start.join("-");
+			date_end = date_end.split("/");
+			date_end = date_end.join("-");
 
-		this.cell_items[cell_name].layers.url = "/timeseries_on_cell/"
+            this.load_timeseries(cell); 
+			this.cell_items[cell_name].layers.url = "/timeseries_on_cell/"
 				+ date_start + "/" + date_end + "/" + cell_name + "/"
 				
         						
-		this.cell_items[cell_name].layers
-				.fetch({
-					success : function() {
-						self.cell_items[cell_name].imagepicker.done = true;
-						self.cell_items[cell_name].imagepicker.timeseries_response = this;								
-						self.cell_items[cell_name].imagepicker.trigger('time_series_success');
-						self.trigger('load_success');
-						//alert("Baseline loaded.");
-						return this;
-					}
-				});
+			this.cell_items[cell_name].layers
+					.fetch({
+						success : function() {
+// 							self.cell_items[cell_name].imagepicker.done = true;
+// 							self.cell_items[cell_name].imagepicker.timeseries_response = this;								
+// 							self.cell_items[cell_name].imagepicker.trigger('time_series_success');
+							self.trigger('load_success');
+							
+							return this;
+						}
+					});
+        }else{
+			this.show_imagepicker_search(cell);
+        }
 
 	},
     set_selected: function(){        
@@ -966,3 +1236,4 @@ var TimeSeries = Backbone.View.extend({
         this.el.hide();
     }
 });
+

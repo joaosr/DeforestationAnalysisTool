@@ -464,8 +464,14 @@ def picker(tile=None):
         location = get_modis_location(cell)
 
         report = Report.current()
+        
+        date_start = datetime.datetime.combine(report.start, datetime.time())
+        date_end = datetime.datetime.combine(report.end, datetime.time())
+        
 
-        imagePicker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=days, location=location, compounddate=str(compounddate))
+        #imagePicker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=days, location=location, compounddate=str(compounddate))
+        
+        imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(cell),  location=location, sensor_dates=thumbs, start=date_start, end=date_end)
         return jsonify({'result': imagePicker.save()})
 
     else:
@@ -562,7 +568,14 @@ def baseline_on_cell(date_start, date_end, cell_name):
         
         result = create_tile_baseline(start_date, end_date, cell_name)
         return jsonify({'result': result})
-    
+
+
+@app.route('/change_baseline/', methods=['POST', 'GET'])
+def change_baseline():
+    if request.method == 'POST':
+        baseline = request.form.get('baseline')
+        logging.info(baseline)
+        Baseline.change_baseline(baseline)
 
 @app.route('/timeseries_on_cell/<date_start>/<date_end>/<cell_name>/', methods=['POST', 'GET'])
 def timeseries_on_cell(date_start, date_end, cell_name):
@@ -596,14 +609,28 @@ def timeseries_cell(cell_name):
         result = TimeSeries.formated_by_cell_parent(cell_name)        
         return jsonify({'result': result})
     
+@app.route('/timeseries_tile/', methods=['POST', 'GET'])    
 @app.route('/timeseries_tile/<cell_name>/', methods=['POST', 'GET'])
-def timeseries_tile(cell_name):
-    if request.method == 'POST':
-        return jsonify({'result': None})
+def timeseries_tile(cell_name=None):
+    if request.method == 'POST' and request.form.get('cell_name'):
+        cell_name = request.form.get('cell_name')
+        result = TimeSeries.formated_by_cell_name(cell_name)
+        return jsonify({'result': result})
     else:
         logging.info(cell_name)
         result = TimeSeries.formated_by_cell_name(cell_name)        
-        return jsonify({'result': result})    
+        return jsonify({'result': result})
+    
+@app.route('/timeseries_last_maps/', methods=['POST', 'GET'])    
+def timeseries_last_maps():
+    if request.method == 'POST' and request.form.get('cell_name'):
+        cell_name = request.form.get('cell_name')
+        result = TimeSeries.find_last_maps(cell_name)
+        return jsonify({'result': result})
+    else:
+        logging.info(cell_name)
+        result = TimeSeries.formated_by_cell_name(cell_name)        
+        return jsonify({'result': result})        
 
 
 @app.route('/baselines/<cell_name>/', methods=['POST', 'GET'])
@@ -612,13 +639,18 @@ def baselines_cell(cell_name):
         return jsonify({'result': None})
     else:
         logging.info(cell_name)
-        result = Baseline.formated_by_cell_parent(cell_name)        
+        result = Baseline.formated_by_cell_parent(cell_name)
+                
         return jsonify({'result': result})
 
-@app.route('/baseline/<cell_name>/', methods=['POST', 'GET'])
-def baseline_cell(cell_name):
-    if request.method == 'POST':
-        return jsonify({'result': None})
+@app.route('/baseline/', methods=['POST', 'GET'])
+@app.route('/baseline/<cell_name>/')
+def baseline_cell(cell_name=None):
+    if request.method == 'POST' and request.form.get('cell_name'):
+        cell_name = request.form.get('cell_name')
+        result = Baseline.formated_by_cell_name(cell_name)
+                
+        return jsonify({'result': result})
     else:
         logging.info(cell_name)
         result = Baseline.formated_by_cell_name(cell_name)        

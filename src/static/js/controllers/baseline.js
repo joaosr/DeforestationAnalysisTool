@@ -414,15 +414,28 @@ var PolygonToolbarBaseline = Backbone.View.extend({
     },
 
     initialize: function() {
-        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change');
+        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change', 'update_baseline');        
         this.buttons = new ButtonGroup({el: this.$('#baseline_selection')});
         this.polytype = new ButtonGroup({el: this.$('#baseline_polytype')});
         this.baseline_range = new RangeSliderBaseline({el: this.$("#baseline_maptools")});
+        this.baseline = {}          
+        this.baseline_range.bind('stop', this.update_baseline);
         this.compare = new ButtonGroup({el: $("#compare_buttons")});
         this.polytype.hide();
         this.buttons.bind('state', this.change_state);
-    },
+        
 
+    },
+    update_baseline: function(low, high, shade, gv, soil, cloud){
+    	this.baseline.def = low;
+    	this.baseline.deg = high;
+    	this.baseline.shade = shade;
+    	this.baseline.gv = gv;
+    	this.baseline.soil = soil;
+    	this.baseline.cloud = cloud;
+
+      	this.trigger('send_baseline', this.baseline);
+    },
     visibility_change: function(e) {
         var el = $(e.target);
         var what = $(e.target).attr('id');
@@ -775,692 +788,685 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 });
 
 var Baseline = Backbone.View.extend({
-			el : $("#baseline"),
-			events : {
-				'click #baseline_select' : 'visibility_change',
-				'click #baseline_list_select' : 'show_baseline_list'
-			},
-			initialize : function() {
-				_.bindAll(this, 'callback', 'hide_report_tool_bar',
-						'show_report_tool_bar', 'hide_image_picker',
-						'show_image_picker', 'visibility_change',
-						'setting_baseline_popup', 'show_imagepicker_search',
-						'set_selected', 'genarete_baseline', 'load_baseline');
-				var self = this;
-				
-				this.callerView = this.options.callerView;
-				this.polygon_tools = new PolygonToolbarBaseline();
-				
-				this.report = this.options.report;
-				this.map = this.options.mapview;
-				// this.setting_report_data();
-				this.report_tool_bar = new Period({
-					el : this.$("#date_range"),
-					report : this.report,
-					url_send : '/baseline_report/',
-					callerView : this
-				});				
-				this.visibility = false;
-				this.selected = false;
+		el : $("#baseline"),
+		events : {
+			'click #baseline_select' : 'visibility_change',
+			'click #baseline_list_select' : 'show_baseline_list'
+		},
+		initialize : function() {
+			_.bindAll(this, 'callback', 'hide_report_tool_bar',
+					'show_report_tool_bar', 'hide_image_picker',
+					'show_image_picker', 'visibility_change',
+					'setting_baseline_popup', 'show_imagepicker_search',
+					'set_selected', 'genarete_baseline', 'load_baseline', 'change_baseline');
+			var self = this;
 
-				this.baseline_layer = new BaselineLayer({mapview: this.map, report: this.report});
-				
-				this.polygon_tools.baseline_range.bind('change', this.baseline_layer.apply_filter);
-				this.polygon_tools.bind('visibility_change', this.baseline_layer.class_visibility);
-				this.polygon_tools.compare.bind('state', function(change_state) {
-					self.trigger("compare_state", change_state);
+			this.callerView = this.options.callerView;
+			this.polygon_tools = new PolygonToolbarBaseline();
+
+			this.report = this.options.report;
+			this.map = this.options.mapview;
+			// this.setting_report_data();
+			this.report_tool_bar = new Period({
+				el : this.$("#date_range"),
+				report : this.report,
+				url_send : '/baseline_report/',
+				callerView : this
+			});				
+			this.visibility = false;
+			this.selected = false;
+
+			this.baseline_layer = new BaselineLayer({mapview: this.map, report: this.report});
+
+			this.polygon_tools.baseline_range.bind('change', this.baseline_layer.apply_filter);
+			this.polygon_tools.baseline_range.bind('send_baseline', this.change_baseline);
+			this.polygon_tools.bind('visibility_change', this.baseline_layer.class_visibility);
+			this.polygon_tools.compare.bind('state', function(change_state) {
+				self.trigger("compare_state", change_state);
+			});
+			this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
+			this.cell_polygons = new CellPolygons({mapview: this.map});
+			//this.polygon_tools.baseline_range.bind('stop', this.change_baseline);
+			this.baselines = new LayerBaselineCollection();
+			this.baselines.url = 'baseline_list/';
+			this.baselines.fetch();
+			var that = this;
+			this.report_tool_bar.bind('send_success', function() {
+				that.baselines.add(that.report_tool_bar.data_request)
+			});
+			this.cell_items = {}
+			this.item_view_imagepicker = {};
+		},
+		create_cell_items : function(cell) {
+			var self = this;
+
+			cell.bind('add_cell_intem', function(child){					
+				var child_name = child.get('z') + '_' + child.get('x') + '_' + child.get('y')	
+				console.log("Primeiro");			
+				if(self.cell_items[child_name] === undefined){
+
+				  self.cell_items[child_name] = {};	
+				  self.cell_items[child_name].cell = child;
+				  self.cell_items[child_name].layers = new LayerBaselineCollection();						  
+				  $.ajax({
+						url : "/baseline/",
+						type : 'POST',
+						data : {
+							cell_name : child_name
+						},
+						dataType : 'json',
+						async : true,
+						success : function(baseline) {								
+							if(baseline.result){
+								console.log(baseline.result);
+								self.cell_items[child_name].baseline = baseline.result;
+								self.genarete_baseline(self.cell_items[child_name].cell); 
+								return baseline;
+							}
+						}
+				  });
+				}
+
+
+
+			});
+
+		},			
+		show_baseline_list : function(e) {
+			if (e)
+				e.preventDefault();
+			if (this.layer_editor_baseline === undefined) {
+				this.layer_editor_baseline = new LayerEditorBaseline({
+					parent : this.$('#baseline_list'),
+					layers : this.baselines
 				});
-				this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
-				this.cell_polygons = new CellPolygons({mapview: this.map});
-				//this.polygon_tools.baseline_range.bind('stop', this.change_baseline);
-				this.baselines = new LayerBaselineCollection();
-				this.baselines.url = 'baseline_list/';
-				this.baselines.fetch();
+			}
+
+			if (this.layer_editor_baseline.showing) {
+				this.layer_editor_baseline.close();
+				this.$("#baseline_list_select").css({
+					"color" : "white",
+					"text-shadow" : "0 1px black",
+					"background" : "none",
+				});
+			} else {
+				console.log(this.baselines);
+				this.layer_editor_baseline.layers = this.baselines;
+				this.layer_editor_baseline.trigger('change_layers');
 				var that = this;
-				this.report_tool_bar.bind('send_success', function() {
-					that.baselines.add(that.report_tool_bar.data_request)
-				});
-				this.cell_items = {}
-				this.item_view_imagepicker = {};
-			},
-			create_cell_items : function(cell) {
-				var self = this;
-
-				cell.bind('add_cell_intem', function(child){					
-					var child_name = child.get('z') + '_' + child.get('x') + '_' + child.get('y')	
-								
-					if(self.cell_items[child_name] === undefined){
-					  	
-					  self.cell_items[child_name] = {};	
-					  self.cell_items[child_name]['cell'] = child;
-					  self.cell_items[child_name]['layers'] = new LayerBaselineCollection();						  
+				this.baselines.each(function(layer) {
+					var layer_map = that.map.layers.get(layer.get('id'));
+					if (layer_map) {
+						// Already exist
+					} else {
+						that.map.layers.add(layer);
 					}
-					
-					
 				});
 
-			},
-			load_baselines_saved: function(cell){
-				var self = this;
-
-				var baselines_saved = new LayerBaselineCollection();
-               
-                  
-
- 				baselines_saved.url = 'baselines/' + cell.get('z')+'_'+cell.get('x')+'_'+cell.get('y') + '/';
-   				baselines_saved.fetch({
- 				   success: function(result){
- 					   baselines_saved.each(function(baseline){
- 						 var cell_name = baseline.get('cell');				                          		                          	
-                         console.log(self.cell_items[cell_name].cell); 
- 						 self.cell_items[cell_name].baseline = baseline;
-
- 						  
- 						 self.load_baseline(self.cell_items[cell_name].cell);
- 					   });
- 					   return this;
- 				   }	
-  				});
-
-
- 				                      
-                
-			},
-			show_baseline_list : function(e) {
-				if (e)
-					e.preventDefault();
-				if (this.layer_editor_baseline === undefined) {
-					this.layer_editor_baseline = new LayerEditorBaseline({
-						parent : this.$('#baseline_list'),
-						layers : this.baselines
-					});
-				}
-
-				if (this.layer_editor_baseline.showing) {
-					this.layer_editor_baseline.close();
-					this.$("#baseline_list_select").css({
-						"color" : "white",
-						"text-shadow" : "0 1px black",
-						"background" : "none",
-					});
-				} else {
-					console.log(this.baselines);
-					this.layer_editor_baseline.layers = this.baselines;
-					this.layer_editor_baseline.trigger('change_layers');
-					var that = this;
-					this.baselines.each(function(layer) {
-						var layer_map = that.map.layers.get(layer.get('id'));
-						if (layer_map) {
-							// Already exist
-						} else {
-							that.map.layers.add(layer);
-						}
-					});
-
-					this.layer_editor_baseline.layers.each(function(m) {
-						if (!m.get('visibility')) {
-							that.layer_editor_baseline.layers.remove(m);
-						}
-					});
-					this
-							.$("#baseline_list_select")
-							.css(
-									{
-										"color" : "rgb(21, 2, 2)",
-										"text-shadow" : "0 1px white",
-										"background" : "-webkit-gradient(linear, 50% 0%, 50% 100%, from(#E0E0E0), to(#EBEBEB))",
-									});
-					this.trigger('show_baseline_list');
-					this.layer_editor_baseline.show();
-				}
-			},
-			change_baseline: function(low, high) {
-	            //var baseline = this.map.layer.;
-	            cell.set({
-	                'ndfi_low': low/200.0,
-	                'ndfi_high': high/200.0
-	            });
-	            cell.save();
-	        },
-			setting_report_data : function() {
-				var date = new Date();
-				var current_month = date.getMonth();
-				var current_year = date.getYear();
-
-				var new_start = moment(
-						new Date(current_year, current_month_sad + 1, 1))
-						.format("DD-MM-YYYY");
-				var new_end = moment(
-						new Date(current_year, current_month_sad + 1, 0))
-						.format("DD-MM-YYYY");
-				console.log("Nem start: " + new_start);
-				this.report.set('str', new_start);
-				this.report.set('str_end', new_end);
-
-			},			
-			setting_baseline_popup : function(popup, cell) {
-				var self = this;
-				
-				
-				var cell_bbox = "";
-				cell.bind("get_cell_bbox", function(bbox) {
-					cell_bbox = bbox;	
+				this.layer_editor_baseline.layers.each(function(m) {
+					if (!m.get('visibility')) {
+						that.layer_editor_baseline.layers.remove(m);
+					}
 				});
-				
-				var cell_name = cell.model.get('z') + '_' + cell.model.get('x')
-						+ '_' + cell.model.get('y');
-				if (this.selected && cell.model.get('z') == '2') {
-					// popup.append( "<p>Test</p>" );
-					var setting_baseline = popup.find('#setting_baseline');
-					var baseline_lay = this.baselines.get_by_cell(cell_name);
-
-					if (baseline_lay) {
-						setting_baseline.find('#rebuild_baseline').unbind('click');
-						setting_baseline.find('#rebuild_baseline').click(
-								function(e) {
-									if (e){e.preventDefault();}
-									self.show_imagepicker_search(cell.model, cell_bbox);
+				this
+						.$("#baseline_list_select")
+						.css(
+								{
+									"color" : "rgb(21, 2, 2)",
+									"text-shadow" : "0 1px white",
+									"background" : "-webkit-gradient(linear, 50% 0%, 50% 100%, from(#E0E0E0), to(#EBEBEB))",
 								});
-												
-						setting_baseline.find('#rebuild_baseline').show();						
-					} 
+				this.trigger('show_baseline_list');
+				this.layer_editor_baseline.show();
+			}
+		},
+		change_baseline: function(baseline) {
+			//var baseline = this.map.layer.;
+			$.ajax({
+						url : "/change_baseline/",
+						type : 'POST',
+						data : {
+							baseline: baseline,								
+						},
+						dataType : 'json',
+						async : true,
+						success : function(baseline) {								
 
-					setting_baseline.show();
+						}
+				  });
 
-				} else {
-					var setting_baseline = popup.find('#setting_baseline');
-					setting_baseline.hide();
-				}
-			},
-			cell_done: function(cell_name) {				
-				var item = this.cell_items[cell_name].imagepicker;
-				if (item) {
-					return item.done;
-				} else {
-					return false;
-				}
+		},
+		setting_report_data : function() {
+			var date = new Date();
+			var current_month = date.getMonth();
+			var current_year = date.getYear();
 
-			},
-			is_baseline_load: function(cell_name) {
-				var baseline_loaded = this.cell_items[cell_name].layers.get_by_cell(cell_name);
-				
-				if (baseline_loaded) {
-					return true;
-				} else {
-					return false;
-				}
+			var new_start = moment(
+					new Date(current_year, current_month_sad + 1, 1))
+					.format("DD-MM-YYYY");
+			var new_end = moment(
+					new Date(current_year, current_month_sad + 1, 0))
+					.format("DD-MM-YYYY");
+			console.log("Nem start: " + new_start);
+			this.report.set('str', new_start);
+			this.report.set('str_end', new_end);
 
-			},
-			setting_baselines: function(cell){                
-			    var layers = new LayerBaselineCollection();
+		},			
+		setting_baseline_popup : function(popup, cell) {
+			var self = this;
+
+
+			var cell_bbox = "";
+			cell.bind("get_cell_bbox", function(bbox) {
+				cell_bbox = bbox;	
+			});
+
+			var cell_name = cell.model.get('z') + '_' + cell.model.get('x')
+					+ '_' + cell.model.get('y');
+			if (this.selected && cell.model.get('z') == '2') {
+				// popup.append( "<p>Test</p>" );
+				var setting_baseline = popup.find('#setting_baseline');
+				var baseline_lay = this.baselines.get_by_cell(cell_name);
+
+				if (baseline_lay) {
+					setting_baseline.find('#rebuild_baseline').unbind('click');
+					setting_baseline.find('#rebuild_baseline').click(
+							function(e) {
+								if (e){e.preventDefault();}
+								self.show_imagepicker_search(cell.model, cell_bbox);
+							});
+
+					setting_baseline.find('#rebuild_baseline').show();						
+				} 
+
+				setting_baseline.show();
+
+			} else {
+				var setting_baseline = popup.find('#setting_baseline');
+				setting_baseline.hide();
+			}
+		},
+		cell_done: function(cell_name) {				
+			var item = this.cell_items[cell_name].imagepicker;
+			if (item) {
+				return item.done;
+			} else {
+				return false;
+			}
+
+		},
+		is_baseline_load: function(cell_name) {
+			var baseline_loaded = this.cell_items[cell_name].layers.get_by_cell(cell_name);
+
+			if (baseline_loaded) {
+				this.polygon_tools.baseline_range.baseline = this.cell_items[cell_name].baseline
+				this.polygon_tools.baseline_range.render(this.cell_items[cell_name].baseline);
+				return true;
+			} else {
+				return false;
+			}
+
+		},
+		setting_baselines: function(cell){                
+			var layers = new LayerBaselineCollection();
+			var map_one_layer_status = "";
+			var map_two_layer_status = "";
+			var map_three_layer_status = "";
+			var map_four_layer_status = "";
+
+			for(key in this.cell_items){   
+
+			   if (this.cell_items[key].layers) {
+				//console.log(this.cell_items[key].layers);															
+				this.cell_items[key].layers.each(function(layer) {
+
+					if(layer.get('description').search("BASELINE/") > -1){
+						map_one_layer_status = map_one_layer_status + '"'
+								+ name + '","' + 'true' + '",';
+						map_two_layer_status = map_two_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						map_three_layer_status = map_three_layer_status
+								+ '"' + name + '","' + 'false' + '",';
+						map_four_layer_status = map_four_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						layers.add(layer);		
+
+					}
+
+				  });
+
+				} 
+			 }	
+
+			 var available_maps=[
+									{
+										id: '6',
+										type: 'google_maps',
+										map_id: 'TERRAIN',
+										  visibility: true,
+									  description: 'Terrain',
+										enabled: true
+									}, 
+									{
+										id: '7',
+										type: 'google_maps',
+										map_id: 'SATELLITE',
+										   visibility: true,
+									 description: 'Satellite'
+									},
+									{
+										id: '9',
+										type: 'google_maps',
+										map_id: 'ROADMAP',
+											visibility: true,
+									description: 'Roadmap'
+									}, {
+										id: '8',
+										type: 'google_maps',
+										map_id: 'HYBRID',
+										 visibility: true,
+									   description: 'Hybrid',
+									}
+
+
+								  ];
+
+				layers.add(available_maps);
+
+				map_one_layer_status = map_one_layer_status + '*';
+				map_two_layer_status = map_two_layer_status + '*';
+				map_three_layer_status = map_three_layer_status + '*';
+				map_four_layer_status = map_four_layer_status + '*';
+
+				cell.set({
+					"map_one_layer_status" : map_one_layer_status
+				});
+				cell.set({
+					"map_two_layer_status" : map_two_layer_status
+				});
+				cell.set({
+					"map_three_layer_status" : map_three_layer_status
+				});
+				cell.set({
+					"map_four_layer_status" : map_four_layer_status
+				});
+
+			   return {
+					'cell' : cell,
+					'baseline' : layers
+				};             					                  
+		},
+		setting_baseline_layers: function(cell) {
+			var self = this;
+			var cell_name = cell.get('z') + '_' + cell.get('x') + '_'
+					+ cell.get('y');
+
+			var layers = this.cell_items[cell_name].layers;
+
+			if (layers) {
+				console.log(layers);
+
+				var layer_names = [];
 				var map_one_layer_status = "";
 				var map_two_layer_status = "";
 				var map_three_layer_status = "";
 				var map_four_layer_status = "";
 
-				for(key in this.cell_items){   
+				layers.each(function(layer) {
+					// var layer_map = self.map.layers.get(layer.get('id'));
+					layer_names.push(layer.get('description'));
+					// if(layer_map){
+					// Already exist
+					// }else{
+					// self.map.layers.add(layer);
+					// }
+				});
 
-				   if (this.cell_items[key].layers) {
-					//console.log(this.cell_items[key].layers);															
-					this.cell_items[key].layers.each(function(layer) {
-						
-						if(layer.get('description').search("BASELINE/") > -1){
-							map_one_layer_status = map_one_layer_status + '"'
-									+ name + '","' + 'true' + '",';
-							map_two_layer_status = map_two_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							map_three_layer_status = map_three_layer_status
-									+ '"' + name + '","' + 'false' + '",';
-							map_four_layer_status = map_four_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							layers.add(layer);		
-
-						}
-						
-					  });
-										
-				    } 
-				 }	
-
-				 var available_maps=[
-										{
-										    id: '6',
-										    type: 'google_maps',
-										    map_id: 'TERRAIN',
-										      visibility: true,
-										  description: 'Terrain',
-										    enabled: true
-										}, 
-										{
-										    id: '7',
-										    type: 'google_maps',
-										    map_id: 'SATELLITE',
-										       visibility: true,
-										 description: 'Satellite'
-										},
-										{
-										    id: '9',
-										    type: 'google_maps',
-										    map_id: 'ROADMAP',
-										        visibility: true,
-										description: 'Roadmap'
-										}, {
-										    id: '8',
-										    type: 'google_maps',
-										    map_id: 'HYBRID',
-										     visibility: true,
-										   description: 'Hybrid',
-										}
-
-
-					                  ];
-
-				    layers.add(available_maps);
-
-				    map_one_layer_status = map_one_layer_status + '*';
-					map_two_layer_status = map_two_layer_status + '*';
-					map_three_layer_status = map_three_layer_status + '*';
-					map_four_layer_status = map_four_layer_status + '*';
-
-					cell.set({
-						"map_one_layer_status" : map_one_layer_status
-					});
-					cell.set({
-						"map_two_layer_status" : map_two_layer_status
-					});
-					cell.set({
-						"map_three_layer_status" : map_three_layer_status
-					});
-					cell.set({
-						"map_four_layer_status" : map_four_layer_status
-					});
-
-				   return {
-						'cell' : cell,
-						'baseline' : layers
-					};             					                  
-			},
-			setting_baseline_layers: function(cell) {
-				var self = this;
-				var cell_name = cell.get('z') + '_' + cell.get('x') + '_'
-						+ cell.get('y');
-				
-				var layers = this.cell_items[cell_name].layers;
-
-				if (layers) {
-					console.log(layers);
-					
-					var layer_names = [];
-					var map_one_layer_status = "";
-					var map_two_layer_status = "";
-					var map_three_layer_status = "";
-					var map_four_layer_status = "";
-										
-					layers.each(function(layer) {
-						// var layer_map = self.map.layers.get(layer.get('id'));
-						layer_names.push(layer.get('description'));
-						// if(layer_map){
-						// Already exist
-						// }else{
-						// self.map.layers.add(layer);
-						// }
-					});
-
-					for (var i = 0; i < layer_names.length; i++) {
-						var name = layer_names[i];
-						console.log(name);
-						if (name.search("RGB/") > -1) {
-							map_one_layer_status = map_one_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							map_two_layer_status = map_two_layer_status + '"'
-									+ name + '","' + 'true' + '",';
-							map_three_layer_status = map_three_layer_status
-									+ '"' + name + '","' + 'false' + '",';
-							map_four_layer_status = map_four_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-						} else if (name === 'NDFI') {
-							map_one_layer_status = map_one_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							map_two_layer_status = map_two_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							map_three_layer_status = map_three_layer_status
-									+ '"' + name + '","' + 'true' + '",';
-							map_four_layer_status = map_four_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-						} else if (name === 'SMA') {
-							map_one_layer_status = map_one_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							map_two_layer_status = map_two_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							map_three_layer_status = map_three_layer_status
-									+ '"' + name + '","' + 'false' + '",';
-							map_four_layer_status = map_four_layer_status + '"'
-									+ name + '","' + 'true' + '",';
-						} else if (name.search("BASELINE/") > -1) {
-							map_one_layer_status = map_one_layer_status + '"'
-									+ name + '","' + 'true' + '",';
-							map_two_layer_status = map_two_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-							map_three_layer_status = map_three_layer_status
-									+ '"' + name + '","' + 'false' + '",';
-							map_four_layer_status = map_four_layer_status + '"'
-									+ name + '","' + 'false' + '",';
-						}
+				for (var i = 0; i < layer_names.length; i++) {
+					var name = layer_names[i];
+					console.log(name);
+					if (name.search("RGB/") > -1) {
+						map_one_layer_status = map_one_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						map_two_layer_status = map_two_layer_status + '"'
+								+ name + '","' + 'true' + '",';
+						map_three_layer_status = map_three_layer_status
+								+ '"' + name + '","' + 'false' + '",';
+						map_four_layer_status = map_four_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+					} else if (name === 'NDFI') {
+						map_one_layer_status = map_one_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						map_two_layer_status = map_two_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						map_three_layer_status = map_three_layer_status
+								+ '"' + name + '","' + 'true' + '",';
+						map_four_layer_status = map_four_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+					} else if (name === 'SMA') {
+						map_one_layer_status = map_one_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						map_two_layer_status = map_two_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						map_three_layer_status = map_three_layer_status
+								+ '"' + name + '","' + 'false' + '",';
+						map_four_layer_status = map_four_layer_status + '"'
+								+ name + '","' + 'true' + '",';
+					} else if (name.search("BASELINE/") > -1) {
+						map_one_layer_status = map_one_layer_status + '"'
+								+ name + '","' + 'true' + '",';
+						map_two_layer_status = map_two_layer_status + '"'
+								+ name + '","' + 'false' + '",';
+						map_three_layer_status = map_three_layer_status
+								+ '"' + name + '","' + 'false' + '",';
+						map_four_layer_status = map_four_layer_status + '"'
+								+ name + '","' + 'false' + '",';
 					}
-					
-					var available_maps=[
-										{
-										    id: '6',
-										    type: 'google_maps',
-										    map_id: 'TERRAIN',
-										      visibility: true,
-										  description: 'Terrain',
-										    enabled: true
-										}, 
-										{
-										    id: '7',
-										    type: 'google_maps',
-										    map_id: 'SATELLITE',
-										       visibility: true,
-										 description: 'Satellite'
-										},
-										{
-										    id: '9',
-										    type: 'google_maps',
-										    map_id: 'ROADMAP',
-										        visibility: true,
-										description: 'Roadmap'
-										}, {
-										    id: '8',
-										    type: 'google_maps',
-										    map_id: 'HYBRID',
-										     visibility: true,
-										   description: 'Hybrid',
-										}
-
-
-					                  ];
-					
-					layers.add(available_maps);
-					
-
-					map_one_layer_status = map_one_layer_status + '*';
-					map_two_layer_status = map_two_layer_status + '*';
-					map_three_layer_status = map_three_layer_status + '*';
-					map_four_layer_status = map_four_layer_status + '*';
-
-					cell.set({
-						"map_one_layer_status" : map_one_layer_status
-					});
-					cell.set({
-						"map_two_layer_status" : map_two_layer_status
-					});
-					cell.set({
-						"map_three_layer_status" : map_three_layer_status
-					});
-					cell.set({
-						"map_four_layer_status" : map_four_layer_status
-					});
-
-					return {
-						'cell' : cell,
-						'baseline' : layers
-					};
-				} else {
-					return false;
 				}
 
-			},
-			enter_cell: function(cell){                
-                /*cell.bind('bbox');
-				var cell_bbox = cell.bbox(this.map);*/ 
+				var available_maps=[
+									{
+										id: '6',
+										type: 'google_maps',
+										map_id: 'TERRAIN',
+										  visibility: true,
+									  description: 'Terrain',
+										enabled: true
+									}, 
+									{
+										id: '7',
+										type: 'google_maps',
+										map_id: 'SATELLITE',
+										   visibility: true,
+									 description: 'Satellite'
+									},
+									{
+										id: '9',
+										type: 'google_maps',
+										map_id: 'ROADMAP',
+											visibility: true,
+									description: 'Roadmap'
+									}, {
+										id: '8',
+										type: 'google_maps',
+										map_id: 'HYBRID',
+										 visibility: true,
+									   description: 'Hybrid',
+									}
 
-				var cell_name = cell.get('z') + "_" + cell.get('x')
-						+ "_" + cell.get('y');
 
-				//var baseline_lay = this.baselines.get_by_cell(cell_name);
-				var baseline = this.cell_items[cell_name].baseline;
-				
-				if(baseline){
-					this.load_baseline(cell);
-					
-				}else{
-					this.show_imagepicker_search(cell);
-					
-				}
+								  ];
 
-			},
-			load_baseline: function(cell){
-				    this.bind('load_success', function(){						
-						cell.trigger('change_cell_action', {color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
-					});
-					cell.trigger('change_cell_action', {color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});
-					
-					this.genarete_baseline(cell);
+				layers.add(available_maps);
 
-			},
-			save_baseline: function(){
-				
-			},  
-			show_imagepicker_search : function(cell) {				
-                cell.bind('bbox');
-				bbox = cell.bbox(this.map);
-								 
-				
 
-				var cell_name = cell.get('z') + "_" + cell.get('x')
-						+ "_" + cell.get('y');
-				
+				map_one_layer_status = map_one_layer_status + '*';
+				map_two_layer_status = map_two_layer_status + '*';
+				map_three_layer_status = map_three_layer_status + '*';
+				map_four_layer_status = map_four_layer_status + '*';
 
-				var editor_imagepicker = this.cell_items[cell_name].imagepicker;
+				cell.set({
+					"map_one_layer_status" : map_one_layer_status
+				});
+				cell.set({
+					"map_two_layer_status" : map_two_layer_status
+				});
+				cell.set({
+					"map_three_layer_status" : map_three_layer_status
+				});
+				cell.set({
+					"map_four_layer_status" : map_four_layer_status
+				});
+
+				return {
+					'cell' : cell,
+					'baseline' : layers
+				};
+			} else {
+				return false;
+			}
+
+		},
+		enter_cell: function(cell){                
+			/*cell.bind('bbox');
+			var cell_bbox = cell.bbox(this.map);*/ 
+
+			var cell_name = cell.get('z') + "_" + cell.get('x')
+					+ "_" + cell.get('y');
+
+			//var baseline_lay = this.baselines.get_by_cell(cell_name);
+			var baseline = this.cell_items[cell_name].baseline;
+
+			if(baseline){
+				this.load_baseline(cell);
+
+			}else{
+				this.show_imagepicker_search(cell);
+
+			}
+
+		},
+		load_baseline: function(cell){
+				this.bind('load_success', function(){						
+					cell.trigger('change_cell_action', {color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
+				});
+				cell.trigger('change_cell_action', {color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});										
+		},
+		save_baseline: function(){
+
+		},  
+		show_imagepicker_search : function(cell) {				
+			cell.bind('bbox');
+			bbox = cell.bbox(this.map);
+
+
+
+			var cell_name = cell.get('z') + "_" + cell.get('x')
+					+ "_" + cell.get('y');
+
+
+			var editor_imagepicker = this.cell_items[cell_name].imagepicker;
+			var that = this;
+			if (editor_imagepicker === undefined) {
+				editor_imagepicker = new EditorBaselineImagePicker(
+						{
+							parent: this.el,
+							cell: cell,
+							bbox: bbox
+						});
+				// TODO inserir os layers do response em uma nova lista		
+				editor_imagepicker
+						.bind(
+								'baseline_success',
+								function() {
+									that.baselines
+											.add(editor_imagepicker.baseline_layers
+													.get_by_cell(this.cell_name))
+								});
+				this.cell_items[cell_name].imagepicker = editor_imagepicker;
+				this.cell_items[cell_name].layers = editor_imagepicker.baseline_layers;
+			}
+
+			/*
+			 * if(this.editor_baseline_imagepicker === undefined) {
+			 *  }
+			 */
+
+			if (editor_imagepicker.showing) {
+				// this.editor_baseline_imagepicker.close();
+			} else {
+				console.log(this.baselines);
+
 				var that = this;
-				if (editor_imagepicker === undefined) {
-					editor_imagepicker = new EditorBaselineImagePicker(
-							{
-								parent: this.el,
-								cell: cell,
-								bbox: bbox
-							});
-					// TODO inserir os layers do response em uma nova lista		
-					editor_imagepicker
-							.bind(
-									'baseline_success',
-									function() {
-										that.baselines
-												.add(editor_imagepicker.baseline_layers
-														.get_by_cell(this.cell_name))
-									});
-					this.cell_items[cell_name].imagepicker = editor_imagepicker;
-					this.cell_items[cell_name].layers = editor_imagepicker.baseline_layers;
-				}
 
-				/*
-				 * if(this.editor_baseline_imagepicker === undefined) {
-				 *  }
-				 */
+				this.trigger('show_imagepicker_search');
+				editor_imagepicker.show();
+			}
 
-				if (editor_imagepicker.showing) {
-					// this.editor_baseline_imagepicker.close();
-				} else {
-					console.log(this.baselines);
+		},
+		genarete_baseline : function(cell){
+			var self = this;
 
-					var that = this;
+			var cell_name = cell.get('z') + "_" + cell.get('x')
+					+ "_" + cell.get('y');        
 
-					this.trigger('show_imagepicker_search');
-					editor_imagepicker.show();
-				}
-				
-			},
-			genarete_baseline : function(cell){//, date_start, date_end, cell_name, bbox) {								
-                var cell_name = cell.get('z') + "_" + cell.get('x')
-						+ "_" + cell.get('y');        
+			var baseline = this.cell_items[cell_name].baseline;
 
-                var baseline = this.cell_items[cell_name].baseline;
-                var date_start = baseline.get('start');
-                var date_end = baseline.get('end');
-                       
-			 
+			if(baseline){
+				var date_start = baseline.start;
+				var date_end = baseline.end;
+
+
 				date_start = date_start.split("/");
 				date_start = date_start.join("-");
 				date_end = date_end.split("/");
 				date_end = date_end.join("-");
 
-				cell.bind('bbox');
-				var bbox = cell.bbox(this.map); 
-
-				
-
-				//var baseline_lay = this.baselines.get_by_cell(cell_name);
-				
-				
-				var editor_imagepicker = this.cell_items[cell_name].imagepicker;
-				var self = this;
-				if (editor_imagepicker === undefined) {
-					editor_imagepicker = new EditorBaselineImagePicker(
-							{
-								parent : this.el,
-								cell : cell,
-								bbox: bbox
-							});
-					/*editor_imagepicker
-							.bind(
-									'baseline_success',
-									function() {
-										self.baselines
-												.add(editor_imagepicker.baseline_layers
-														.get_by_cell(this.cell_name))
-									});*/
-					this.cell_items[cell_name].imagepicker = editor_imagepicker;
-					this.cell_items[cell_name].layers = editor_imagepicker.baseline_layers;
-				}
-
 				this.cell_items[cell_name].layers.url = "/baseline_on_cell/"
-						+ date_start + "/" + date_end + "/" + cell_name + "/"
-						
-                						
-				this.cell_items[cell_name].layers
-						.fetch({
-							success : function() {
-								self.cell_items[cell_name].imagepicker.done = true;																
-								self.cell_items[cell_name].imagepicker.trigger('baseline_success');
-								self.trigger('load_success');
-								//alert("Baseline loaded.");
-								return this;
-							}
-						});
+					+ date_start + "/" + date_end + "/" + cell_name + "/"
 
-			},
-			set_selected : function() {
-				this.selected = true;
-				this.callerView.callback_selected(this);
-				this.$("#baseline_select").addClass('baseline_select');
-			},
-			disable : function() {
+				this.load_baseline(cell);					
+				this.cell_items[cell_name].layers
+					.fetch({
+						success : function() {
+							//self.cell_items[cell_name].imagepicker.done = true;																
+							//self.cell_items[cell_name].imagepicker.trigger('baseline_success');
+							self.trigger('load_success');
+							//alert("Baseline loaded.");
+							return this;
+						}
+					});
+
+			}else{
+				this.show_imagepicker_search(cell);
+			}               
+
+		},
+		set_selected : function() {
+			this.selected = true;
+			this.callerView.callback_selected(this);
+			this.$("#baseline_select").addClass('baseline_select');
+		},
+		disable : function() {
+			$(this.el).css("background-color", "rgba(0, 0, 0, 0)");
+			this.$("#baseline_select h3").css("color", "#999999");
+			this.$("#baseline_content").hide();
+			this.visibility = false;
+			this.selected = false;
+			this.$("#baseline_select").removeClass('baseline_select');
+		},
+		callback : function(view) {
+			if (view === this.report_tool_bar
+					&& this.report_tool_bar.visibility) {
+				this.hide_image_picker();
+			}
+			/*
+			 * else if(view === this.image_picker &&
+			 * this.image_picker.visibility){ this.hide_report_tool_bar(); }
+			 */
+		},
+		hide_report_tool_bar : function() {
+			if (this.report_tool_bar.visibility) {
+				this.report_tool_bar.visibility_change();
+			}
+		},
+		show_report_tool_bar : function() {
+			if (!this.report_tool_bar.visibility) {
+				this.report_tool_bar.visibility_change();
+			}
+		},
+		hide_image_picker : function() {
+			if (this.image_picker.visibility) {
+				this.image_picker.visibility_change();
+			}
+		},
+		show_image_picker : function() {
+			if (!this.image_picker.visibility) {
+				this.image_picker.visibility_change();
+				this.image_picker.bind('visibility_change', this
+						.show_baseline_list(null));
+			}
+		},
+		show_selected : function() {
+			if (this.selected) {
+				this.el.show();
+			} else {
+				this.el.hide();
+			}
+		},
+		show : function() {
+			this.el.show();
+		},
+
+		hide : function() {
+			this.el.hide();
+		},
+		start_editing_tools: function(state) {
+			if(state){
+				this.editing_router = new EditingToolsBaseline({
+					baseline: this
+			   });
+			}else{
+				if(this.editing_router) {
+					//unbind all
+					this.editing_router.reset();
+					this.polygon_tools.reset();
+					delete this.editing_router;
+				}
+			}
+
+		},
+		visibility_change : function() {
+			if (this.visibility) {
 				$(this.el).css("background-color", "rgba(0, 0, 0, 0)");
 				this.$("#baseline_select h3").css("color", "#999999");
-				this.$("#baseline_content").hide();
+				//this.$("#baseline_content").hide();
 				this.visibility = false;
-				this.selected = false;
-				this.$("#baseline_select").removeClass('baseline_select');
-			},
-			callback : function(view) {
-				if (view === this.report_tool_bar
-						&& this.report_tool_bar.visibility) {
-					this.hide_image_picker();
-				}
-				/*
-				 * else if(view === this.image_picker &&
-				 * this.image_picker.visibility){ this.hide_report_tool_bar(); }
-				 */
-			},
-			hide_report_tool_bar : function() {
-				if (this.report_tool_bar.visibility) {
-					this.report_tool_bar.visibility_change();
-				}
-			},
-			show_report_tool_bar : function() {
-				if (!this.report_tool_bar.visibility) {
-					this.report_tool_bar.visibility_change();
-				}
-			},
-			hide_image_picker : function() {
-				if (this.image_picker.visibility) {
-					this.image_picker.visibility_change();
-				}
-			},
-			show_image_picker : function() {
-				if (!this.image_picker.visibility) {
-					this.image_picker.visibility_change();
-					this.image_picker.bind('visibility_change', this
-							.show_baseline_list(null));
-				}
-			},
-			show_selected : function() {
-				if (this.selected) {
-					this.el.show();
-				} else {
-					this.el.hide();
-				}
-			},
-			show : function() {
-				this.el.show();
-			},
-
-			hide : function() {
-				this.el.hide();
-			},
-			start_editing_tools: function(state) {
-				if(state){
-					this.editing_router = new EditingToolsBaseline({
-	                    baseline: this
-	               });
-				}else{
-					if(this.editing_router) {
-		                //unbind all
-		                this.editing_router.reset();
-		                this.polygon_tools.reset();
-		                delete this.editing_router;
-		            }
-				}
-				
-			},
-			visibility_change : function() {
-				if (this.visibility) {
-					$(this.el).css("background-color", "rgba(0, 0, 0, 0)");
-					this.$("#baseline_select h3").css("color", "#999999");
-					//this.$("#baseline_content").hide();
-					this.visibility = false;
-				} else {
-					$(this.el).css("background-color", "rgba(0, 0, 0, 1)");
-					this.$("#baseline_select h3").css("color", "white");
-					//this.$("#baseline_content").show();
-					this.visibility = true;
-					this.callerView.callback(this);
-					this.set_selected();
-				}
-
+			} else {
+				$(this.el).css("background-color", "rgba(0, 0, 0, 1)");
+				this.$("#baseline_select h3").css("color", "white");
+				//this.$("#baseline_content").show();
+				this.visibility = true;
+				this.callerView.callback(this);
+				this.set_selected();
 			}
-		});
+
+		}
+	});
 
 //jqueryui slider wrapper
 //triggers change with values
 var RangeSliderBaseline = Backbone.View.extend({
  initialize: function() {
-     _.bind(this, 'slide', 'slide_shade', 'slide_gv', 'slide_soil', 'slide_cloud', 'set_values');
-     var self = this;
+     _.bind(this, 'slide', 'slide_shade', 'slide_gv', 'slide_soil', 'slide_cloud', 'set_values', 'render');
+      
      this.low = 165;
      this.high = 175;
-     this.shade = 70;
-     this.gv = 15;
-     this.soil = 10;
+     this.shade = 65;
+     this.gv = 19;
+     this.soil = 4;
      this.cloud = 7;
      
-     this.$("#slider_forest").slider({
+     
+     this.render();
+ },
+ render: function(baseline){
+ 	var self = this;     
+ 	if(baseline){
+     this.low = baseline.def;
+     this.high = baseline.deg;
+     this.shade = baseline.shade;
+     this.gv = baseline.gv;
+     this.soil = baseline.soil;
+     this.cloud = baseline.cloud;
+ 	}
+
+ 	this.$("#slider_forest").slider({
              range: true,
              min: 0,
              max: 200,
              //values: [40, 60], //TODO: load from model
-             values: [165, 175], //TODO: load from model
+             values: [self.low, self.high], //TODO: load from model
              slide: function(event, ui) {
                  // Hack to get red bar resizing
 
@@ -1470,7 +1476,7 @@ var RangeSliderBaseline = Backbone.View.extend({
              },
              stop: function(event, ui) {
             	 self.low  = ui.values[0];
-            	 self.high = ui.values[1];
+            	 self.high = ui.values[1];            	 
                  self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);
                  //self.trigger('stop', low);
              },
@@ -1482,8 +1488,10 @@ var RangeSliderBaseline = Backbone.View.extend({
                  
                  var size0 = self.$('#slider_forest a.ui-slider-handle:eq(0)').css('left');
 
-                 self.$('#slider_forest a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">165</p>');
-                 self.$('#slider_forest a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">175</p>');
+                 self.$('#slider_forest a.ui-slider-handle:eq(0)').empty();
+                 self.$('#slider_forest a.ui-slider-handle:eq(0)').append('<p id="ht0" class="tooltip">'+self.low+'</p>');
+                 self.$('#slider_forest a.ui-slider-handle:eq(1)').empty();
+                 self.$('#slider_forest a.ui-slider-handle:eq(1)').append('<p id="ht1" class="tooltip">'+self.high+'</p>');
              }
       });
      
@@ -1491,7 +1499,7 @@ var RangeSliderBaseline = Backbone.View.extend({
          range: "100",
          min: 0,
          max: 100,         
-         value: 70, //TODO: load from model
+         value: self.shade, //TODO: load from model
          slide: function(event, ui) {
              // Hack to get red bar resizing
              self.shade  = ui.value;             
@@ -1499,12 +1507,13 @@ var RangeSliderBaseline = Backbone.View.extend({
          },
          stop: function(event, ui) {
         	 self.shade  = ui.value;             
-             self.trigger('stop', self.low, self.high, self.shade);
+             self.trigger('stop', self.low, self.high, self.shade, self.gv, self.soil, self.cloud);
          },
          create: function(event,ui) {
              var size = self.$('#slider_shade a.ui-slider-handle').css('left');
              self.$('#slider_shade span.hack_shade').css('left',size);
-             self.$('#slider_shade a.ui-slider-handle').append('<p id="ht0" class="tooltip">70</p>');             
+             self.$('#slider_shade a.ui-slider-handle').empty();
+             self.$('#slider_shade a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.shade+'</p>');             
          }
        });
       
@@ -1512,7 +1521,7 @@ var RangeSliderBaseline = Backbone.View.extend({
           range: "100",
           min: 0,
           max: 100,         
-          value: 15, //TODO: load from model
+          value: self.gv, //TODO: load from model
           slide: function(event, ui) {
               // Hack to get red bar resizing
               self.gv  = ui.value;             
@@ -1525,7 +1534,8 @@ var RangeSliderBaseline = Backbone.View.extend({
           create: function(event,ui) {
           	  var size = self.$('#slider_gv a.ui-slider-handle').css('left');
               self.$('#slider_gv span.hack_gv').css('left',size);
-              self.$('#slider_gv a.ui-slider-handle').append('<p id="ht0" class="tooltip">15</p>');             
+              self.$('#slider_gv a.ui-slider-handle').empty();
+              self.$('#slider_gv a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.gv+'</p>');             
           }
         });
       
@@ -1533,7 +1543,7 @@ var RangeSliderBaseline = Backbone.View.extend({
           range: "100",
           min: 0,
           max: 100,         
-          value: 10, //TODO: load from model
+          value: self.soil, //TODO: load from model
           slide: function(event, ui) {
               // Hack to get red bar resizing
               self.soil  = ui.value;             
@@ -1546,7 +1556,8 @@ var RangeSliderBaseline = Backbone.View.extend({
           create: function(event,ui) {
           	  var size = self.$('#slider_soil a.ui-slider-handle').css('left');
               self.$('#slider_soil span.hack_soil').css('left',size);
-              self.$('#slider_soil a.ui-slider-handle').append('<p id="ht0" class="tooltip">10</p>');             
+              self.$('#slider_soil a.ui-slider-handle').empty();
+              self.$('#slider_soil a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.soil+'</p>');             
           }
         });
 
@@ -1554,7 +1565,7 @@ var RangeSliderBaseline = Backbone.View.extend({
           range: "100",
           min: 0,
           max: 100,         
-          value: 7, //TODO: load from model
+          value: self.cloud, //TODO: load from model
           slide: function(event, ui) {
               // Hack to get red bar resizing
               self.cloud  = ui.value;             
@@ -1567,12 +1578,11 @@ var RangeSliderBaseline = Backbone.View.extend({
           create: function(event,ui) {
           	  var size = self.$('#slider_cloud a.ui-slider-handle').css('left');
               self.$('#slider_cloud span.hack_cloud').css('left',size);
-              self.$('#slider_cloud a.ui-slider-handle').append('<p id="ht0" class="tooltip">7</p>');             
+              self.$('#slider_cloud a.ui-slider-handle').empty();
+              self.$('#slider_cloud a.ui-slider-handle').append('<p id="ht0" class="tooltip">'+self.cloud+'</p>');             
           }
         });
-     
  },
-
  slide: function(low, high, silent) {
 	 this.low = low;
 	 this.high = high;

@@ -173,10 +173,8 @@ var MapView = Backbone.View.extend({
             }
     },
     reset_layers_map: function(level, layer, operation_map) {
-    	//this.layers.models = layer.models;
-    	this.layers.reset(layer.toJSON());
-    	//this.layers = layer;
-    	//this.layers.trigger('reset');
+    	
+    	this.layers.reset(layer.toJSON());    	
     	this.zoom_level    = level;
     	this.operation_map = operation_map; 
     	this.layer_editor  = undefined;

@@ -37,20 +37,15 @@ var TimeSeriesLayer = Backbone.View.extend({
         console.log("Report ID: "+this.report.id);        
         this.extra_images_list = {};
         this.extra_images_data = {};
-        
-
-        
 
         this.mapview.bind('click', this.click);
         
-        this.mapview.layers.bind('change_layers_baseline', function() {        	
-           self.map_auth();
-		});
+        
         
 
         this.sub_map_layer = [];
         this.add_class_control_layers();
-        console.log(" === Baseline layer created === ");
+        console.log(" === TimeSeries layer created === ");
     },
 
     add_class_control_layers: function() {
@@ -248,10 +243,10 @@ var TimeSeriesLayer = Backbone.View.extend({
         this.soil_thresh  = soil_thresh;
         this.cloud_thresh = cloud_thresh;
 
-        this.layer.filter = this.filter //TODO mater somente em versão debugg        
+        //this.layer.filter = this.filter //TODO mater somente em versão debugg        
         
         this.layer.filter_tiles_canvas(this.extra_images_list, this.def_thresh, this.deg_thresh, this.shade_thresh, this.gv_thresh, this.soil_thresh, this.cloud_thresh);
-        //this.layer.filter_tiles(def_thresh);
+        
     },
 
     
@@ -270,21 +265,21 @@ var TimeSeriesLayer = Backbone.View.extend({
       // sometimes due to browser limitation to get images from the same domain
       // images are not loaded, so start a timeout to finished the loading
       setTimeout(load_finished, 20*1000);
-      var image_baseline = new Image();
+      var image_timeseries = new Image();
       var extra_images = {}
       
       //check if thereis support for corssOrigin images and use proxy if isn't available
       var map_layer_timeseries = this.map_layer.time_series;
       
-      if(image_baseline.crossOrigin !== undefined) {
-          image_baseline.crossOrigin = '';
-          image_baseline.src = EARTH_ENGINE_TILE_SERVER + map_layer_timeseries.get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + map_layer_timeseries.get('token');          
+      if(image_timeseries.crossOrigin !== undefined) {
+          image_timeseries.crossOrigin = '';
+          image_timeseries.src = EARTH_ENGINE_TILE_SERVER + map_layer_timeseries.get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + map_layer_timeseries.get('token');          
       } else {
-        image_baseline.src = "/ee/tiles/" + map_layer_timeseries.get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + map_layer_timeseries.get('token');        
+        image_timeseries.src = "/ee/tiles/" + map_layer_timeseries.get('mapid') + "/"+ zoom + "/"+ coord.x + "/" + coord.y +"?token=" + map_layer_timeseries.get('token');        
       }
       
       for(var key in this.map_layer){
-    	  if(key !== "baseline"){
+    	  if(key !== "timeseries"){
 	    	  extra_images[key] = new Image();
 	    	  
 	    	  if(extra_images[key].crossOrigin !== undefined) {
@@ -297,10 +292,10 @@ var TimeSeriesLayer = Backbone.View.extend({
       }
 
       var ctx = canvas.getContext('2d');
-      canvas.image = image_baseline;
+      canvas.image = image_timeseries;
       canvas.coord = coord;
     
-      image_baseline.onload = function() {
+      image_timeseries.onload = function() {
           load_finished();
           //ctx.globalAlpha = 0.5;
           
@@ -330,8 +325,17 @@ var TimeSeriesLayer = Backbone.View.extend({
     // filter image canvas based on thresholds
     // and color it
     filter: function(ndfi_data, mask_images, w, h, def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh, cloud_thresh) {    
-        var temperature_thresh = 10;
-    	deg_thresh = 170;
+        var temperature_thresh = 22;
+//         shade_thresh = 65;
+//         gv_thresh = 19;
+//         soil_thresh = 5;
+//         cloud_thresh = 5;
+        
+//         deg_thresh = 175;
+//     	def_thresh = 165;
+    	
+//     	temperature_thresh = 22;
+    	
         var components = 4; //rgba
         
         //console.log(mask_images.shade);        
@@ -347,7 +351,7 @@ var TimeSeriesLayer = Backbone.View.extend({
         var CLOUD_COLOR             = [102, 102, 102];
         var WATER_COLOR             = [0, 0, 255];
         
-        var UNCLASSIFIED = 201;
+        var UNCLASSIFIED = 203;
         var CLOUD = 202;
         var WATER = 255;        
 
@@ -377,76 +381,78 @@ var TimeSeriesLayer = Backbone.View.extend({
                 
                 var p_cloud        = mask_images.cloud[pixel_pos];
                 var p_cloud_region = mask_images.cloud_region[pixel_pos];
-                //var p_temperature  = mask_images.temperature[pixel_pos];
+                var p_temperature  = mask_images.temperature[pixel_pos];
                 
-                var p_last_map_r   = mask_images.last_map[pixel_pos+0];
-                var p_last_map_g   = mask_images.last_map[pixel_pos+1];
-                var p_last_map_b   = mask_images.last_map[pixel_pos+2];
+//                 var p_last_map_r   = mask_images.last_map[pixel_pos+0];
+//                 var p_last_map_g   = mask_images.last_map[pixel_pos+1];
+//                 var p_last_map_b   = mask_images.last_map[pixel_pos+2];
 
                 var a = ndfi_data[pixel_pos + 3];
-                // there is a better way to do this but this is fastest
-                if(a > 0) {
-//                     if(p >= NDFI_ENCODING_LIMIT) 
-                    // Water and Cloud mask
-                    if (p == UNCLASSIFIED) {
+                
+               if(a > 0) {
+                	/*
+                     * Classification (forest, degradation and deforestation)
+                     */
+                	if (p == UNCLASSIFIED) {
                         ndfi_data[pixel_pos + 0] = 255;
                         ndfi_data[pixel_pos + 1] = 255;
                         ndfi_data[pixel_pos + 2] = 255;
                         ndfi_data[pixel_pos + 3] = 255;
-                    } else if (p_last_map_r == 0 && p_last_map_g == 0 && p_last_map_b == 0) {
-                        ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
+                    } else if (p == 255) {
+                    	ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = OLD_DEFORESTATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = OLD_DEFORESTATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = 255;
-                    } else if (p_last_map_r == 255 && p_last_map_g == 255 && p_last_map_b == 0) {
-                        ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
-                        ndfi_data[pixel_pos + 1] = OLD_DEFORESTATION_COLOR[1];
-                        ndfi_data[pixel_pos + 2] = OLD_DEFORESTATION_COLOR[2];
-                        ndfi_data[pixel_pos + 3] = 255;
-                    } else if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb) {
-                        ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
-                        ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
-                        ndfi_data[pixel_pos + 2] = WATER_COLOR[2];
-                        ndfi_data[pixel_pos + 3] = 255;
-                    } else if (p_cloud_region != 0 && p_cloud >= cloud_thresh){ //&& p_temperature <= temperature_thresh) {
-                        //console.log(p_temperature);
-                        ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
-                        ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
-                        ndfi_data[pixel_pos + 2] = CLOUD_COLOR[2];
-                        ndfi_data[pixel_pos + 3] = 255;
-                    //
-                    // Classification (forest, degradation and deforestation)
-                    //
                     } else if (p < def_thresh) {
                     	ndfi_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = show_deforestation;
-                    }else if (p > deg_thresh) {
+                    } else if (p > deg_thresh) {
                     	ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];
                         ndfi_data[pixel_pos + 1] = FOREST_COLOR[1];
                         ndfi_data[pixel_pos + 2] = FOREST_COLOR[2];
                         ndfi_data[pixel_pos + 3] = show_forest;                                            	
-                    }else {
+                    } else {
                     	ndfi_data[pixel_pos + 0] = DEGRADATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = DEGRADATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = DEGRADATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = show_degradation;                        
                     }
-                            
-
-//                         else {
-//                           ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];
-//                           ndfi_data[pixel_pos + 1] = FOREST_COLOR[1];
-//                           ndfi_data[pixel_pos + 2] = FOREST_COLOR[2];
-//                           ndfi_data[pixel_pos + 3] = show_forest;
-//                         }
-//                     } else {
-//                         //ndfi_data[pixel_pos + 3] = 255;
+                    /*
+                     * Cloud Mask
+                     */
+                    if (p_cloud_region != 0 && p_cloud >= cloud_thresh){// && p_temperature <= temperature_thresh) {
+                        //console.log(p_temperature);
+                        ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = CLOUD_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = 255;
+                    }
+                    /*
+                     * Water Mask
+                     */
+                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb) {
+                        ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
+                        ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
+                        ndfi_data[pixel_pos + 2] = WATER_COLOR[2];
+                        ndfi_data[pixel_pos + 3] = 255;
+                    }
+                    
+                    
+//                     if (p_last_map_r == 0 && p_last_map_g == 0 && p_last_map_b == 0) {
+//                         ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
+//                         ndfi_data[pixel_pos + 1] = OLD_DEFORESTATION_COLOR[1];
+//                         ndfi_data[pixel_pos + 2] = OLD_DEFORESTATION_COLOR[2];
+//                         ndfi_data[pixel_pos + 3] = 255;
+//                     } else if (p_last_map_r == 255 && p_last_map_g == 255 && p_last_map_b == 0) {
+//                         ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
+//                         ndfi_data[pixel_pos + 1] = OLD_DEFORESTATION_COLOR[1];
+//                         ndfi_data[pixel_pos + 2] = OLD_DEFORESTATION_COLOR[2];
+//                         ndfi_data[pixel_pos + 3] = 255;
 //                     }
-                }
-            }
+               }
+           }
         }
     }
-
 });
