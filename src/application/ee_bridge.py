@@ -12,6 +12,7 @@
 
 import ast
 import datetime
+import calendar
 import logging
 import re
 import time
@@ -1321,8 +1322,10 @@ class NDFI(object):
         OUTPUTS = ['gv', 'soil', 'npv']
 
         base = self._kriged_mosaic(period, long_span)
+        logging.info(base.getMapId({'bands': 'sur_refl_b01,sur_refl_b02,sur_refl_b03'}))
         unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
         result = unmixed.expression('addBands(b(0,1,2), round(max(b(0,1,2), 0) * 100))')
+        #logging.info(result.getMapId({'bands': 'band_0,band_1,band_2'}))
         return result.select(['.*'], OUTPUTS + [i + '_100' for i in OUTPUTS])
 
     def _unmixed_landsat_L5(self, period):
@@ -1400,27 +1403,23 @@ class NDFI(object):
         """
         work_month = self._getMidMonth(period['start'], period['end'])
         work_year = self._getMidYear(period['start'], period['end'])
-        date = '%04d%02d' % (work_year, work_month)                
+        compounddate = '%04d%02d' % (work_year, work_month)                
         #TODO: Work with data from Downscalling table when EE KrigeModis algorithm to user it.
-        #downscalling = Downscalling.find_by_compounddate(date) 
-        #feature_collection = Downscalling.return_feature_collection(downscalling)
-        #logging.info(type(feature_collection))
-        #logging.info("Compounddate: "+date)
-        feature_collection = False
+        downscalling = Downscalling.find_by_compounddate(compounddate)         
+        feature_collection = Downscalling.return_feature_collection(downscalling)        
+        #feature_collection = False
         params = ''
         
         if feature_collection:
-            params = feature_collection
+            params = feature_collection            
         else:
-            krig_filter = ee.Filter.eq('Compounddate', int(date))
-            params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
-            #logging.info(params.getInfo())
-            #Downscalling.save_feature_collection(params)
+            krig_filter = ee.Filter.eq('Compounddate', int(compounddate))
+            params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)            
+            Downscalling.save_feature_collection(params)
         
         mosaic = self._make_mosaic(period, long_span)
         image = ee.Algorithms.SAD.KrigeModis(mosaic, params)
-        logging.info("Krige Modis")
-        logging.info(image.getInfo())
+        
         return image
 
     def _make_mosaic(self, period, long_span=False):
@@ -1477,14 +1476,15 @@ class NDFI(object):
             end_month = time.gmtime(end_time / 1000).tm_mon
             end_year = time.gmtime(end_time / 1000).tm_year
             start = '%04d%02d' % (start_year, start_month)
-            end = '%04d%02d' % (end_year, end_month)
-            #image_picker = ImagePicker.find_by_compounddate_period(start, end)
-            #feature_collection = ImagePicker.return_feature_collection(image_picker)
-            feature_collection = False
+            end = '%04d%02d' % (end_year, end_month)            
+            image_picker = ImagePicker.find_by_period(start_time, end_time, True)
+            feature_collection = ImagePicker.return_feature_collection(image_picker)
+            #feature_collection = False
             
             # Prepare the inclusions table.
             if feature_collection:
                 inclusions = feature_collection
+                logging.info("from system")
             else:
                 inclusions_filter = ee.Filter.And(
                                        ee.Filter.gte('compounddate', start),
@@ -1492,7 +1492,7 @@ class NDFI(object):
                 # Prepare the inclusions table.
                 inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
                 inclusions = inclusions.filter(inclusions_filter)
-                #ImagePicker.save_feature_collection(inclusions)
+                ImagePicker.save_feature_collection(inclusions)
                 
         else:
             # Calculate the time span.
@@ -1500,21 +1500,21 @@ class NDFI(object):
             end_time = period['end']
             month = self._getMidMonth(start_time, end_time)
             year = self._getMidYear(start_time, end_time)
-            compounddate = '%04d%02d' % (year, month)
-            logging.info("Image Picker Compounddate: "+compounddate);
-            #image_picker = ImagePicker.find_by_compounddate(compounddate)
-            #feature_collection = ImagePicker.return_feature_collection(image_picker)
-            feature_collection = False
-            
+            compounddate = '%04d%02d' % (year, month)            
+            image_picker = ImagePicker.find_by_period(start_time, end_time)
+            feature_collection = ImagePicker.return_feature_collection(image_picker)
+            #feature_collection = False
+                        
             # Prepare the inclusions table.
             if feature_collection:
                 inclusions = feature_collection
+                logging.info("from system")
             else:
                 inclusions_filter = ee.Filter.eq(
                 'compounddate', compounddate)
                 inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
                 inclusions = inclusions.filter(inclusions_filter)
-                #ImagePicker.save_feature_collection(inclusions)
+                ImagePicker.save_feature_collection(inclusions)
 
         # Prepare source image collections.
         modis_ga = ee.ImageCollection('MODIS/MOD09GA').filterDate(start_time, end_time)
@@ -1524,9 +1524,7 @@ class NDFI(object):
         #TODO: Return to normal start_time without add 1 day
         object1 = ee.call(
           'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-          modis_ga, modis_gq, inclusions, start_time + 1, end_time)
-
-        #logging.info("Make MOsaic: "+str(object1))
+          modis_ga, modis_gq, inclusions, start_time, end_time)
 
         return object1
 
@@ -1625,6 +1623,8 @@ def get_prodes_stats(assetids, table_id):
         results.append({'values': stats, 'type': 'DataDictionary'})
     return {'data': {'properties': {'classHistogram': results}}}
 
+
+
 def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b04,sur_refl_b03', gain=[2.0,2.0,2.0]):
     result_final = []
     nextYear = year
@@ -1634,6 +1634,12 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
     if month == '12':
         nextYear = str(int(year) + 1)
         nextMonth = '01'
+        
+    start = datetime.date(int(year), int(month), 1)
+    end   = datetime.date(int(year), int(month), calendar.monthrange(int(year), int(month))[1])
+    
+    next_start = datetime.date(int(nextYear), int(nextMonth), 1)
+    next_end   = datetime.date(int(nextYear), int(nextMonth), calendar.monthrange(int(nextYear), int(nextMonth))[1])
 
     collection = ee.ImageCollection('MOD09GA').filterDate(year+'-'+month+'-01', nextYear+'-'+nextMonth+'-01')
     images = collection.getInfo().get('features')
@@ -1659,13 +1665,13 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
 
         imageId = images[i].get('id')
         imageIdSplit = imageId.split('_')
-        date = imageIdSplit[4]+'-'+imageIdSplit[3]+'-'+imageIdSplit[2]
+        date = imageIdSplit[4]+'-'+imageIdSplit[3]+'-'+imageIdSplit[2]        
         
-        selected = ImagePicker.is_day_selected(imageIdSplit[4], imageIdSplit[2]+imageIdSplit[3], cell)
+        selected = ImagePicker.is_day_selected(imageIdSplit[2]+'-'+imageIdSplit[3]+'-'+imageIdSplit[4], start, end, cell)
         
-        if selected:
+        if selected:            
             result_final.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date, 'selected': True})
-        else:
+        else:            
             result_final.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date, 'selected': False})
           
 

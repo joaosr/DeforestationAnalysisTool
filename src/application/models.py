@@ -6,10 +6,13 @@ App Engine datastore models
 """
 
 import ast
-from datetime import datetime, date
+from datetime import datetime, date, time
 from dateutil.relativedelta import relativedelta
+import calendar
+import re
 import logging
 import operator
+import types
 
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -847,10 +850,7 @@ class ImagePicker(db.Model):
         
         return {
                 'id': str(self.key()),
-                'key': str(self.key()),
-                #'cell': str(self.cell.key()),
-                #'paths': json.loads(self.geo),
-                #'type': self.type,
+                'key': str(self.key()),               
                 'sensor': self.sensor,
                 'cell': self.cell,
                 'year': self.year,
@@ -868,16 +868,31 @@ class ImagePicker(db.Model):
         return json.dumps(self.as_dict())
 
     @staticmethod
-    def find_by_compounddate_period(start, end):
-        q = ImagePicker.all().filter('compounddate >=', start).filter('compounddate <=', end)
-        r = q.fetch(10)
+    def find_by_period(start, end, long_span=False):
+        if isinstance(start, types.IntType):
+            start = datetime.fromtimestamp(start / 1e3)
+            logging.info(start.strftime("%Y-%b-%d %H:%M:%S"))
+        if isinstance(end, types.IntType):
+            end = datetime.fromtimestamp(end / 1e3)
+            logging.info(end.strftime("%Y-%b-%d %H:%M:%S"))
+            
+        if long_span:
+            q = ImagePicker.all().filter('start <=', start)
+        else:     
+            q = ImagePicker.all().filter('start =', start).filter('end =', end)
+        r = q.fetch(100)
+        
         if r:
+            for i in range(len(r)):                            
+                for j in range(len(r[i].sensor_dates)):
+                    if "modis" not in r[i].sensor_dates[j]:
+                        r.remove(r[i])
             return r
         else:
             return None
         
     @staticmethod
-    def find_by_period(start_compounddate, end_compounddate, tile):
+    def find_by_compounddate_period(start_compounddate, end_compounddate, tile):
         q = ImagePicker.all().filter('compounddate >=', start_compounddate).filter('compounddate <=', end_compounddate).filter("cell =", tile)
         r = q.fetch(10)
         if r:
@@ -893,15 +908,17 @@ class ImagePicker(db.Model):
             return None
     
     @staticmethod
-    def is_day_selected(day, compounddate, cell):
-        q = ImagePicker.all().filter('compounddate =', compounddate).filter('cell =', cell)
+    def is_day_selected(day, start, end, cell):
+        q = ImagePicker.all().filter('start =', start).filter('end =', end).filter('cell =', cell)
         r = q.fetch(1)
         
         if len(r) > 0:
-            if day in r[0].day:
-                return True
-            else:
-                return False
+            for i in range(len(r)):
+                for j in range(len(r[i].sensor_dates)):
+                    if day in r[i].sensor_dates[j]:
+                        return True
+                        
+            return False
         else:
             return False
         
@@ -959,10 +976,11 @@ class ImagePicker(db.Model):
             return r
         else:
             return None
+    
         
     @staticmethod
-    def find_by_compounddate_and_cell(compounddate, cell):
-        q = ImagePicker.all().filter('compounddate =', compounddate).filter('cell =', cell)
+    def find_by_period_and_cell(start, end, cell):
+        q = ImagePicker.all().filter('start =', start).filter('end =', end).filter('cell =', cell)
         r = q.fetch(1)
         if r:
             return r
@@ -978,16 +996,27 @@ class ImagePicker(db.Model):
                     location = r[i].location
                     polygon = ast.literal_eval(location)
                     geometry = ee.Geometry.Polygon(polygon)
+                    
+                    days = []
+                    for j in range(len(r[i].sensor_dates)):
+                        sensor_date      = r[i].sensor_dates[j]
+                        date_day         = re.search(r'(\d+-\d+-\d+)', sensor_date).group(1)
+                        year, month, day = date_day.split('-')
+                        days.append(str(int(day)).zfill(2))   
+                        
+                    
                     properties = {'cell': r[i].cell,
-                                  'compounddate': r[i].compounddate,
-                                  'day': ','.join(r[i].day),
-                                  'month': r[i].month,
-                                  'year': r[i].year
+                                  'compounddate': int(year + month),
+                                  'day': ','.join(days),
+                                  'month': int(month),
+                                  'year': int(year)
                                  }
                     feature = ee.Feature(geometry, properties)
                     feature_collection.append(feature)
-                
-                return ee.FeatureCollection(feature_collection)
+                    
+                result = ee.FeatureCollection(feature_collection) 
+                #logging.info(result)
+                return result 
         
         else:
             return None
@@ -996,7 +1025,7 @@ class ImagePicker(db.Model):
     def save_feature_collection(feature_collection):
         logging.info("Image Picker feature size:"+str(len(feature_collection.getInfo()['features'])))        
         collections_ = feature_collection.getInfo()['features']
-        report = Report.current()
+        report = Report.current()                
         
         for i in range(len(collections_)):
             collection_ = collections_[i]
@@ -1004,11 +1033,21 @@ class ImagePicker(db.Model):
             properties = collection_['properties']            
             cell = properties['cell']
             compounddate = properties['compounddate']
-            days = properties['day']
+            days = properties['day'].split(',')
             month = properties['month']
-            year = properties['year']                        
+            year = properties['year']                                    
+            sensor_dates = []
+            date_start = date(int(year), int(month), 1)
+            date_start = datetime.combine(date_start, time())
+            date_end   = date(int(year), int(month), calendar.monthrange(int(year), int(month))[1])
+            date_end = datetime.combine(date_end, time())
             
-            image_picker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=days.split(","), location=str(location), compounddate=str(compounddate))
+            for i in range(len(days)):
+                day = str(int(days[i])).zfill(2)                
+                sensor_dates.append("modis__" + year + '-' + str(int(month)).zfill(2) + '-' + day)  
+            
+            #image_picker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=days.split(","), location=str(location), compounddate=str(compounddate))
+            image_picker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(cell),  location=str(location), sensor_dates=sensor_dates, start=date_start, end=date_end)
             
             image_picker.save()
 
@@ -1071,7 +1110,7 @@ class Downscalling(db.Model):
     @staticmethod
     def find_by_compounddate(compounddate):
         q = Downscalling.all().filter('compounddate =', compounddate)
-        r = q.fetch(40)
+        r = q.fetch(50)
         if r:
             return r
         else:
@@ -1097,7 +1136,9 @@ class Downscalling(db.Model):
                     feature = ee.Feature(geometry, properties)
                     feature_collection.append(feature)
                 
-                return ee.FeatureCollection(feature_collection)
+                result = ee.FeatureCollection(feature_collection)
+                
+                return result
         
         else:
             return None

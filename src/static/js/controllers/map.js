@@ -202,7 +202,7 @@ var MapView = Backbone.View.extend({
                 if(this.layer_editor_base !== undefined && this.layer_editor_base.showing) {
                     this.open_google_maps_base_layer_editor();
                 }
-                this.layer_editor.layers = this.layers;
+                this.layer_editor.layers.reset(this.layers.toJSON());
                 var that = this;
                 this.layer_editor.layers.each(function(m){
                     if(!m.get('visibility')){

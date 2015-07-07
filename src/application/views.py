@@ -315,10 +315,11 @@ def tiles_sensor(sensor=None):
             
             r = Report.current()
             start_date = r.start
-            compounddate = '%04d%02d' % (start_date.year, start_date.month) 
+            end_date = r.end
+            #compounddate = '%04d%02d' % (start_date.year, start_date.month) 
             
             for i in range(len(tile_array)):
-                image_picker = ImagePicker.find_by_compounddate_and_cell(compounddate, tile_array[i]['name'])
+                image_picker = ImagePicker.find_by_period_and_cell(start_date, end_date, tile_array[i]['name'])
                 if image_picker:
                     tile_array[i]['done'] = True
                 else:
@@ -451,15 +452,10 @@ def picker(tile=None):
         cell   = 'h' + p[0] + 'v' + p[1]
 
         thumbs = request.form.get('thumb').split(',')
-        days   = []
-        day, month, year = ['', '', '']
-
-        for thumb in thumbs:
-            day, month, year = thumb.split('-')
-            days.append(day)
-
-        #day          = ','.join(days)
-        compounddate = year + month
+        sensor_dates = []
+        for i in range(len(thumbs)):
+            day, month, year = thumbs[i].split('-')
+            sensor_dates.append('modis__' + year +'-'+ month +'-'+ day)
 
         location = get_modis_location(cell)
 
@@ -468,10 +464,7 @@ def picker(tile=None):
         date_start = datetime.datetime.combine(report.start, datetime.time())
         date_end = datetime.datetime.combine(report.end, datetime.time())
         
-
-        #imagePicker = ImagePicker(sensor='MODIS', report=report, added_by= users.get_current_user(), cell=str(cell),  year=str(year), month=str(month), day=days, location=location, compounddate=str(compounddate))
-        
-        imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(cell),  location=location, sensor_dates=thumbs, start=date_start, end=date_end)
+        imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(cell),  location=location, sensor_dates=sensor_dates, start=date_start, end=date_end)
         return jsonify({'result': imagePicker.save()})
 
     else:
