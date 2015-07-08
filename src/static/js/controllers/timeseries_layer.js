@@ -386,7 +386,11 @@ var TimeSeriesLayer = Backbone.View.extend({
 //                 var p_last_map_r   = mask_images.last_map[pixel_pos+0];
 //                 var p_last_map_g   = mask_images.last_map[pixel_pos+1];
 //                 var p_last_map_b   = mask_images.last_map[pixel_pos+2];
-
+                
+//                var p_last_map = mask_images.last_map[pixel_pos+0] + 
+//                				 mask_images.last_map[pixel_pos+1] +
+//                				 mask_images.last_map[pixel_pos+2];
+                
                 var a = ndfi_data[pixel_pos + 3];
                 
                if(a > 0) {
@@ -394,26 +398,34 @@ var TimeSeriesLayer = Backbone.View.extend({
                      * Classification (forest, degradation and deforestation)
                      */
                 	if (p == UNCLASSIFIED) {
-                        ndfi_data[pixel_pos + 0] = 255;
+                        
+                		ndfi_data[pixel_pos + 0] = 255;
                         ndfi_data[pixel_pos + 1] = 255;
                         ndfi_data[pixel_pos + 2] = 255;
                         ndfi_data[pixel_pos + 3] = 255;
-                    } else if (p == 255) {
-                    	ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
+                        
+                    } else if (p > 200) {//(p === 255) {
+                    	
+                        ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = OLD_DEFORESTATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = OLD_DEFORESTATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = 255;
-                    } else if (p < def_thresh) {
+                        
+                    } else if (p >= 0 && p <= def_thresh) {
+                    
                     	ndfi_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = show_deforestation;
-                    } else if (p > deg_thresh) {
+                    
+                    } else if (p > deg_thresh && p <= 200) {
+                    	
                     	ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];
                         ndfi_data[pixel_pos + 1] = FOREST_COLOR[1];
                         ndfi_data[pixel_pos + 2] = FOREST_COLOR[2];
-                        ndfi_data[pixel_pos + 3] = show_forest;                                            	
-                    } else {
+                        ndfi_data[pixel_pos + 3] = show_forest;
+                        
+                    } else if (p > def_thresh && p <= deg_thresh){
                     	ndfi_data[pixel_pos + 0] = DEGRADATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = DEGRADATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = DEGRADATION_COLOR[2];
@@ -422,7 +434,7 @@ var TimeSeriesLayer = Backbone.View.extend({
                     /*
                      * Cloud Mask
                      */
-                    if (p_cloud_region != 0 && p_cloud >= cloud_thresh){// && p_temperature <= temperature_thresh) {
+                    if (p_cloud_region != 0 && p_cloud >= cloud_thresh && p != 255){// && p_temperature <= temperature_thresh) {
                         //console.log(p_temperature);
                         ndfi_data[pixel_pos + 0] = CLOUD_COLOR[0];
                         ndfi_data[pixel_pos + 1] = CLOUD_COLOR[1];
@@ -432,7 +444,7 @@ var TimeSeriesLayer = Backbone.View.extend({
                     /*
                      * Water Mask
                      */
-                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb) {
+                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb && p != 255) {
                         ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
                         ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
                         ndfi_data[pixel_pos + 2] = WATER_COLOR[2];

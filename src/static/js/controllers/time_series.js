@@ -821,7 +821,7 @@ var TimeSeries = Backbone.View.extend({
         'click #time_series_historical_results_select': 'show_time_series_historical_results'
     },
     initialize: function(){
-        _.bindAll(this, 'visibility_change', 'set_selected', 'is_timeseries_load', 'show_imagepicker_search', 'setting_timeseries_layers', 'genarete_timeseries', 'load_timeseries', 'setting_timeseries_popup');
+        _.bindAll(this, 'visibility_change', 'set_selected', 'is_timeseries_load', 'show_imagepicker_search', 'genarete_timeseries', 'load_timeseries', 'setting_timeseries_popup');
         this.callerView = this.options.callerView;
         this.polygon_tools = new PolygonToolbarTimeSeries();  
 
@@ -864,8 +864,7 @@ var TimeSeries = Backbone.View.extend({
 																
 								if(time_series.result){
 									
-									self.cell_items[child_name].time_series = time_series.result;
-									//self.genarete_timeseries(self.cell_items[child_name].cell); 
+									self.cell_items[child_name].time_series = time_series.result;									
 									return time_series;
 								}
 							}
@@ -910,7 +909,16 @@ var TimeSeries = Backbone.View.extend({
 							self.genarete_timeseries(cell.model);
 						});
 
-				popup_el.find('#load_timeseries').show();						
+				popup_el.find('#load_timeseries').show();
+				
+				popup_el.find('#create_timeseries').unbind('click');
+				popup_el.find('#create_timeseries').click(
+						function(e) {
+							if (e){e.preventDefault();}
+							self.show_imagepicker_search(cell.model);							
+						});
+
+				popup_el.find('#create_timeseries').show();
 			}else{
 				popup_el.find('#load_timeseries').hide();
 			} 

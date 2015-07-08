@@ -630,8 +630,7 @@ $(function() {
 
         // entering on select_mode
         select_mode: function(x, y, z) {
-            this.map.hide_zoom_control();
-            this.map.show_sad_info(this.report_base.models[0], z);
+            this.map.hide_zoom_control();            
             this.main_operations.listen_zoon(z);
 
             if(this.main_operations.baseline.selected && z === 1){
@@ -660,6 +659,8 @@ $(function() {
 //                 })   
             	
 
+            }else{
+            	this.map.show_sad_info(this.report_base.models[0], z);
             }
             	
            
@@ -667,6 +668,7 @@ $(function() {
             this.compare_view('one');
             this.polygon_tools.hide();
             this.main_operations.baseline.polygon_tools.hide();
+            this.main_operations.time_series.polygon_tools.hide();
             this.ndfi_layer.hide();
             this.overview.select_mode();
             this.cell_polygons.polygons.reset();

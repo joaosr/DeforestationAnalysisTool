@@ -1405,9 +1405,9 @@ class NDFI(object):
         work_year = self._getMidYear(period['start'], period['end'])
         compounddate = '%04d%02d' % (work_year, work_month)                
         #TODO: Work with data from Downscalling table when EE KrigeModis algorithm to user it.
-        downscalling = Downscalling.find_by_compounddate(compounddate)         
-        feature_collection = Downscalling.return_feature_collection(downscalling)        
-        #feature_collection = False
+        #downscalling = Downscalling.find_by_compounddate(compounddate)         
+        #feature_collection = Downscalling.return_feature_collection(downscalling)        
+        feature_collection = False
         params = ''
         
         if feature_collection:
@@ -1477,9 +1477,9 @@ class NDFI(object):
             end_year = time.gmtime(end_time / 1000).tm_year
             start = '%04d%02d' % (start_year, start_month)
             end = '%04d%02d' % (end_year, end_month)            
-            image_picker = ImagePicker.find_by_period(start_time, end_time, True)
-            feature_collection = ImagePicker.return_feature_collection(image_picker)
-            #feature_collection = False
+            #image_picker = ImagePicker.find_by_period(start_time, end_time, True)
+            #feature_collection = ImagePicker.return_feature_collection(image_picker)
+            feature_collection = False
             
             # Prepare the inclusions table.
             if feature_collection:
@@ -1501,9 +1501,9 @@ class NDFI(object):
             month = self._getMidMonth(start_time, end_time)
             year = self._getMidYear(start_time, end_time)
             compounddate = '%04d%02d' % (year, month)            
-            image_picker = ImagePicker.find_by_period(start_time, end_time)
-            feature_collection = ImagePicker.return_feature_collection(image_picker)
-            #feature_collection = False
+            #image_picker = ImagePicker.find_by_period(start_time, end_time)
+            #feature_collection = ImagePicker.return_feature_collection(image_picker)
+            feature_collection = False
                         
             # Prepare the inclusions table.
             if feature_collection:
@@ -1840,7 +1840,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'token':       feature_gv['token'],
                         'id': 'gv',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'GV band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_gv['mapid']+'/{Z}/{X}/{Y}?token='+feature_gv['token']
                         })
@@ -1853,7 +1853,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'token':       feature_shade['token'],
                         'id': 'shade',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Shade band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_shade['mapid']+'/{Z}/{X}/{Y}?token='+feature_shade['token']
                         })
@@ -1866,7 +1866,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'token':       feature_shade_median['token'],
                         'id': 'shade_median',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Shade median band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_shade_median['mapid']+'/{Z}/{X}/{Y}?token='+feature_shade_median['token']
                         })
@@ -1879,7 +1879,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'token':       feature_soil['token'],
                         'id': 'soil',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Soil band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_soil['mapid']+'/{Z}/{X}/{Y}?token='+feature_soil['token']
                         })
@@ -1892,7 +1892,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'token':       feature_cloud['token'],
                         'id': 'cloud',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Cloud band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_cloud['mapid']+'/{Z}/{X}/{Y}?token='+feature_cloud['token']
                         })
@@ -1905,7 +1905,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'token':       feature_cloud_region['token'],
                         'id': 'cloud_region',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Cloud region band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_cloud_region['mapid']+'/{Z}/{X}/{Y}?token='+feature_cloud_region['token']
                         })
@@ -1918,7 +1918,7 @@ def create_tile_baseline(start_date, end_date, cell):
                         'token':       feature_temperature['token'],
                         'id': 'temperature',
                         'type':        'custom',
-                        'visibility':  True,
+                        'visibility':  False,
                         'description': 'Temperature band',
                         'url': 'https://earthengine.googleapis.com/map/'+feature_temperature['mapid']+'/{Z}/{X}/{Y}?token='+feature_temperature['token']
                         })
@@ -2198,7 +2198,7 @@ def create_tile_timeseries(start_date, end_date, cell):
         image_sma = ee.ImageCollection(smas).mosaic().clip(polygon) #TODO: remover
         
         # Get the last map classification
-        registers = time_series.last_map_cellc
+        registers = time_series.last_map_cell
         
         ## Gera a imagem classificada do baseline para esta data.
         
@@ -2211,7 +2211,10 @@ def create_tile_timeseries(start_date, end_date, cell):
         ##
         image_last_map = image_last_map.clip(polygon)
         image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
-        
+        #########################################################################
+#         image_ndfi = image_ndfi.mask(image_last_map.neq(3))
+        image_last_map = image_last_map.mask(image_last_map.eq(3))
+        #########################################################################
         feature_ndfi = ee.Image(image_ndfi).getMapId({
                               'bands': 'nd'}) #TODO: aqui está o dado ndfi bruto
         

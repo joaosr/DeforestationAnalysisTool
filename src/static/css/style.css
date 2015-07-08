@@ -3722,6 +3722,37 @@ body, html {
   border: 1px solid rgb(158, 158, 158);
   box-shadow: 0 0 1px rgb(0, 0, 0);	
 }
+#grid .cell .cell_wrapper_info #timeseries_actions {
+  display: none;
+  float: left;
+  margin: 10px;
+}
+#grid .cell .cell_wrapper_info #timeseries_actions #load_timeseries{
+  display: none;
+  float: left;
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(100, 157, 221);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(63, 84, 98);
+  text-decoration: none;
+  margin: 5px;  
+  border: 1px solid rgb(63, 62, 62);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 1);
+}
+#grid .cell .cell_wrapper_info #timeseries_actions #create_timeseries{
+  display: none;
+  float: left;
+  padding: 5px 10px 5px 10px;
+  border-radius: 4px;
+  background-color: rgb(25, 190, 31);
+  color: rgb(255, 255, 255);
+  text-shadow: 0 1px rgb(63, 84, 98);
+  text-decoration: none;
+  margin: 5px;  
+  border: 1px solid rgb(63, 62, 62);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 1);
+}
 #grid .cell .cell_wrapper_info h3 {
   display: block;
   margin: 5px 0 0 9px;
