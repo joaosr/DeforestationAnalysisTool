@@ -1,9 +1,10 @@
 # encoding: utf-8
 
-from datetime import datetime, date
+import calendar
+from datetime import datetime, date, time 
+import json
 import logging
 import random
-import time
 
 from google.appengine.api import memcache
 from google.appengine.ext import deferred
@@ -19,7 +20,6 @@ from application.time_utils import timestamp
 from ee_bridge import NDFI
 from flask import render_template, flash, url_for, redirect, abort, request, make_response
 from ft import FT
-import simplejson as json
 from time_utils import month_range
 
 
@@ -83,6 +83,25 @@ def create_tables():
         deferred.defer(update_report_stats, str(r.key()))
 
     return r.as_json()
+
+@app.route('/api/v0/polygon/month', methods=['POST', 'GET'])
+def export_areas():
+    compounddate = request.args.get('compounddate','')
+    
+    if not compounddate:
+        abort(400)
+    
+    month = compounddate[4:6]
+    year  =  compounddate[0:4]
+    start = date(int(year), int(month), 1)
+    start = datetime.combine(start, time())
+    end   = date(int(year), int(month), calendar.monthrange(int(year), int(month))[1])
+    end   = datetime.combine(end, time())
+    
+    report   = Report.find_by_period(start, end)
+    polygons = Cell.polygon_by_report(report)
+    
+    return json.dumps(polygons)
 
 @app.route('/_ah/cmd/create_cell', methods=['POST', 'GET'])
 def create_tables_cell():

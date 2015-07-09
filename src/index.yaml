@@ -22,6 +22,19 @@ indexes:
   - name: start
     direction: desc
 
+- kind: Cell
+  properties:
+  - name: operation
+  - name: report
+  - name: last_change_on
+    direction: desc
+
+- kind: Cell
+  properties:
+  - name: report
+  - name: last_change_on
+    direction: desc
+
 - kind: ImagePicker
   properties:
   - name: cell

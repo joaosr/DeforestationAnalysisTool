@@ -25,7 +25,6 @@ from kml import path_to_kml
 from mercator import Mercator
 import simplejson as json
 from time_utils import timestamp
-from google.appengine.api.validation import Repeated
 
 
 CELL_BLACK_LIST = ['1_4_0', '1_0_4', '1_1_4', '1_4_4']
@@ -101,6 +100,14 @@ class Report(db.Model):
     @staticmethod
     def find_by_assetid(assetid):
         q = Report.all().filter('asssetid =', assetid)
+        r = q.fetch(1)
+        if r:
+            return r[0]
+        return None
+    
+    @staticmethod
+    def find_by_period(start, end):
+        q = Report.all().filter('start =', start).filter("end =", end)
         r = q.fetch(1)
         if r:
             return r[0]
@@ -187,19 +194,7 @@ class Report(db.Model):
         r = q.fetch(1)
         logging.info(r)
         if len(r) > 0:
-           """ 
-           if r[0].finished:
-              #r = Report(start=start_date, end=end_date, assetid=assetid)
-              r[0].start = start_date;
-              r[0].end = end_date;
-              r[0].assetid = assetid
-              r.put()
-              return {'message': 'New period of analyse saved!', 'data': None}
-          
-           else:
-              return {'message': 'Last period not finalized!', 'data': None}
-           """
-           return {'message': 'Period already created, try another one!', 'data': None}
+            return {'message': 'Period already created, try another one!', 'data': None}
         else:
             r_last = Report.all().filter('start <', start_date).order('-start').fetch(1)
             if len(r_last) > 0:
@@ -439,6 +434,25 @@ class Cell(db.Model):
             #not saved
             return 0
         return Area.all().filter('cell =', self).order('-added_on').count();
+    
+    @staticmethod
+    def polygon_by_report(report):
+        q = Cell.all().filter('report =', report).filter('operation =', 'sad').order('-last_change_on')
+        r = q.fetch(100)
+        if r:
+            features = []
+            for i in range(len(r)):
+                q = Area.all().filter('cell =', r[i]).order('-added_on')
+                a = q.fetch(100)
+                if a:
+                    for j in range(len(a)):
+                        if a[j]:
+                            features.append(a[j].as_feature())
+                            
+            return ee.FeatureCollection(features).getInfo()     
+                
+        else:
+            return None        
 
     def children_done(self):
         eid = self.external_id()
@@ -607,7 +621,7 @@ class Tile(db.Model):
     @staticmethod
     def find_by_cell_name(cell_name):
         q = Tile.all().filter('cells =', cell_name)
-        r = q.fetch(10)
+        r = q.fetch(100)
         if r:
             tiles = {}
             for i in range(len(r)):
@@ -704,6 +718,13 @@ class Area(db.Model):
 
     def as_json(self):
         return json.dumps(self.as_dict())
+    
+    def as_feature(self):
+        geo = self.geo
+        polygon = ast.literal_eval(geo)
+        geometry = ee.Geometry.Polygon(polygon)
+        properties = self.as_dict()
+        return ee.Feature(geometry, properties)
 
     def save(self):
         """ wrapper for put makes compatible with django"""
@@ -1204,10 +1225,10 @@ class Baseline(db.Model):
     end          = db.DateProperty()
     defo         = db.FloatProperty(default=165.0)
     deg          = db.FloatProperty(default=175.0)
-    shade        = db.FloatProperty(default=70.0)
-    gv           = db.FloatProperty(default=15.0)
-    soil         = db.FloatProperty(default=10.0)
-    cloud        = db.FloatProperty(default=7.0) 
+    shade        = db.FloatProperty(default=65.0)
+    gv           = db.FloatProperty(default=19.0)
+    soil         = db.FloatProperty(default=4.0)
+    cloud        = db.FloatProperty(default=42.0) 
     
     
     @property
@@ -1248,14 +1269,16 @@ class Baseline(db.Model):
         q = Baseline.all().filter("name =", baseline['name'])
         r = q.fetch(1)
         if r:
-            r[0].defo = float(baseline['defo'])
+            r[0].defo = float(baseline['def'])
             r[0].deg = float(baseline['deg'])
             r[0].shade = float(baseline['shade'])
             r[0].gv = float(baseline['gv'])
             r[0].soil = float(baseline['soil'])
             r[0].cloud = float(baseline['cloud'])
+            r[0].put()
+            return r[0]
         else:
-            pass    
+            return None   
 
     def as_json(self):
         return json.dumps(self.as_dict())

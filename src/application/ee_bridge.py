@@ -1524,7 +1524,7 @@ class NDFI(object):
         #TODO: Return to normal start_time without add 1 day
         object1 = ee.call(
           'SAD/com.google.earthengine.examples.sad.MakeMosaic',
-          modis_ga, modis_gq, inclusions, start_time, end_time)
+          modis_ga, modis_gq, inclusions, start_time + 1, end_time)
 
         return object1
 
@@ -2835,6 +2835,9 @@ def _get_modis_tile(horizontal, vertical):
         ee.Geometry.Rectangle(min_x, min_y, max_x, max_y), MODIS_CRS)
 
     return rectangle
+
+
+
 
 
 def _get_raw_mapid(mapid):

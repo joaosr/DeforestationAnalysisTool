@@ -9,12 +9,14 @@ var MapView = Backbone.View.extend({
             disableDefaultUI: true,
             disableDoubleClickZoom: true,
             draggableCursor:'default',
+            scaleControl: true,
             scrollwheel: false,
             mapTypeControl:false
             /*mapTypeControlOptions: {
                 style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
                 position: google.maps.ControlPosition.BOTTOM_LEFT
             }*/
+            
     },
 
     events: {
@@ -36,11 +38,12 @@ var MapView = Backbone.View.extend({
        google.maps.event.addListener(this.map, 'click', this.click);
        this.zoom_level = '0';
        this.operation_map = 'sad';
-       //google.maps.event.addListener(this.map, 'idle', this.tilesloaded);
+       google.maps.event.addListener(this.map, 'idle', this.tilesloaded);
        this.projector = new Projector(this.map);
        this.projector.draw = this.ready;
        this.layers = new LayerCollection();       
        this.signals_on = true;
+       
        this.layer_dialog_pos= this.options.layer_dialog_pos || 'top';
 
     },

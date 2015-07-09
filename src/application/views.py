@@ -7,6 +7,7 @@ import re
 from shutil import copyfile
 import sys
 import time
+import ast
 
 from google.appengine.api import memcache, users
 from google.appengine.api import urlfetch
@@ -568,7 +569,10 @@ def change_baseline():
     if request.method == 'POST':
         baseline = request.form.get('baseline')
         logging.info(baseline)
-        Baseline.change_baseline(baseline)
+        result = Baseline.change_baseline(ast.literal_eval(baseline))
+        return jsonify({'result': result.as_json()})
+    
+    return jsonify({'result': None})
 
 @app.route('/timeseries_on_cell/<date_start>/<date_end>/<cell_name>/', methods=['POST', 'GET'])
 def timeseries_on_cell(date_start, date_end, cell_name):

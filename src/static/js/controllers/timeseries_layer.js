@@ -9,7 +9,7 @@ var TimeSeriesLayer = Backbone.View.extend({
 
     //DEFORESTATION_COLOR: [248, 8, 8],
     //DEGRADATION_COLOR: [247, 119, 87],
-    DEFORESTATION_COLOR: [0, 0, 0],
+    DEFORESTATION_COLOR: [255, 255, 0],
     DEGRADATION_COLOR: [0, 255, 254],
     PREVIOUS_DEFORESTATION_COLOR: [0, 0, 255],
     PREVIOUS_DEGRADATION_COLOR: [0, 255, 255],
@@ -444,7 +444,7 @@ var TimeSeriesLayer = Backbone.View.extend({
                     /*
                      * Water Mask
                      */
-                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb && p != 255) {
+                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb && p < 200) {
                         ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
                         ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
                         ndfi_data[pixel_pos + 2] = WATER_COLOR[2];

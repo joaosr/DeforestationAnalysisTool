@@ -593,7 +593,7 @@ $(function() {
         	    this.map.show_zoom_control();
                 this.map.show_layers_control();
               
-//                 this.main_operations.time_series.start_editing_tools(true);
+                this.main_operations.time_series.start_editing_tools(true);
 //                 this.get_status_layer_map(cell.get('compare_view'));
             }
             
@@ -679,6 +679,7 @@ $(function() {
                 delete this.editing_router;
             }
             this.main_operations.baseline.start_editing_tools(false);
+            this.main_operations.time_series.start_editing_tools(false);
         },
         
         show_messagem: function(){

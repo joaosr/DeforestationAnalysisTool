@@ -414,7 +414,7 @@ var PolygonToolbarBaseline = Backbone.View.extend({
     },
 
     initialize: function() {
-        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change', 'update_baseline');        
+        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change');        
         this.buttons = new ButtonGroup({el: this.$('#baseline_selection')});
         this.polytype = new ButtonGroup({el: this.$('#baseline_polytype')});
         this.baseline_range = new RangeSliderBaseline({el: this.$("#baseline_maptools")});
@@ -662,6 +662,10 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 				self.genarete_baseline();				
 				return d;
 			},
+			error: function(d){
+				alert("Try again.");
+
+			},
 		}).responseText;
 
 		// var s = jQuery.parseJSON(message);
@@ -686,7 +690,12 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 				self.$("#loading_cover").hide();				
 				self.trigger('baseline_success');
 				return this;
-			}
+			},
+			error: function(d){                      				
+			    self.$("#loading_cover").hide(); 
+				alert("Try again.");
+
+			},
 		});
 
 	},
@@ -922,16 +931,17 @@ var Baseline = Backbone.View.extend({
 		},
 		change_baseline: function(baseline) {
 			//var baseline = this.map.layer.;
+			//console.log(baseline.name);
 			$.ajax({
 						url : "/change_baseline/",
 						type : 'POST',
 						data : {
-							baseline: baseline,								
+							baseline: JSON.stringify(baseline),								
 						},
 						dataType : 'json',
 						async : true,
 						success : function(baseline) {								
-
+							console.log(baseline);
 						}
 				  });
 
@@ -1250,6 +1260,9 @@ var Baseline = Backbone.View.extend({
 				this.bind('load_success', function(){						
 					cell.trigger('change_cell_action', {color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
 				});
+				this.bind('load_error', function(){						
+					cell.trigger('change_cell_action', {color: "rgba(159, 40, 56, 0.8)", text_action: "Try again"});
+				});
 				cell.trigger('change_cell_action', {color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});										
 		},
 		save_baseline: function(){
@@ -1334,7 +1347,10 @@ var Baseline = Backbone.View.extend({
 							self.trigger('load_success');
 							//alert("Baseline loaded.");
 							return this;
-						}
+						},
+						error: function(d){						    
+						    self.trigger('load_error');
+						},
 					});
 
 			}else{

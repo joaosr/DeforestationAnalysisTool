@@ -215,6 +215,105 @@ var LayerEditorTimeSeries = Backbone.View.extend({
 
 });
 
+var EditingToolsTimeSeries = Backbone.View.extend({
+
+    initialize: function() {
+        _.bindAll(this, 'change_state', 'new_polygon', 'reset', 'polygon_mouseout', 'polygon_mouseover');
+        this.state = 'move';
+        this.time_series = this.options.time_series;
+        this.time_series.polygon_tools.bind('state', this.change_state);
+    },
+
+    new_polygon: function(data) {
+        //this.time_series.cell_polygons.polygons.create(data);
+        var p = new Polygon(data);
+        this.time_series.cell_polygons.polygons.add(p);
+        window.loading_small.loading('saving poly');
+        p.save(null, {
+            success: function() {
+                window.loading_small.finished('saving poly');
+            }
+        });
+    },
+
+    //reset to initial state
+    reset: function() {
+        this.time_series.timeseries_layer.unbind('polygon', this.new_polygon);
+        this.time_series.create_polygon_tool.unbind('polygon', this.new_polygon);
+        this.time_series.timeseries_layer.editing_state = false;
+        this.time_series.cell_polygons.editing_state = false;
+        this.time_series.create_polygon_tool.editing_state(false);
+        this.time_series.polygon_tools.polytype.hide();
+        //this.time_series.map.$("canvas").css('cursor','auto');
+        this.time_series.cell_polygons.unbind('click_on_polygon', this.time_series.create_polygon_tool.edit_polygon);
+        this.time_series.cell_polygons.unbind('mouseover', this.polygon_mouseover);
+        this.time_series.cell_polygons.unbind('mouseout', this.polygon_mouseout);
+        this.time_series.map.map.setOptions({draggableCursor: 'default'});
+    },
+
+    editing_mode: function() {
+        this.time_series.cell_polygons.bind('click_on_polygon', this.time_series.create_polygon_tool.edit_polygon);
+    },
+
+    polygon_mouseout: function() {
+        var st = this.state;
+        var cursors_pos = {
+            'edit': '4 4',
+            'auto': '7 7',
+            'remove': '6 6',
+            'draw': '4 16'
+        };
+        this.time_series.map.map.setOptions({draggableCursor: 'url(/static/img/cursor_' + st +'.png) ' + cursors_pos[st] + ', default'});
+    },
+
+    polygon_mouseover: function() {
+        var st = this.state;
+        var cursors_pos = {
+            'edit': '4 4',
+            'auto': '7 7',
+            'remove': '6 6',
+            'draw': '4 16'
+        };
+        $('path').css({cursor: 'url("http://maps.gstatic.com/intl/en_us/mapfiles/openhand_8_8.cur"), default !important'});
+    },
+
+    change_state: function(st) {
+        if(st == this.state) {
+            return;
+        }
+        this.state = st;
+        this.reset();
+        this.polygon_mouseout();
+        switch(st) {
+            case 'edit':
+                this.editing_mode();
+                this.time_series.cell_polygons.bind('mouseover', this.polygon_mouseover);
+                this.time_series.cell_polygons.bind('mouseout', this.polygon_mouseout);
+                break;
+            case 'remove':
+                this.time_series.cell_polygons.editing_state = true;
+                this.time_series.cell_polygons.bind('mouseover', this.polygon_mouseover);
+                this.time_series.cell_polygons.bind('mouseout', this.polygon_mouseout);
+                break;
+            case 'draw':
+                this.time_series.create_polygon_tool.editing_state(true);
+                this.time_series.polygon_tools.polytype.bind('state', this.time_series.create_polygon_tool.poly_type);
+                this.time_series.create_polygon_tool.bind('polygon', this.new_polygon);
+                this.time_series.polygon_tools.polytype.show();
+                this.time_series.polygon_tools.polytype.select('def');
+                break;
+            case 'auto':
+                this.time_series.timeseries_layer.unbind('polygon', this.new_polygon);
+                this.time_series.timeseries_layer.bind('polygon', this.new_polygon);
+                this.time_series.timeseries_layer.editing_state = true;
+                //this.time_series.map.$("canvas").css('cursor','crosshair');
+                break;
+        }
+        console.log(st);
+    }
+
+});
+
 var PolygonToolbarTimeSeries = Backbone.View.extend({
 
     el: $("#work_toolbar_timeseries"),
@@ -834,6 +933,11 @@ var TimeSeries = Backbone.View.extend({
         this.timeseries_layer = new TimeSeriesLayer({mapview: this.map, report: this.report});
         
         this.polygon_tools.timeseries_range.bind('change', this.timeseries_layer.apply_filter);
+        this.polygon_tools.compare.bind('state', function(change_state) {
+			self.trigger("compare_state", change_state);
+		});
+        this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
+        this.cell_polygons = new CellPolygons({mapview: this.map});
         this.time_series = new LayerTimeSeriesCollection();
         this.time_series.url = 'time_series_historical_results/';
         this.time_series.fetch();
@@ -963,12 +1067,12 @@ var TimeSeries = Backbone.View.extend({
 		}
 
 		/*
-		 * if(this.editor_baseline_imagepicker === undefined) {
+		 * if(this.editor_time_series_imagepicker === undefined) {
 		 *  }
 		 */
 
 		if (editor_imagepicker.showing) {
-			// this.editor_baseline_imagepicker.close();
+			// this.editor_time_series_imagepicker.close();
 		} else {
 			console.log(this.time_series);
 
@@ -1168,6 +1272,21 @@ var TimeSeries = Backbone.View.extend({
         this.selected = false;
         this.$("#time_series_select").removeClass('time_series_select');
     },
+    start_editing_tools: function(state) {
+		if(state){
+			this.editing_router = new EditingToolsTimeSeries({
+				time_series: this
+		   });
+		}else{
+			if(this.editing_router) {
+				//unbind all
+				this.editing_router.reset();
+				this.polygon_tools.reset();
+				delete this.editing_router;
+			}
+		}
+
+	},
     show_time_series_historical_results: function(e){
     	if(e) e.preventDefault();
         if(this.layer_editor_time_series === undefined) {
@@ -1180,7 +1299,7 @@ var TimeSeries = Backbone.View.extend({
 
         if(this.layer_editor_time_series.showing) {
             this.layer_editor_time_series.close(); 
-            this.$("#baseline_list_select").css({
+            this.$("#time_series_list_select").css({
                 "color": "white",
                 "text-shadow": "0 1px black",
                 "background": "none",
@@ -1204,7 +1323,7 @@ var TimeSeries = Backbone.View.extend({
                     that.layer_editor_time_series.layers.remove(m);
                 }
             });
-            this.$("#baseline_list_select").css({
+            this.$("#time_series_list_select").css({
             	                                "color": "rgb(21, 2, 2)",
             	                                "text-shadow": "0 1px white",
             	                                "background": "-webkit-gradient(linear, 50% 0%, 50% 100%, from(#E0E0E0), to(#EBEBEB))",
