@@ -18,14 +18,11 @@ import re
 import time
 
 from google.appengine.api import users
-from yaml import tokens
 
 from application.models import Report, Baseline, ImagePicker, Downscalling, Tile, \
     TimeSeries, CellGrid
 import ee
 import settings
-from google.appengine.ext import cloudstorage
-#from chardet.test import result
 
 
 # A multiplier to convert square meters to square kilometers.
@@ -1940,7 +1937,6 @@ def get_landsat_data_stack(image, sensor, start_date, end_date=None, cell=None, 
     unmixed = ee.Image(image).select([0,1,2,3,4,6]).unmix(ENDMEMBERS).max(0) # clamped
 
     ## NDFI calc =====================================================================
-    #clamped = unmixed.max(0)
     summed = unmixed.expression('b(0) + b(1) + b(2) + b(3)')
     
     gv    = unmixed.select(0)
@@ -1955,8 +1951,10 @@ def get_landsat_data_stack(image, sensor, start_date, end_date=None, cell=None, 
     ndfi = ee.Image.cat(gv_shade, npv_plus_soil).normalizedDifference()
     ndfi = ndfi.multiply(100).add(100).byte()
     
-    ndfi_vizualize = ndfi.where(summed.eq(0), INVALID_NDFI)
-    ndfi_vizualize = ndfi_vizualize.select([0], ['ndfi']) 
+    # ndfi_vizualize = ndfi.where(summed.eq(0), INVALID_NDFI) #summed.eq(0) quer dizer e 100% sombra 
+    # ndfi_vizualize = ndfi_vizualize.select([0], ['ndfi']) 
+    
+    ndfi_vizualize = ndfi.select([0], ['ndfi'])
     
     red = ndfi_vizualize.interpolate([150, 185], [255, 0], 'clamp')
     green = ndfi_vizualize.interpolate([  0, 100, 125, 150, 185, 200, 201],
@@ -2086,7 +2084,7 @@ def make_last_map(last_map_info, baseline_image = None):
     last_map_class_mosaic = ee.ImageCollection(last_map_class_list).mosaic().clip(polygon)
     
     if baseline_image:
-        last_map_class_mosaic = last_map_class_mosaic.where((baseline_image.eq(3)).Or(baseline_image.eq(6)), 3) # Old deforestation
+        last_map_class_mosaic = last_map_class_mosaic.where((baseline_image.eq(3)), 3) # Old deforestation .Or(baseline_image.eq(6))
         
     return last_map_class_mosaic     
 
@@ -2210,9 +2208,9 @@ def create_tile_timeseries(start_date, end_date, cell):
         #image_last_map = make_last_map(last_map_cell)
         ##
         image_last_map = image_last_map.clip(polygon)
-        image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
+#         image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
         #########################################################################
-#         image_ndfi = image_ndfi.mask(image_last_map.neq(3))
+        image_ndfi = image_ndfi.mask(image_last_map.neq(3))
         image_last_map = image_last_map.mask(image_last_map.eq(3))
         #########################################################################
         feature_ndfi = ee.Image(image_ndfi).getMapId({

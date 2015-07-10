@@ -1,8 +1,9 @@
 # encoding: utf-8
 
 import calendar
-from datetime import datetime, date, time 
-import json
+import datetime
+import simplejson as json
+import time
 import logging
 import random
 
@@ -14,13 +15,11 @@ from app import app
 from application import settings
 from application.constants import amazon_bounds
 from application.ee_bridge import Stats
-from application.models import Report, Cell, StatsStore, FustionTablesNames, CellGrid, \
-    Tile
+from application.models import Report, Cell, StatsStore, FustionTablesNames, CellGrid, Tile
 from application.time_utils import timestamp
 from ee_bridge import NDFI
 from flask import render_template, flash, url_for, redirect, abort, request, make_response
 from ft import FT
-from time_utils import month_range
 
 
 @app.route('/_ah/cmd/create_table')
@@ -66,7 +65,7 @@ def create_tables():
 
     if not month or not year:
         abort(400)
-    start = date(year=int(year), month=int(month), day=int(day))
+    start = datetime.date(year=int(year), month=int(month), day=int(day))
     r = Report(start=start, finished=False)
     r.put()
 
@@ -75,7 +74,7 @@ def create_tables():
     year = request.args.get('fyear','')
     day= request.args.get('fday','')
     if assetid and month and year and day:
-        r.end = date(year=int(year), month=int(month), day=int(day))
+        r.end = datetime.date(year=int(year), month=int(month), day=int(day))
         r.assetid = assetid
         if assetid != 'null':
            r.finished = True
@@ -93,10 +92,10 @@ def export_areas():
     
     month = compounddate[4:6]
     year  =  compounddate[0:4]
-    start = date(int(year), int(month), 1)
-    start = datetime.combine(start, time())
-    end   = date(int(year), int(month), calendar.monthrange(int(year), int(month))[1])
-    end   = datetime.combine(end, time())
+    start = datetime.date(int(year), int(month), 1)
+    start = datetime.datetime.combine(start, datetime.time())
+    end   = datetime.date(int(year), int(month), calendar.monthrange(int(year), int(month))[1])
+    end   = datetime.datetime.combine(end, datetime.time())
     
     report   = Report.find_by_period(start, end)
     polygons = Cell.polygon_by_report(report)

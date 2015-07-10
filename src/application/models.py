@@ -437,17 +437,18 @@ class Cell(db.Model):
     
     @staticmethod
     def polygon_by_report(report):
-        q = Cell.all().filter('report =', report).filter('operation =', 'sad').order('-last_change_on')
+        q = Cell.all().filter('report =', report).order('-last_change_on')
         r = q.fetch(100)
         if r:
             features = []
             for i in range(len(r)):
-                q = Area.all().filter('cell =', r[i]).order('-added_on')
-                a = q.fetch(100)
-                if a:
-                    for j in range(len(a)):
-                        if a[j]:
-                            features.append(a[j].as_feature())
+                if r[i].operation == 'sad' or r[i].operation == types.NoneType:
+                    q = Area.all().filter('cell =', r[i]).order('-added_on')
+                    a = q.fetch(100)
+                    if a:
+                        for j in range(len(a)):
+                            if a[j]:
+                                features.append(a[j].as_feature())
                             
             return ee.FeatureCollection(features).getInfo()     
                 
@@ -722,6 +723,8 @@ class Area(db.Model):
     def as_feature(self):
         geo = self.geo
         polygon = ast.literal_eval(geo)
+        for i in range(len(polygon[0])):
+            polygon[0][i] = polygon[0][i][::-1]
         geometry = ee.Geometry.Polygon(polygon)
         properties = self.as_dict()
         return ee.Feature(geometry, properties)

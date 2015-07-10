@@ -1122,14 +1122,9 @@ var Baseline = Backbone.View.extend({
 				var map_three_layer_status = "";
 				var map_four_layer_status = "";
 
-				layers.each(function(layer) {
-					// var layer_map = self.map.layers.get(layer.get('id'));
+				layers.each(function(layer) {					
 					layer_names.push(layer.get('description'));
-					// if(layer_map){
-					// Already exist
-					// }else{
-					// self.map.layers.add(layer);
-					// }
+					
 				});
 
 				for (var i = 0; i < layer_names.length; i++) {

@@ -138,6 +138,7 @@ var LayerBaselineCollection = Backbone.Collection.extend({
             if(m.get('type') === 'custom') { 
             	
             	if(m.get('id') === 'baseline'){
+            	  console.log("Here");
                   m.set({"layer": layer});
             	}
                 
@@ -206,6 +207,7 @@ var LayerTimeSeriesCollection = Backbone.Collection.extend({
             if(m.get('type') === 'custom') { 
             	
             	if(m.get('id') === 'time_series'){
+            	  console.log('here');
                   m.set({"layer": layer});
             	}
                 
@@ -257,7 +259,7 @@ var LayerCollection = Backbone.Collection.extend({
             this.each(function(m) {
                 if(m.get('type') === 'custom') { 
                 	               
-                	if(m.get('id') === 'baseline'){
+                	if(m.get('id') === 'baseline' || m.get('id') === 'time_series'){
                         m.set({"layer": layer});
                   	}                   
                     lay[m.get('id')] = m;

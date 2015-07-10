@@ -225,6 +225,7 @@ var EditingToolsTimeSeries = Backbone.View.extend({
     },
 
     new_polygon: function(data) {
+    	console.log("here!");
         //this.time_series.cell_polygons.polygons.create(data);
         var p = new Polygon(data);
         this.time_series.cell_polygons.polygons.add(p);
@@ -329,7 +330,7 @@ var PolygonToolbarTimeSeries = Backbone.View.extend({
         this.buttons = new ButtonGroup({el: this.$('#timeseries_selection')});
         this.polytype = new ButtonGroup({el: this.$('#timeseries_polytype')});
         this.timeseries_range = new RangeSliderTimeSeries({el: this.$("#timeseries_maptools")});
-        this.timeseries = {}          
+        this.time_series = {}          
         this.timeseries_range.bind('stop', this.update_timeseries);
         this.compare = new ButtonGroup({el: $("#compare_buttons")});
         this.polytype.hide();
@@ -338,14 +339,14 @@ var PolygonToolbarTimeSeries = Backbone.View.extend({
 
     },
     update_timeseries: function(low, high, shade, gv, soil, cloud){
-    	this.timeseries.def = low;
-    	this.timeseries.deg = high;
-    	this.timeseries.shade = shade;
-    	this.timeseries.gv = gv;
-    	this.timeseries.soil = soil;
-    	this.timeseries.cloud = cloud;
+    	this.time_series.def = low;
+    	this.time_series.deg = high;
+    	this.time_series.shade = shade;
+    	this.time_series.gv = gv;
+    	this.time_series.soil = soil;
+    	this.time_series.cloud = cloud;
 
-      	this.trigger('send_timeseries', this.timeseries);
+      	this.trigger('send_timeseries', this.time_series);
     },
     visibility_change: function(e) {
         var el = $(e.target);
@@ -390,7 +391,7 @@ var RangeSliderTimeSeries = Backbone.View.extend({
 		 this.shade = 65;
 		 this.gv = 19;
 		 this.soil = 4;
-		 this.cloud = 7;
+		 this.cloud = 42;
 
 
 		 this.render();
@@ -786,6 +787,11 @@ var EditorTimeSeriesImagePicker = Backbone.View.extend({
 				self.make_timeseries();				
 				return d;
 			},
+			error: function(d){                      				
+			    self.$("#loading_cover").hide(); 
+				alert("Try again.");
+
+			},
 		}).responseText;
 
 		// var s = jQuery.parseJSON(message);
@@ -811,7 +817,12 @@ var EditorTimeSeriesImagePicker = Backbone.View.extend({
 				self.$("#loading_cover").hide();				
 				self.trigger('time_series_success');
 				return this;
-			}
+			},
+			error: function(d){                      				
+			    self.$("#loading_cover").hide(); 
+				alert("Try again.");
+
+			},
 		});
 
 	},
@@ -920,7 +931,7 @@ var TimeSeries = Backbone.View.extend({
         'click #time_series_historical_results_select': 'show_time_series_historical_results'
     },
     initialize: function(){
-        _.bindAll(this, 'visibility_change', 'set_selected', 'is_timeseries_load', 'show_imagepicker_search', 'genarete_timeseries', 'load_timeseries', 'setting_timeseries_popup');
+        _.bindAll(this, 'visibility_change', 'set_selected', 'is_timeseries_load', 'show_imagepicker_search', 'genarete_timeseries', 'load_timeseries', 'setting_timeseries_popup', 'change_timeseries');
         this.callerView = this.options.callerView;
         this.polygon_tools = new PolygonToolbarTimeSeries();  
 
@@ -933,6 +944,7 @@ var TimeSeries = Backbone.View.extend({
         this.timeseries_layer = new TimeSeriesLayer({mapview: this.map, report: this.report});
         
         this.polygon_tools.timeseries_range.bind('change', this.timeseries_layer.apply_filter);
+        this.polygon_tools.timeseries_range.bind('send_timeseries', this.change_timeseries);
         this.polygon_tools.compare.bind('state', function(change_state) {
 			self.trigger("compare_state", change_state);
 		});
@@ -983,6 +995,9 @@ var TimeSeries = Backbone.View.extend({
 	    this.bind('load_success', function(){						
 			cell.trigger('change_cell_action', {color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
 		});
+		this.bind('load_error', function(){						
+			cell.trigger('change_cell_action', {color: "rgba(159, 40, 56, 0.8)", text_action: "Try again"});
+		});
 		cell.trigger('change_cell_action', {color: "rgba(106, 169, 202, 0.8)", color_transition: "rgba(106, 169, 202, 0.6)", text_action: "Loading..."});
 		
     },
@@ -1032,6 +1047,22 @@ var TimeSeries = Backbone.View.extend({
 		} else {			
 			popup.find('#timeseries_actions').hide();
 		}
+	},
+	change_timeseries: function(timeseries) {
+			
+			$.ajax({
+						url : "/change_timeseries/",
+						type : 'POST',
+						data : {
+							timeseries: JSON.stringify(timeseries),								
+						},
+						dataType : 'json',
+						async : true,
+						success : function(timeseries) {								
+							console.log(timeseries);
+						}
+				  });
+
 	},
     show_imagepicker_search : function(cell) {				
         
@@ -1107,11 +1138,13 @@ var TimeSeries = Backbone.View.extend({
         						
 			this.cell_items[cell_name].layers
 					.fetch({
-						success : function() {
-// 							self.cell_items[cell_name].imagepicker.done = true;
-// 							self.cell_items[cell_name].imagepicker.timeseries_response = this;								
-// 							self.cell_items[cell_name].imagepicker.trigger('time_series_success');
+						success : function(d) {
 							self.trigger('load_success');
+							
+							return this;
+						},
+						error : function(d) {
+							self.trigger('load_error');
 							
 							return this;
 						}
@@ -1258,6 +1291,8 @@ var TimeSeries = Backbone.View.extend({
     	var timeseries_loaded = this.cell_items[cell_name].layers.get_by_cell(cell_name);
 		
 		if (timeseries_loaded) {
+			this.polygon_tools.timeseries_range.time_series = this.cell_items[cell_name].time_series
+				this.polygon_tools.timeseries_range.render(this.cell_items[cell_name].time_series);
 			return true;
 		} else {
 			return false;
@@ -1343,13 +1378,13 @@ var TimeSeries = Backbone.View.extend({
         if(this.visibility){
             $(this.el).css("background-color", "rgba(0, 0, 0, 0)");
             this.$("#time_series_select h3").css("color", "#999999");
-            this.$("#time_series_content").hide();
+            //this.$("#time_series_content").hide();
             this.visibility = false;
         }
         else{
              $(this.el).css("background-color", "rgba(0, 0, 0, 1)");
             this.$("#time_series_select h3").css("color", "white");
-            this.$("#time_series_content").show();   
+            //this.$("#time_series_content").show();   
             this.visibility = true;
             this.callerView.callback(this);
             this.set_selected();            

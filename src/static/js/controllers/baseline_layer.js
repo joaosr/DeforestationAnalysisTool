@@ -122,7 +122,7 @@ var BaselineLayer = Backbone.View.extend({
 
     refrest: function() {
         if(this.showing) {
-            this.apply_filter(this.def_thresh, this.deg_thresh);
+            this.apply_filter(this.extra_images_list, this.def_thresh, this.deg_thresh, this.shade_thresh, this.gv_thresh, this.soil_thresh, this.cloud_thresh);
         }
     },
 
@@ -135,6 +135,7 @@ var BaselineLayer = Backbone.View.extend({
 
         var c = this.layer.composed(this.mapview.el[0]);
         //var c =  this.layer_L5.composed(this.mapview.el[0]);
+        
         var point = this.mapview.projector.transformCoordinates(e.latLng);
 
         // rendef offscreen
@@ -151,6 +152,7 @@ var BaselineLayer = Backbone.View.extend({
         color[3] = image_data.data[pixel_pos + 3];
         var def = is_color(color, this.DEFORESTATION_COLOR);
         var deg = is_color(color, this.DEGRADATION_COLOR);
+        console.log(color);
         if(!deg && !def) {
             window.loading_small.finished('ndfilayer: click');
             return;
@@ -404,12 +406,12 @@ var BaselineLayer = Backbone.View.extend({
                     /*
                      * Classification (forest, degradation and deforestation)
                      */
-                    } else if (p < def_thresh) {
+                    } else if (p <= def_thresh) {
                     	ndfi_data[pixel_pos + 0] = DEFORESTATION_COLOR[0];
                         ndfi_data[pixel_pos + 1] = DEFORESTATION_COLOR[1];
                         ndfi_data[pixel_pos + 2] = DEFORESTATION_COLOR[2];
                         ndfi_data[pixel_pos + 3] = show_deforestation;
-                    }else if (p > deg_thresh) {
+                    }else if (p > deg_thresh && p < 200) {
                     	ndfi_data[pixel_pos + 0] = FOREST_COLOR[0];
                         ndfi_data[pixel_pos + 1] = FOREST_COLOR[1];
                         ndfi_data[pixel_pos + 2] = FOREST_COLOR[2];

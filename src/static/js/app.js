@@ -576,8 +576,7 @@ $(function() {
                 this.main_operations.baseline.start_editing_tools(true);
                 this.get_status_layer_map(cell.get('compare_view'));
             }else if(this.main_operations.time_series.selected){
-            	this.main_operations.time_series.polygon_tools.show();
-            	console.log("time_series mode");
+            	this.main_operations.time_series.polygon_tools.show();            	
             	var response = this.main_operations.time_series.setting_timeseries_layers(cell);
             	
           	    this.map.reset_layers_map('2', response['time_series'], 'time_series');         	              	    
@@ -594,7 +593,7 @@ $(function() {
                 this.map.show_layers_control();
               
                 this.main_operations.time_series.start_editing_tools(true);
-//                 this.get_status_layer_map(cell.get('compare_view'));
+                this.get_status_layer_map(cell.get('compare_view'));
             }
             
         },

@@ -35,6 +35,11 @@ indexes:
   - name: last_change_on
     direction: desc
 
+- kind: Cell
+  properties:
+  - name: report
+  - name: operation
+
 - kind: ImagePicker
   properties:
   - name: cell

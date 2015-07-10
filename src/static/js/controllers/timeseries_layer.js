@@ -64,7 +64,7 @@ var TimeSeriesLayer = Backbone.View.extend({
         var map_layer_timeseries = this.map_layer.time_series;
 
         for(var key  in this.map_layer){
-            if(key !== "timeseries"){
+            if(key !== "time_series"){
                 this.map_layer[key].set({"layer": new CanvasTileLayer(this.canvas_setup, this.filter)});
             }
         }
@@ -120,25 +120,28 @@ var TimeSeriesLayer = Backbone.View.extend({
 
     refrest: function() {
         if(this.showing) {
-            this.apply_filter(this.def_thresh, this.deg_thresh);
+            this.apply_filter(this.extra_images_list, this.def_thresh, this.deg_thresh, this.shade_thresh, this.gv_thresh, this.soil_thresh, this.cloud_thresh);
         }
     },
 
     click: function(e) {
         var self = this;
         if(!this.editing_state) {
+            console.log("Here!");
             return;
         }
         window.loading_small.loading('ndfilayer: click');
 
         var c = this.layer.composed(this.mapview.el[0]);
+        console.log(window.settings);
         //var c =  this.layer_L5.composed(this.mapview.el[0]);
         var point = this.mapview.projector.transformCoordinates(e.latLng);
 
         // rendef offscreen
         var ctx = c.getContext('2d');
+        
         var image_data = ctx.getImageData(0, 0, c.width, c.height);
-
+        
 
         // get pixel color
         var pixel_pos = (Math.floor(point.y)*c.width + Math.floor(point.x)) * 4;
@@ -149,7 +152,9 @@ var TimeSeriesLayer = Backbone.View.extend({
         color[3] = image_data.data[pixel_pos + 3];
         var def = is_color(color, this.DEFORESTATION_COLOR);
         var deg = is_color(color, this.DEGRADATION_COLOR);
+        console.log("Here:" + color);
         if(!deg && !def) {
+            //console.log("Here:" + color);
             window.loading_small.finished('ndfilayer: click');
             return;
         }
@@ -326,10 +331,10 @@ var TimeSeriesLayer = Backbone.View.extend({
     // and color it
     filter: function(ndfi_data, mask_images, w, h, def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh, cloud_thresh) {    
         var temperature_thresh = 22;
-//         shade_thresh = 65;
-//         gv_thresh = 19;
-//         soil_thresh = 5;
-//         cloud_thresh = 5;
+         shade_thresh = 65;
+         gv_thresh = 10;
+         soil_thresh = 5;
+         cloud_thresh = 15;
         
 //         deg_thresh = 175;
 //     	def_thresh = 165;
@@ -346,7 +351,7 @@ var TimeSeriesLayer = Backbone.View.extend({
         
         var DEFORESTATION_COLOR     = [255, 255, 0];
         var OLD_DEFORESTATION_COLOR = [0, 0, 0];
-        var DEGRADATION_COLOR       = [0, 255, 254]; //[255, 199, 44];        
+        var DEGRADATION_COLOR       = [0, 255, 255]; //[255, 199, 44];        
         var FOREST_COLOR            = [0, 153, 77]; // [32, 224, 32];
         var CLOUD_COLOR             = [102, 102, 102];
         var WATER_COLOR             = [0, 0, 255];
@@ -383,17 +388,9 @@ var TimeSeriesLayer = Backbone.View.extend({
                 var p_cloud_region = mask_images.cloud_region[pixel_pos];
                 var p_temperature  = mask_images.temperature[pixel_pos];
                 
-//                 var p_last_map_r   = mask_images.last_map[pixel_pos+0];
-//                 var p_last_map_g   = mask_images.last_map[pixel_pos+1];
-//                 var p_last_map_b   = mask_images.last_map[pixel_pos+2];
-                
-//                var p_last_map = mask_images.last_map[pixel_pos+0] + 
-//                				 mask_images.last_map[pixel_pos+1] +
-//                				 mask_images.last_map[pixel_pos+2];
-                
                 var a = ndfi_data[pixel_pos + 3];
                 
-               if(a > 0) {
+                if(a > 0) {
                 	/*
                      * Classification (forest, degradation and deforestation)
                      */
@@ -444,25 +441,12 @@ var TimeSeriesLayer = Backbone.View.extend({
                     /*
                      * Water Mask
                      */
-                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb && p < 200) {
+                    if (p_shd_md >= shade_thresh_rgb && p_gv <= gv_thresh_rgb && p_soil <= soil_thresh_rgb) {
                         ndfi_data[pixel_pos + 0] = WATER_COLOR[0];
                         ndfi_data[pixel_pos + 1] = WATER_COLOR[1];
                         ndfi_data[pixel_pos + 2] = WATER_COLOR[2];
                         ndfi_data[pixel_pos + 3] = 255;
                     }
-                    
-                    
-//                     if (p_last_map_r == 0 && p_last_map_g == 0 && p_last_map_b == 0) {
-//                         ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
-//                         ndfi_data[pixel_pos + 1] = OLD_DEFORESTATION_COLOR[1];
-//                         ndfi_data[pixel_pos + 2] = OLD_DEFORESTATION_COLOR[2];
-//                         ndfi_data[pixel_pos + 3] = 255;
-//                     } else if (p_last_map_r == 255 && p_last_map_g == 255 && p_last_map_b == 0) {
-//                         ndfi_data[pixel_pos + 0] = OLD_DEFORESTATION_COLOR[0];
-//                         ndfi_data[pixel_pos + 1] = OLD_DEFORESTATION_COLOR[1];
-//                         ndfi_data[pixel_pos + 2] = OLD_DEFORESTATION_COLOR[2];
-//                         ndfi_data[pixel_pos + 3] = 255;
-//                     }
                }
            }
         }
