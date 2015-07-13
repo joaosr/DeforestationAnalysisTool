@@ -19,7 +19,7 @@ import time
 
 from google.appengine.api import users
 
-from application.models import Report, Baseline, ImagePicker, Downscalling, Tile, \
+from application.models import Area, Report, Baseline, ImagePicker, Downscalling, Tile, \
     TimeSeries, CellGrid
 import ee
 import settings
@@ -655,7 +655,6 @@ class SMA(object):
         """Returns the year part of the midpoint of two Unix timestamps."""
         middle_seconds = int((end + start) / 2000)
         return time.gmtime(middle_seconds).tm_year
-
 
 class NDFI(object):
     """A helper for computing NDFI status on MODIS image over a time period."""
@@ -1554,7 +1553,6 @@ class NDFI(object):
         middle_seconds = int((end + start) / 2000)
         return time.gmtime(middle_seconds).tm_year
 
-
 def get_prodes_stats(assetids, table_id):
     """Computes the area of each class in each polygon in each PRODES image.
 
@@ -1620,8 +1618,6 @@ def get_prodes_stats(assetids, table_id):
         results.append({'values': stats, 'type': 'DataDictionary'})
     return {'data': {'properties': {'classHistogram': results}}}
 
-
-
 def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b04,sur_refl_b03', gain=[2.0,2.0,2.0]):
     result_final = []
     nextYear = year
@@ -1675,7 +1671,6 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
         
 
     return result_final
-
 
 def create_tile_baseline(start_date, end_date, cell):  
     
@@ -2090,6 +2085,22 @@ def make_last_map(last_map_info, baseline_image = None):
 
 ##
 
+def make_last_map_with_validated_polygons(last_map_info, baseline_image = None):
+    
+    #logging.info('\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/')
+    #logging.info(last_map_info.cell)
+    
+    polygons = Area.find_feature_collection_by_cell(last_map_info.cell)
+    
+    logging.info(polygons)
+    
+    if baseline_image:
+        pass
+        
+        #last_map_class_mosaic = last_map_class_mosaic.where((baseline_image.eq(3)), 3)
+    
+    return 1
+
 def create_tile_timeseries(start_date, end_date, cell):
     
     time_series = TimeSeries.find_cell_period(cell, start_date, end_date)
@@ -2198,10 +2209,13 @@ def create_tile_timeseries(start_date, end_date, cell):
         # Get the last map classification
         registers = time_series.last_map_cell
         
-        ## Gera a imagem classificada do baseline para esta data.
+        """
+        Gera a imagem classificada do baseline para esta data.
         
+        """
         for ii in range(len(registers)):
             if ii == 0:
+                ##image_last_map_vp = make_last_map_with_validated_polygons(registers[ii])
                 image_last_map = make_last_map(registers[ii])
             else:
                 image_last_map = make_last_map(registers[ii], image_last_map)
@@ -2209,10 +2223,11 @@ def create_tile_timeseries(start_date, end_date, cell):
         ##
         image_last_map = image_last_map.clip(polygon)
 #         image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
-        #########################################################################
         image_ndfi = image_ndfi.mask(image_last_map.neq(3))
         image_last_map = image_last_map.mask(image_last_map.eq(3))
-        #########################################################################
+        """
+        =========================================================================
+        """
         feature_ndfi = ee.Image(image_ndfi).getMapId({
                               'bands': 'nd'}) #TODO: aqui está o dado ndfi bruto
         
@@ -2371,7 +2386,6 @@ def create_tile_timeseries(start_date, end_date, cell):
         return resutls
     else:
         return None
-
     
 def shade_median(image, sensor, year, tile_name, end_date=None):
     ENDMEMBERS = [
@@ -2410,7 +2424,6 @@ def brightness_temperature(image):
     temperature = imageTOA.select('B6').subtract(273.15);
 
     return temperature
-
 
 def create_baseline(start_date, end_date, sensor=EELandsat.LANDSAT5):
     ENDMEMBERS = [
@@ -2613,7 +2626,6 @@ def create_time_series(start_date, end_date, sensor=EELandsat.LANDSAT5):
     
     return time_series.save()
 
-
 def get_modis_location(cell):
     inclusions_filter = ee.Filter.eq('cell', cell);
 
@@ -2626,7 +2638,6 @@ def get_modis_location(cell):
     location = inclusions.getInfo()['geometry']['coordinates']
 
     return str(location)
-
 
 def get_modis_thumbnail(image_id, cell, bands='sur_refl_b05,sur_refl_b04,sur_refl_b03', gain=[2.0,2.0,2.0]):
     """Returns a thumbnail ID for a given image ID.
@@ -2656,7 +2667,6 @@ def get_modis_thumbnail(image_id, cell, bands='sur_refl_b05,sur_refl_b04,sur_ref
         'region': reprojected,
         'gain': gain
     })
-
 
 def _get_area_histogram(image, polygons, classes):
     """Computes the area of class in each polygon.
@@ -2696,7 +2706,6 @@ def _get_area_histogram(image, polygons, classes):
         result.append(row)
 
     return result
-
 
 def _remap_prodes_classes(img):
     """Remaps the values of the first band of a PRODES classification image.
@@ -2764,7 +2773,6 @@ def _remap_prodes_classes(img):
     final = remapped.mask(img.mask()).select(['remapped'], ['class'])
     return (final, set(classes_to))
 
-
 def _paint(image, table_id, report_id, cls):
     """Paints a region from a Fusion Table onto an image.
 
@@ -2784,7 +2792,6 @@ def _paint(image, table_id, report_id, cls):
     fc = fc.filterMetadata('report_id', 'equals', int(report_id))
     fc = fc.filterMetadata('type', 'equals', cls)
     return image.paint(fc, cls)
-
 
 def _get_landsat_toa(start_time, end_time, version=-1):
     """Returns a Landsat 7 TOA ee.ImageCollection for a given time period.
@@ -2807,7 +2814,6 @@ def _get_landsat8(start_time, end_time, version=-1):
     collection = collection.filterDate(start_time, end_time)
     #return collection.map(ee.Algorithms.LandsatTOA)
     return collection
-
 
 def _get_modis_tile(horizontal, vertical):
     """Returns a GeoJSON geometry for a given MODIS tile.
@@ -2833,10 +2839,6 @@ def _get_modis_tile(horizontal, vertical):
         ee.Geometry.Rectangle(min_x, min_y, max_x, max_y), MODIS_CRS)
 
     return rectangle
-
-
-
-
 
 def _get_raw_mapid(mapid):
     """Strips any fields other than "mapid" and "token" from a MapId object."""

@@ -185,7 +185,7 @@ var BaselineLayer = Backbone.View.extend({
             var paths = [];
 
             function simplify(points) {
-                return GDouglasPeucker(points, 30);
+                return GDouglasPeucker(points, 5);//30
             }
             // pixel -> latlon
             function unproject(p) {

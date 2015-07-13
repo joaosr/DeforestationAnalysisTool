@@ -38,7 +38,7 @@ var MapView = Backbone.View.extend({
        google.maps.event.addListener(this.map, 'click', this.click);
        this.zoom_level = '0';
        this.operation_map = 'sad';
-       google.maps.event.addListener(this.map, 'idle', this.tilesloaded);
+       //google.maps.event.addListener(this.map, 'idle', this.tilesloaded);
        this.projector = new Projector(this.map);
        this.projector.draw = this.ready;
        this.layers = new LayerCollection();       

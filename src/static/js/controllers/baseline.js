@@ -834,8 +834,7 @@ var Baseline = Backbone.View.extend({
 				self.trigger("compare_state", change_state);
 			});
 			this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
-			this.cell_polygons = new CellPolygons({mapview: this.map});
-			//this.polygon_tools.baseline_range.bind('stop', this.change_baseline);
+			this.cell_polygons = new CellPolygons({mapview: this.map, operation: 'baseline', report: this.report});			
 			this.baselines = new LayerBaselineCollection();
 			this.baselines.url = 'baseline_list/';
 			this.baselines.fetch();
@@ -928,6 +927,34 @@ var Baseline = Backbone.View.extend({
 				this.trigger('show_baseline_list');
 				this.layer_editor_baseline.show();
 			}
+		},
+		work_mode: function(callback, cell, x, y, z) {
+			this.polygon_tools.show();
+            var response = this.setting_baseline_layers(cell);         	    
+     	    
+     	    this.map.reset_layers_map('2', response['baseline'], 'baseline');         	             	    
+     	    this.baseline_layer.map_auth();
+     	    
+     	    callback.compare_view(cell.get('compare_view'));
+     	    
+     	   _.each(callback.compare_maps, function(m) {
+     		  m.zoom_level = '2';
+     		  m.operation_map = 'baseline';
+     	   });
+     	   
+     	    this.map.show_zoom_control();
+            this.map.show_layers_control();
+          
+            
+
+            this.cell_polygons.polygons.x = x;
+            this.cell_polygons.polygons.y = y;
+            this.cell_polygons.polygons.z = z;
+            this.cell_polygons.polygons.operation = 'baseline';
+            this.cell_polygons.polygons.fetch();     
+
+            this.start_editing_tools(true);
+            callback.get_status_layer_map(cell.get('compare_view'));
 		},
 		change_baseline: function(baseline) {
 			//var baseline = this.map.layer.;

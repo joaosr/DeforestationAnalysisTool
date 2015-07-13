@@ -31,6 +31,23 @@ indexes:
 
 - kind: Cell
   properties:
+  - name: operation
+  - name: x
+  - name: y
+  - name: z
+  - name: last_change_on
+
+- kind: Cell
+  properties:
+  - name: operation
+  - name: x
+  - name: y
+  - name: z
+  - name: last_change_on
+    direction: desc
+
+- kind: Cell
+  properties:
   - name: report
   - name: last_change_on
     direction: desc

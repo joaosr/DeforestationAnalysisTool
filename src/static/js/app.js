@@ -556,44 +556,12 @@ $(function() {
                 });
                 this.get_status_layer_map(cell.get('compare_view'));
             }
-            else if(this.main_operations.baseline.selected){      
-            	this.main_operations.baseline.polygon_tools.show();
-                var response = this.main_operations.baseline.setting_baseline_layers(cell);         	    
-         	    
-         	    this.map.reset_layers_map('2', response['baseline'], 'baseline');         	             	    
-         	    this.main_operations.baseline.baseline_layer.map_auth();
-         	    
-         	    this.compare_view(cell.get('compare_view'));
-         	    
-         	   _.each(this.compare_maps, function(m) {
-         		  m.zoom_level = '2';
-         		  m.operation_map = 'baseline';
-         	   });
-         	   
-         	    this.map.show_zoom_control();
-                this.map.show_layers_control();
-              
-                this.main_operations.baseline.start_editing_tools(true);
-                this.get_status_layer_map(cell.get('compare_view'));
+            else if(this.main_operations.baseline.selected){
+            	this.main_operations.baseline.work_mode(this, cell, x, y, z);
+
             }else if(this.main_operations.time_series.selected){
-            	this.main_operations.time_series.polygon_tools.show();            	
-            	var response = this.main_operations.time_series.setting_timeseries_layers(cell);
-            	
-          	    this.map.reset_layers_map('2', response['time_series'], 'time_series');         	              	    
-          	    this.main_operations.time_series.timeseries_layer.map_auth();
-         	    
-         	    this.compare_view(cell.get('compare_view'));
-         	    
-          	   _.each(this.compare_maps, function(m) {
-	           		  m.zoom_level = '2';
-    	      		  m.operation_map = 'time_series';
-          	   });
-         	   
-        	    this.map.show_zoom_control();
-                this.map.show_layers_control();
-              
-                this.main_operations.time_series.start_editing_tools(true);
-                this.get_status_layer_map(cell.get('compare_view'));
+            	this.main_operations.time_series.work_mode(this, cell, x, y, z);
+
             }
             
         },
@@ -642,13 +610,29 @@ $(function() {
                 this.main_operations.baseline.bind('load_success', function(){
                 	var response = self.main_operations.baseline.setting_baselines(cell);
          	        self.map.reset_layers_map('1', response['baseline'], 'baseline');	
-                })   
+                });
+
+                this.main_operations.baseline.cell_polygons.polygons.reset();
+				if(this.main_operations.baseline.editing_router) {
+					//unbind all
+					this.main_operations.baseline.editing_router.reset();
+					this.main_operations.baseline.polygon_tools.reset();
+					delete this.main_operations.baseline.editing_router;
+				}   
             	
 
             }else if(this.main_operations.time_series.selected && z === 1){
             	var cell = this.gridstack.current_cell;            	
                 console.log(cell);
                 var self = this    
+
+                this.main_operations.time_series.cell_polygons.polygons.reset();
+				if(this.main_operations.time_series.editing_router) {
+					//unbind all
+					this.main_operations.time_series.editing_router.reset();
+					this.main_operations.time_series.polygon_tools.reset();
+					delete this.main_operations.time_series.editing_router;
+				}
 
                 //this.main_operations.time_series.load_baselines_saved(cell); 
 
@@ -677,6 +661,7 @@ $(function() {
                 this.polygon_tools.reset();
                 delete this.editing_router;
             }
+
             this.main_operations.baseline.start_editing_tools(false);
             this.main_operations.time_series.start_editing_tools(false);
         },
@@ -777,10 +762,11 @@ $(function() {
             // init interface elements
             this.init_ui();
             
-            this.gridstack.grid.bind('show_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);
-            this.gridstack.grid.bind('show_cell_popup', this.main_operations.time_series.setting_timeseries_popup, this);
-            
+            this.gridstack.grid.bind('show_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);            
             this.gridstack.grid.bind('hide_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);
+
+            this.gridstack.grid.bind('show_cell_popup', this.main_operations.time_series.setting_timeseries_popup, this);
+            this.gridstack.grid.bind('hide_cell_popup', this.main_operations.time_series.setting_timeseries_popup, this);
 
             // init the map
             this.map.map.setCenter(this.amazon_bounds.getCenter());

@@ -186,7 +186,7 @@ var TimeSeriesLayer = Backbone.View.extend({
             var paths = [];
 
             function simplify(points) {
-                return GDouglasPeucker(points, 30);
+                return GDouglasPeucker(points, 5);//2000);
             }
             // pixel -> latlon
             function unproject(p) {
@@ -198,12 +198,14 @@ var TimeSeriesLayer = Backbone.View.extend({
             console.log("points before ", points.length);
             // outer path
             var simple = simplify(_.map(points, unproject));
+//             var simple = _.map(points, unproject);
             paths.push(simple);
             console.log("points after", simple.length);
 
             // inner paths (reversed)
             _.each(inners, function(p) {
                 paths.push(simplify(_.map(p.reverse(), unproject)));
+//                 paths.push(_.map(p.reverse(), unproject));
             });
 
             return paths;

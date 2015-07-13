@@ -48,7 +48,7 @@ var RGBStrechLayer = LayerModel.extend({
               description: desc,
               layer: this.google_maps_layer()               
         });
-        this.set_enabled(false);
+        this.set_enabled(true);
     },
 
     on_cell: function(x, y, z) {

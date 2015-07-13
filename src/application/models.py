@@ -720,6 +720,26 @@ class Area(db.Model):
     def as_json(self):
         return json.dumps(self.as_dict())
     
+    @staticmethod
+    def find_feature_collection_by_cell(cell_grid):
+        z, x, y = cell_grid.name.split('_')        
+        operation = 'timeseries'
+        q = Cell.all().filter('z =', int(z)).filter('y =', int(y)).filter('x =', int(x)).filter('operation =', operation).order('last_change_on')
+        cells = q.fetch(1)
+                
+        q = Area.all().filter('cell =', cells[0])
+        r = q.fetch(100)
+        logging.info("+++++++++++++++ Polygons ++++++++++++++++++++++++")
+        logging.info(len(r))
+        if r: 
+            result = []
+            for i in range(len(r)):
+                result.append(r[i].as_feature())
+            
+            return ee.FeatureCollection(result)
+        else:
+            return None
+    
     def as_feature(self):
         geo = self.geo
         polygon = ast.literal_eval(geo)

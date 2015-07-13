@@ -346,6 +346,7 @@ var PolygonToolbarTimeSeries = Backbone.View.extend({
     	this.time_series.soil = soil;
     	this.time_series.cloud = cloud;
 
+        console.log(this.time_series); 
       	this.trigger('send_timeseries', this.time_series);
     },
     visibility_change: function(e) {
@@ -949,7 +950,7 @@ var TimeSeries = Backbone.View.extend({
 			self.trigger("compare_state", change_state);
 		});
         this.create_polygon_tool = new  PolygonDrawTool({mapview: this.map});
-        this.cell_polygons = new CellPolygons({mapview: this.map});
+        this.cell_polygons = new CellPolygons({mapview: this.map, operation: 'time_series', report: this.report});
         this.time_series = new LayerTimeSeriesCollection();
         this.time_series.url = 'time_series_historical_results/';
         this.time_series.fetch();
@@ -1048,8 +1049,34 @@ var TimeSeries = Backbone.View.extend({
 			popup.find('#timeseries_actions').hide();
 		}
 	},
+	work_mode: function(callback, cell, x, y, z) {
+		this.polygon_tools.show();            	
+    	var response = this.setting_timeseries_layers(cell);
+    	
+  	    this.map.reset_layers_map('2', response['time_series'], 'time_series');         	              	    
+  	    this.timeseries_layer.map_auth();
+ 	    
+  	    callback.compare_view(cell.get('compare_view'));
+ 	    
+  	   _.each(callback.compare_maps, function(m) {
+       		  m.zoom_level = '2';
+      		  m.operation_map = 'time_series';
+  	   });
+ 	   
+	    this.map.show_zoom_control();
+        this.map.show_layers_control();
+
+        this.cell_polygons.polygons.x = x;
+        this.cell_polygons.polygons.y = y;
+        this.cell_polygons.polygons.z = z;
+        this.cell_polygons.polygons.operation = 'time_series';
+        this.cell_polygons.polygons.fetch();
+      
+        this.start_editing_tools(true);
+        callback.get_status_layer_map(cell.get('compare_view'));
+	},
 	change_timeseries: function(timeseries) {
-			
+			console.log(timeseries);
 			$.ajax({
 						url : "/change_timeseries/",
 						type : 'POST',
