@@ -11,8 +11,9 @@
 
 
 import ast
-import datetime
 import calendar
+import datetime
+import ee
 import logging
 import re
 import time
@@ -20,8 +21,7 @@ import time
 from google.appengine.api import users
 
 from application.models import Area, Report, Baseline, ImagePicker, Downscalling, Tile, \
-    TimeSeries, CellGrid
-import ee
+    TimeSeries, CellGrid, Cell
 import settings
 
 
@@ -1672,7 +1672,7 @@ def get_modis_thumbnails_list(year, month, tile, bands='sur_refl_b05,sur_refl_b0
 
     return result_final
 
-def create_tile_baseline(start_date, end_date, cell):  
+def create_tile_baseline(start_date, end_date, cell_name):  
     
     baselines     = []
     ndfis         = [] 
@@ -1688,14 +1688,16 @@ def create_tile_baseline(start_date, end_date, cell):
     resutls       = []
     
     #image_picker = ImagePicker.find_by_period(start_compounddate, end_compounddate, tile_name)
+    z, x, y = cell_name.split('_') 
+    cell = Cell.get_or_create(Report.current().key(), 'baseline', int(x), int(y), int(z))
+    cell_grid = CellGrid.find_by_name(cell_name) 
     baseline     = Baseline.find_by_cell(cell)
     tile_image_picker = ''
     
     if baseline:
         tile_image_picker = baseline.image_picker
-    else: 
-        cell_grid = CellGrid.find_by_name(cell)
-        baseline  = Baseline(added_by=users.get_current_user(), cell=cell_grid, name='null', start=start_date.date(), end=end_date.date())
+    else:                         
+        baseline  = Baseline(added_by=users.get_current_user(), cell=cell, name='null', start=start_date.date(), end=end_date.date())
         tile_image_picker = baseline.image_picker
         
     
@@ -1736,7 +1738,7 @@ def create_tile_baseline(start_date, end_date, cell):
                           })
             
             # TODO ajustar os nomes das variaveis
-            landsat_data_stack = get_landsat_data_stack(image, sensor, start_date, None, cell, tile_name)
+            landsat_data_stack = get_landsat_data_stack(image, sensor, start_date, None, cell_grid, tile_name)
             baselines.append(landsat_data_stack['ndfi'])
             ndfis.append(landsat_data_stack['ndfi_rgb'])
             smas.append(landsat_data_stack['sma'])
@@ -1755,8 +1757,7 @@ def create_tile_baseline(start_date, end_date, cell):
         else:
             pass 
 
-    if len(baselines) > 0:                
-        cell_grid = CellGrid.find_by_name(cell)
+    if len(baselines) > 0:                            
         geo  = ast.literal_eval(cell_grid.geo)
         polygon = ee.Geometry(ee.Geometry.Polygon(geo), "EPSG:4326")
         #polygon = ee.Geometry.Polygon(geo)
@@ -1781,15 +1782,16 @@ def create_tile_baseline(start_date, end_date, cell):
         mapid = feature_baseline['mapid']
         token = feature_baseline['token']    
         
-        name = 'BASELINE/'+cell+'/'+sensor+'/'+start_date.strftime("%Y-%b-%d")
+        name = 'BASELINE/'+cell_name+'/'+sensor+'/'+start_date.strftime("%Y-%b-%d")
         
         #baseline = Baseline(added_by=users.get_current_user(), cell=cell_grid, name=name, start=start_date.date(), end=end_date.date())
         baseline.added_by = users.get_current_user()
         baseline.name     = name
          
-        baseline_result          = baseline.save()['data']
+        baseline_result          = baseline.save()
         baseline_result['mapid'] = mapid
         baseline_result['token'] = token
+        baseline_result['description'] = name        
         baseline_result['type']  = 'custom'
         baseline_result['id']    = 'baseline' 
         baseline_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 
@@ -1991,7 +1993,7 @@ def get_landsat_data_stack(image, sensor, start_date, end_date=None, cell=None, 
 #TODO: Precisamos pensar melhor como tratar essa função quando tivermos varias imagens 
 #TODO: classificadas na série
 
-def make_last_map(last_map_info, baseline_image = None):
+def make_last_map(cell_grid, last_map_info, baseline_image = None):
     
     last_map_class_list = []
     
@@ -2073,7 +2075,7 @@ def make_last_map(last_map_info, baseline_image = None):
             last_map_class_list.append(last_map_class)
     
     
-    geo  = ast.literal_eval(last_map_info.cell.geo)
+    geo  = ast.literal_eval(cell_grid.geo)
     polygon = ee.Geometry(ee.Geometry.Polygon(geo), "EPSG:4326")
         
     last_map_class_mosaic = ee.ImageCollection(last_map_class_list).mosaic().clip(polygon)
@@ -2086,36 +2088,19 @@ def make_last_map(last_map_info, baseline_image = None):
 ##
 
 def make_last_map_with_validated_polygons(last_map_info, baseline_image = None):
-    
-    #logging.info('\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/\0/')
-    #logging.info(last_map_info.cell)
-    
+        
     polygons = Area.find_feature_collection_by_cell(last_map_info.cell)
     
-    logging.info(polygons)
+#     logging.info(polygons.getInfo()['features'][0])
+    
+    validatedRaster = polygons.reduceToImage({'properties': 'type', 'reducer': ee.Reducer.first()}).multiply(3)
     
     if baseline_image:
-        pass
-        
-        #last_map_class_mosaic = last_map_class_mosaic.where((baseline_image.eq(3)), 3)
+        validatedRaster = validatedRaster.where((baseline_image.eq(3)), 3)
     
-    return 1
+    return validatedRaster
 
-def create_tile_timeseries(start_date, end_date, cell):
-    
-    time_series = TimeSeries.find_cell_period(cell, start_date, end_date)
-    tile_image_picker = ''
-    
-    if time_series:
-        tile_image_picker = time_series.image_picker
-    else:
-        cell_grid = CellGrid.find_by_name(cell)
-        time_series = TimeSeries(added_by=users.get_current_user(), cell=cell_grid, name='null', start=start_date.date(), end=end_date.date())
-        tile_image_picker = time_series.image_picker
-    
-    
-    logging.info(tile_image_picker)
-    
+def create_tile_timeseries(start_date, end_date, cell_name):
     #  Get the new time series classifcation applying the baseline deforestation mask
     ndfis         = []
     ndfi_rgbs     = [] 
@@ -2129,6 +2114,21 @@ def create_tile_timeseries(start_date, end_date, cell):
     temperatures  = []
     smas          = [] #TODO: Remover e ajustar as dependencias
     resutls       = []
+    
+    z, x, y = cell_name.split('_') 
+    cell = Cell.get_or_create(Report.current().key(), 'timeseries', int(x), int(y), int(z))
+    cell_grid = CellGrid.find_by_name(cell_name) 
+    time_series     = TimeSeries.find_cell_period(cell, start_date, end_date)
+    
+    
+    if time_series:
+        tile_image_picker = time_series.image_picker
+    else:        
+        time_series = TimeSeries(added_by=users.get_current_user(), cell=cell, name='null', start=start_date.date(), end=end_date.date())
+        tile_image_picker = time_series.image_picker
+    
+    
+    logging.info(tile_image_picker)
     
     for i in range(len(tile_image_picker)):
         if len(tile_image_picker[i]) == 1:
@@ -2164,7 +2164,7 @@ def create_tile_timeseries(start_date, end_date, cell):
                           })
             
             ##
-            landsat_data_stack = get_landsat_data_stack(image, sensor, start_date, None, cell, tile_name)
+            landsat_data_stack = get_landsat_data_stack(image, sensor, start_date, None, cell_grid, tile_name)
             ##
             
             ndfis.append(landsat_data_stack['ndfi'])
@@ -2187,11 +2187,9 @@ def create_tile_timeseries(start_date, end_date, cell):
             pass
             #resutls.append(None)
     
-    if len(ndfis) > 0:                
-        cell_grid = CellGrid.find_by_name(cell)
+    if len(ndfis) > 0:                        
         geo  = ast.literal_eval(cell_grid.geo)
-        polygon = ee.Geometry(ee.Geometry.Polygon(geo), "EPSG:4326")
-        #polygon = ee.Geometry.Polygon(geo)
+        polygon = ee.Geometry(ee.Geometry.Polygon(geo), "EPSG:4326")        
         
         image_ndfi = ee.ImageCollection(ndfis).mosaic().clip(polygon)
         
@@ -2215,12 +2213,13 @@ def create_tile_timeseries(start_date, end_date, cell):
         """
         for ii in range(len(registers)):
             if ii == 0:
-                ##image_last_map_vp = make_last_map_with_validated_polygons(registers[ii])
-                image_last_map = make_last_map(registers[ii])
+#                 image_last_map = make_last_map_with_validated_polygons(registers[ii])
+                image_last_map = make_last_map(cell_grid, registers[ii])
             else:
-                image_last_map = make_last_map(registers[ii], image_last_map)
-        #image_last_map = make_last_map(last_map_cell)
+                image_last_map = make_last_map_with_validated_polygons(registers[ii], image_last_map)
+                #image_last_map = make_last_map(last_map_cell)
         ##
+        
         image_last_map = image_last_map.clip(polygon)
 #         image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
         image_ndfi = image_ndfi.mask(image_last_map.neq(3))
@@ -2234,15 +2233,15 @@ def create_tile_timeseries(start_date, end_date, cell):
         mapid = feature_ndfi['mapid']
         token = feature_ndfi['token']    
         
-        name = 'TIME_SERIES/'+cell+'/'+sensor+'/'+start_date.strftime("%Y-%b-%d")
-        
-        #baseline = Baseline(added_by=users.get_current_user(), cell=cell_grid, name=name, start=start_date.date(), end=end_date.date())
+        name = 'TIME_SERIES/'+cell_grid.name+'/'+sensor+'/'+start_date.strftime("%Y-%b-%d")
+                
         time_series.added_by = users.get_current_user()
         time_series.name     = name
          
-        ndfi_result          = time_series.save()['data']
+        ndfi_result          = time_series.save()
         ndfi_result['mapid'] = mapid
         ndfi_result['token'] = token
+        ndfi_result['description'] = name
         ndfi_result['type']  = 'custom'
         ndfi_result['id']    = 'time_series' 
         ndfi_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 

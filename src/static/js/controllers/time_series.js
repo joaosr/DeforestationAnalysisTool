@@ -601,7 +601,6 @@ var RangeSliderTimeSeries = Backbone.View.extend({
 	 }
 });
 
-
 var EditorTimeSeriesImagePicker = Backbone.View.extend({
 
 	showing : false,
@@ -816,7 +815,7 @@ var EditorTimeSeriesImagePicker = Backbone.View.extend({
 				self.done = true;
 				self.timeseries_response = this;
 				self.$("#loading_cover").hide();				
-				self.trigger('time_series_success');
+				self.trigger('timeseries_success');
 				return this;
 			},
 			error: function(d){                      				
@@ -923,7 +922,6 @@ var EditorTimeSeriesImagePicker = Backbone.View.extend({
 	}
 
 });
-
 
 var TimeSeries = Backbone.View.extend({
     el: $("#time_series"),
@@ -1152,7 +1150,6 @@ var TimeSeries = Backbone.View.extend({
 			var date_start = ts[0].start;
 			var date_end = ts[0].end;
 
-
 			date_start = date_start.split("/");
 			date_start = date_start.join("-");
 			date_end = date_end.split("/");
@@ -1161,18 +1158,15 @@ var TimeSeries = Backbone.View.extend({
             this.load_timeseries(cell); 
 			this.cell_items[cell_name].layers.url = "/timeseries_on_cell/"
 				+ date_start + "/" + date_end + "/" + cell_name + "/"
-				
         						
 			this.cell_items[cell_name].layers
 					.fetch({
 						success : function(d) {
-							self.trigger('load_success');
-							
+							self.trigger('load_success');							
 							return this;
 						},
 						error : function(d) {
-							self.trigger('load_error');
-							
+							self.trigger('load_error');							
 							return this;
 						}
 					});

@@ -143,11 +143,8 @@ $(function() {
         init_ui: function() {
             this.main_operations = new MainOperations({report: this.active_report, mapview: this.map});
             this.main_operations.bind('sad_change', this.reload_report);
-//            this.selection_toolbar = new ReportToolbar({report:this.active_report});
             this.polygon_tools = new PolygonToolbar();
             this.overview = new Overview({report: this.active_report});
-//            this.imagePicker = new ImagePicker();
-//            this.downscalling = new DownScalling();
 
             this.ndfi_layer = new NDFILayer({mapview: this.map, report: this.active_report, available_layers: this.available_layers});
 
@@ -433,11 +430,11 @@ $(function() {
                     m.map.setZoom(self.map.map.getZoom());
                     m.map.setCenter(self.map.map.getCenter());
                     self.map.bind('center_changed', m.set_center_silence);
-                    self.map.bind('zoom_changed', m.set_zoom_silence);
+                    //self.map.bind('zoom_changed', m.set_zoom_silence);
                     self.map.bind('click', m.close_layer_editor);
                     self.map.bind('open_layer_editor', m.close_layer_editor);
                     m.bind('center_changed', self.map.set_center_silence);
-                    m.bind('zoom_changed', self.map.set_zoom_silence);
+                    //m.bind('zoom_changed', self.map.set_zoom_silence);
                     m.bind('click', self.map.close_layer_editor);
                     m.bind('open_layer_editor', self.map.close_layer_editor);
                     
@@ -464,7 +461,7 @@ $(function() {
                     _.each(self.compare_maps, function(other) {
                         if(other !== m) {
                             m.bind('center_changed', other.set_center_silence);
-                            m.bind('zoom_changed', other.map.set_zoom_silence);
+                            //m.bind('zoom_changed', other.map.set_zoom_silence);
                             m.bind('click', other.close_layer_editor);
                             m.bind('open_layer_editor', other.close_layer_editor);
                         }
@@ -483,9 +480,9 @@ $(function() {
                 _.each(this.compare_maps, function(m) {
                     // unbind!
                     self.map.unbind('center_changed', m.set_center_silence);
-                    self.map.unbind('zoom_changed', m.set_zoom_silence);
+                    //self.map.unbind('zoom_changed', m.set_zoom_silence);
                     m.unbind('center_changed', self.map.set_center_silence);
-                    m.unbind('zoom_changed', self.map.set_zoom_silence);
+                    //m.unbind('zoom_changed', self.map.set_zoom_silence);
                     self.map.unbind('click', m.close_layer_editor);
                     m.unbind('click', self.map.close_layer_editor);
                     self.map.unbind('open_layer_editor', m.close_layer_editor);
@@ -494,7 +491,7 @@ $(function() {
                     _.each(self.compare_maps, function(other) {
                         if(other !== m) {
                             m.unbind('center_changed', other.set_center_silence);
-                            m.unbind('zoom_changed', other.set_zoom_silence);
+                           // m.unbind('zoom_changed', other.set_zoom_silence);
                             m.unbind('click', other.close_layer_editor);
                             m.unbind('open_layer_editor', other.close_layer_editor);
                         }
@@ -602,7 +599,8 @@ $(function() {
 
             if(this.main_operations.baseline.selected && z === 1){
             	var cell = this.gridstack.current_cell;            	
-                console.log(cell);
+            	console.log("((((((((((((((((((((())))))))))))))))))))))))")
+                console.log(cell.key);
                 var self = this    
 
                 //this.main_operations.baseline.load_baselines_saved(cell); 

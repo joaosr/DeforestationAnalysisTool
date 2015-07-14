@@ -124,8 +124,6 @@ class ReportAPI(Resource):
             return str(new_report.key())
         return "already finished"
 
-
-
 class CellAPI(Resource):
     """ api to access cell info """
 
@@ -235,7 +233,6 @@ class CellAPI(Resource):
         if not mapid:
             abort(404)
         return Response(json.dumps(mapid), mimetype='application/json')
-
 
 class PolygonAPI(Resource):
 

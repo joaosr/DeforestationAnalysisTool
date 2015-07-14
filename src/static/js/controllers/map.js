@@ -194,7 +194,7 @@ var MapView = Backbone.View.extend({
                 });
             }
             
-            console.log(this.layers);
+            //console.log(this.layers);
            
             if(this.layer_editor.showing) {
                 this.layer_editor.close();

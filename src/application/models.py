@@ -376,6 +376,24 @@ class Cell(db.Model):
             return Cell(z=z, x=x, y=y, ndfi_low=0.2, ndfi_high=0.3, report=r, operation='sad')
         else:
             return Cell(z=z, x=x, y=y, ndfi_low=0.2, ndfi_high=0.3, report=r, operation=operation)
+    
+    @staticmethod
+    def find_by_operation_parent(operation, parent_name):
+        q = Cell.all().filter('operation =', operation).filter("parent_id =", parent_name)
+        r = q.fetch(50)
+        if r:
+            return r 
+        else:
+            return None
+    
+    @staticmethod
+    def find_by_operation_xyz(operation, x, y, z):
+        q = Cell.all().filter('operation =', operation).filter("x =", x).filter("y =", y).filter("z =", z)
+        r = q.fetch(1)
+        if r:
+            return r 
+        else:
+            return None
 
     def external_id(self):
         return "_".join(map(str,(self.z, self.x, self.y)))
@@ -390,8 +408,9 @@ class Cell(db.Model):
             by = latest.added_by.nickname()
         """
 
+        key_id = '' 
         try:
-            self.key()
+            key_id = self.key()
             note_count = self.note_set.count()
             t = timestamp(self.last_change_on)
             if self.last_change_by:
@@ -402,8 +421,8 @@ class Cell(db.Model):
             t = 0
             children_done = 0
 
-        return {
-                #'key': str(self.key()),
+        return {                
+                'key': str(key_id),
                 'id': self.external_id(),
                 'z': self.z,
                 'x': self.x,
@@ -721,13 +740,8 @@ class Area(db.Model):
         return json.dumps(self.as_dict())
     
     @staticmethod
-    def find_feature_collection_by_cell(cell_grid):
-        z, x, y = cell_grid.name.split('_')        
-        operation = 'timeseries'
-        q = Cell.all().filter('z =', int(z)).filter('y =', int(y)).filter('x =', int(x)).filter('operation =', operation).order('last_change_on')
-        cells = q.fetch(1)
-                
-        q = Area.all().filter('cell =', cells[0])
+    def find_feature_collection_by_cell(cell):
+        q = Area.all().filter('cell =', cell)
         r = q.fetch(100)
         logging.info("+++++++++++++++ Polygons ++++++++++++++++++++++++")
         logging.info(len(r))
@@ -1243,7 +1257,7 @@ class Baseline(db.Model):
     added_on     = db.DateTimeProperty(auto_now_add=True)
     added_by     = db.UserProperty(required=True)
     name         = db.StringProperty(required=True)
-    cell         = db.ReferenceProperty(CellGrid)
+    cell         = db.ReferenceProperty(Cell)
     start        = db.DateProperty(required=True)
     end          = db.DateProperty()
     defo         = db.FloatProperty(default=165.0)
@@ -1257,8 +1271,8 @@ class Baseline(db.Model):
     @property
     def image_picker(self):
         result = []
-        
-        tiles = Tile.find_by_cell_name(self.cell.name)
+        cell_name = str(self.cell.z) +'_'+ str(self.cell.x) +'_'+ str(self.cell.y)
+        tiles = Tile.find_by_cell_name(cell_name)
         
         for tile in tiles:
             tile_name = tiles[tile]['name']
@@ -1271,12 +1285,13 @@ class Baseline(db.Model):
         return result
 
     def as_dict(self):
+        cell_name = str(self.cell.z) +'_'+ str(self.cell.x) +'_'+ str(self.cell.y)
         return {
-                'key': str(self.key()),
+                #'key': str(self.key()),
                 'added_on': timestamp(self.added_on),
                 'added_by': str(self.added_by.nickname()),                
                 'name': self.name,
-                'cell': self.cell.name,
+                'cell': cell_name,
                 'start': self.start.strftime("%d/%b/%Y"),
                 'end': self.end.strftime("%d/%b/%Y"),                                
                 'def': self.defo,
@@ -1327,11 +1342,9 @@ class Baseline(db.Model):
             return None
     
     @staticmethod
-    def find_by_cell(cell_name):
-        result = []
-        cell = CellGrid.find_by_name(cell_name)
+    def find_by_cell(cell):
         if cell: 
-            q = Baseline.all().filter('cell', cell).order('-start')
+            q = Baseline.all().filter('cell =', cell).order('-start')
             r = q.fetch(1)
             
             if r:
@@ -1342,9 +1355,21 @@ class Baseline(db.Model):
             return None
     
     @staticmethod
-    def find_by_cell_date(cell_name, start_date, end_date):
-        result = []
-        cell = CellGrid.find_by_name(cell_name)
+    def find_by_cell_xyz(cell):
+        cell = Cell.find_by_operation_xyz('baseline', cell.x, cell.y, cell.z)
+        if cell: 
+            q = Baseline.all().filter('cell IN', cell).order('-start')
+            r = q.fetch(1)
+            
+            if r:
+                return r[0] 
+            else:
+                return None
+        else:
+            return None
+    
+    @staticmethod
+    def find_by_cell_date(cell, start_date, end_date):
         if cell: 
             q = Baseline.all().filter('cell =', cell).filter('start =', start_date).filter('end =', end_date).order('-start')
             r = q.fetch(1)
@@ -1359,9 +1384,9 @@ class Baseline(db.Model):
     @staticmethod
     def formated_by_cell_parent(cell_name):
         result = []
-        cell = CellGrid.find_by_parent_name(cell_name)
-        if cell: 
-            q = Baseline.all().filter('cell IN', cell).order('-start')
+        cells = Cell.find_by_operation_parent('baseline', cell_name)
+        if cells: 
+            q = Baseline.all().filter('cell IN', cells).order('-start')
             r = q.fetch(50)
             
             if r:
@@ -1374,10 +1399,11 @@ class Baseline(db.Model):
             return None
     
     @staticmethod
-    def formated_by_cell_name(cell_name):        
-        cell = CellGrid.find_by_name(cell_name)
+    def formated_by_cell_name(cell_name):
+        z, x, y = cell_name.split('_')        
+        cell = Cell.find_by_operation_xyz('baseline', int(x), int(y), int(z))
         if cell: 
-            q = Baseline.all().filter('cell =', cell).order('-start')
+            q = Baseline.all().filter('cell IN', cell).order('-start')
             r = q.fetch(1)
             
             if r:                
@@ -1388,8 +1414,7 @@ class Baseline(db.Model):
             return None
 
     def save(self):
-        q = ''
-        message = ''
+        q = ''        
         if self.end:
             q = Baseline.all().filter('start =', self.start).filter('cell =', self.cell).filter('end =', self.end)
         else:
@@ -1398,28 +1423,15 @@ class Baseline(db.Model):
         r = q.fetch(1)
 
         try:
-            if r:
-                #r[0].mapid   = self.mapid
-                #r[0].token  = self.token
-                r[0].put()
-                message = 'Baseline updated.' 
-                       
+            if r:                
+                r[0].put()            
+                return r[0].as_dict()                                         
             else:
-                self.put()
-                message = 'Baseline created.' 
-                       
-            return {'message': message, 
-                       'data': {
-                                    #'id':          r[0].mapid,
-                                    #'token':       r[0].token,
-                                    'type':        'baseline',
-                                    'visibility':  True,
-                                    'description': self.name
-                                    #'url': 'https://earthengine.googleapis.com/map/'+r[0].mapid+'/{Z}/{X}/{Y}?token='+r[0].token
-                                   }
-                       }
+                self.put()           
+                return self.as_dict()      
+            
         except:
-            return 'Could not save baseline.'
+            return None
 
 class TimeSeries(db.Model):
     """ images selected by user """
@@ -1427,7 +1439,7 @@ class TimeSeries(db.Model):
     added_on = db.DateTimeProperty(auto_now_add=True)
     added_by = db.UserProperty(required=True)
     name     = db.StringProperty(required=True)
-    cell     = db.ReferenceProperty(CellGrid)
+    cell     = db.ReferenceProperty(Cell)
     start    = db.DateProperty(required=True)
     end      = db.DateProperty(required=True)    
     defo     = db.FloatProperty(default=165.0)
@@ -1446,18 +1458,19 @@ class TimeSeries(db.Model):
         if r:
             logging.info(len(r))
             result = []
-            result.append(Baseline.find_by_cell(self.cell.name))            
+            result.append(Baseline.find_by_cell_xyz(self.cell))            
             for i in range(len(r)):
                 result.append(r[i])
             
             return result
         else:
-            return [Baseline.find_by_cell(self.cell.name)]        
+            return [Baseline.find_by_cell_xyz(self.cell)]        
     
     @property
     def image_picker(self):
-        result = []        
-        tiles = Tile.find_by_cell_name(self.cell.name)
+        result = []      
+        cell_name = str(self.cell.z) +'_'+ str(self.cell.x) +'_'+ str(self.cell.y)  
+        tiles = Tile.find_by_cell_name(cell_name)
         
         for tile in tiles:
             tile_name = tiles[tile]['name']
@@ -1469,12 +1482,13 @@ class TimeSeries(db.Model):
         return result
 
     def as_dict(self):
+        cell_name = str(self.cell.z) +'_'+ str(self.cell.x) +'_'+ str(self.cell.y)
         return {                
                 'key': str(self.key()),
                 'added_on': timestamp(self.added_on),
                 'added_by': str(self.added_by.nickname()),
                 'name': self.name,
-                'cell': self.cell.name,
+                'cell': cell_name,
                 'start': self.start.strftime("%d/%b/%Y"),
                 'end': self.end.strftime("%d/%b/%Y"),
                 'def': self.defo,
@@ -1490,9 +1504,10 @@ class TimeSeries(db.Model):
     
     @staticmethod
     def find_last_maps(cell_name):
-        cell = CellGrid.find_by_name(cell_name)
-        if cell:
-            q = TimeSeries.all().filter('cell =', cell).order('-start')
+        z, x, y = cell_name.split('_')        
+        cells = Cell.find_by_operation_xyz('timeseries', int(x), int(y), int(z))        
+        if cells:
+            q = TimeSeries.all().filter('cell IN', cells).order('-start')
             r = q.fetch(100)
             if r:
                 result = []
@@ -1507,9 +1522,9 @@ class TimeSeries(db.Model):
     @staticmethod
     def formated_by_cell_parent(cell_name):
         result = []
-        cell = CellGrid.find_by_parent_name(cell_name)
-        if cell: 
-            q = TimeSeries.all().filter('cell IN', cell).order('-start')
+        cells = Cell.find_by_operation_parent('timeseries', cell_name)
+        if cells: 
+            q = TimeSeries.all().filter('cell IN', cells).order('-start')
             r = q.fetch(50)
             
             if r:
@@ -1523,10 +1538,10 @@ class TimeSeries(db.Model):
         
     @staticmethod
     def formated_by_cell_name(cell_name):
-        result = []
-        cell = CellGrid.find_by_name(cell_name)
-        if cell: 
-            q = TimeSeries.all().filter('cell =', cell).order('-start')
+        z, x, y = cell_name.split('_')        
+        cells = Cell.find_by_operation_xyz('timeseries', int(x), int(y), int(z))                
+        if cells: 
+            q = TimeSeries.all().filter('cell IN', cells).order('-start')
             r = q.fetch(1)
             
             if r:
@@ -1538,9 +1553,9 @@ class TimeSeries(db.Model):
             return None
         
     @staticmethod
-    def find_cell_period(cell_name, start, end):
-        result = []
-        cell = CellGrid.find_by_name(cell_name)
+    def find_cell_period(cell, start, end):        
+        #z, x, y = cell_name.split('_')        
+        #cells = Cell.find_by_operation_xyz('timeseries', int(x), int(y), int(z))        
         if cell: 
             q = TimeSeries.all().filter('cell =', cell).filter('start =', start).filter('end =', end)
             r = q.fetch(1)
@@ -1577,29 +1592,13 @@ class TimeSeries(db.Model):
         r = q.fetch(1)
 
         try:
-            if r:               
-               r[0].put()
-               return {'message': 'Time series updated.', 
-                       'data': {
-                                    
-                                    'type':       'time_series',
-                                    'visibility': True,
-                                    'description':  self.name
-                                    
-                                   }
-                       }
+            if r:                
+                r[0].put()            
+                return r[0].as_dict()                                         
             else:
-               self.put()
-               return {'message': 'Time series created.', 
-                       'data': {
-                                    
-                                    'type':       'time_series',
-                                    'visibility': True,
-                                    'description':  self.name
-                                    
-                                   }
-                       }
-
+                self.put()           
+                return self.as_dict()      
             
         except:
-            return 'Could not save baseline.'
+            return None
+        

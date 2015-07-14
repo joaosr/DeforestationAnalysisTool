@@ -72,6 +72,7 @@ function add_rgb_layers(layers, gridstack, report_id, operation) {
             b: layer.b,
             sensor: layer.sensor,
             report_id: report_id,
+            visibility: true,
             description: layer.description,
             operation: operation
         });

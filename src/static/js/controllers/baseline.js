@@ -799,13 +799,11 @@ var EditorBaselineImagePicker = Backbone.View.extend({
 var Baseline = Backbone.View.extend({
 		el : $("#baseline"),
 		events : {
-			'click #baseline_select' : 'visibility_change',
-			'click #baseline_list_select' : 'show_baseline_list'
+			'click #baseline_select' : 'visibility_change',			
 		},
 		initialize : function() {
 			_.bindAll(this, 'callback', 'hide_report_tool_bar',
-					'show_report_tool_bar', 'hide_image_picker',
-					'show_image_picker', 'visibility_change',
+					'show_report_tool_bar', 'hide_image_picker',					
 					'setting_baseline_popup', 'show_imagepicker_search',
 					'set_selected', 'genarete_baseline', 'load_baseline', 'change_baseline');
 			var self = this;
@@ -879,55 +877,7 @@ var Baseline = Backbone.View.extend({
 
 			});
 
-		},			
-		show_baseline_list : function(e) {
-			if (e)
-				e.preventDefault();
-			if (this.layer_editor_baseline === undefined) {
-				this.layer_editor_baseline = new LayerEditorBaseline({
-					parent : this.$('#baseline_list'),
-					layers : this.baselines
-				});
-			}
-
-			if (this.layer_editor_baseline.showing) {
-				this.layer_editor_baseline.close();
-				this.$("#baseline_list_select").css({
-					"color" : "white",
-					"text-shadow" : "0 1px black",
-					"background" : "none",
-				});
-			} else {
-				console.log(this.baselines);
-				this.layer_editor_baseline.layers = this.baselines;
-				this.layer_editor_baseline.trigger('change_layers');
-				var that = this;
-				this.baselines.each(function(layer) {
-					var layer_map = that.map.layers.get(layer.get('id'));
-					if (layer_map) {
-						// Already exist
-					} else {
-						that.map.layers.add(layer);
-					}
-				});
-
-				this.layer_editor_baseline.layers.each(function(m) {
-					if (!m.get('visibility')) {
-						that.layer_editor_baseline.layers.remove(m);
-					}
-				});
-				this
-						.$("#baseline_list_select")
-						.css(
-								{
-									"color" : "rgb(21, 2, 2)",
-									"text-shadow" : "0 1px white",
-									"background" : "-webkit-gradient(linear, 50% 0%, 50% 100%, from(#E0E0E0), to(#EBEBEB))",
-								});
-				this.trigger('show_baseline_list');
-				this.layer_editor_baseline.show();
-			}
-		},
+		},					
 		work_mode: function(callback, cell, x, y, z) {
 			this.polygon_tools.show();
             var response = this.setting_baseline_layers(cell);         	    
@@ -1000,8 +950,7 @@ var Baseline = Backbone.View.extend({
 
 			var cell_name = cell.model.get('z') + '_' + cell.model.get('x')
 					+ '_' + cell.model.get('y');
-			if (this.selected && cell.model.get('z') == '2') {
-				// popup.append( "<p>Test</p>" );
+			if (this.selected && cell.model.get('z') == '2') {				
 				var setting_baseline = popup.find('#setting_baseline');
 				var baseline_lay = this.baselines.get_by_cell(cell_name);
 
@@ -1035,7 +984,7 @@ var Baseline = Backbone.View.extend({
 		is_baseline_load: function(cell_name) {
 			var baseline_loaded = this.cell_items[cell_name].layers.get_by_cell(cell_name);
 
-			if (baseline_loaded) {
+			if (baseline_loaded) {				
 				this.polygon_tools.baseline_range.baseline = this.cell_items[cell_name].baseline
 				this.polygon_tools.baseline_range.render(this.cell_items[cell_name].baseline);
 				return true;
@@ -1258,26 +1207,7 @@ var Baseline = Backbone.View.extend({
 				return false;
 			}
 
-		},
-		enter_cell: function(cell){                
-			/*cell.bind('bbox');
-			var cell_bbox = cell.bbox(this.map);*/ 
-
-			var cell_name = cell.get('z') + "_" + cell.get('x')
-					+ "_" + cell.get('y');
-
-			//var baseline_lay = this.baselines.get_by_cell(cell_name);
-			var baseline = this.cell_items[cell_name].baseline;
-
-			if(baseline){
-				this.load_baseline(cell);
-
-			}else{
-				this.show_imagepicker_search(cell);
-
-			}
-
-		},
+		},		
 		load_baseline: function(cell){
 				this.bind('load_success', function(){						
 					cell.trigger('change_cell_action', {color: "rgba(140, 224, 122, 0.8)", text_action: "Enter"});
@@ -1351,7 +1281,6 @@ var Baseline = Backbone.View.extend({
 				var date_start = baseline.start;
 				var date_end = baseline.end;
 
-
 				date_start = date_start.split("/");
 				date_start = date_start.join("-");
 				date_end = date_end.split("/");
@@ -1364,10 +1293,7 @@ var Baseline = Backbone.View.extend({
 				this.cell_items[cell_name].layers
 					.fetch({
 						success : function() {
-							//self.cell_items[cell_name].imagepicker.done = true;																
-							//self.cell_items[cell_name].imagepicker.trigger('baseline_success');
-							self.trigger('load_success');
-							//alert("Baseline loaded.");
+							self.trigger('load_success');							
 							return this;
 						},
 						error: function(d){						    
@@ -1416,13 +1342,6 @@ var Baseline = Backbone.View.extend({
 		hide_image_picker : function() {
 			if (this.image_picker.visibility) {
 				this.image_picker.visibility_change();
-			}
-		},
-		show_image_picker : function() {
-			if (!this.image_picker.visibility) {
-				this.image_picker.visibility_change();
-				this.image_picker.bind('visibility_change', this
-						.show_baseline_list(null));
 			}
 		},
 		show_selected : function() {

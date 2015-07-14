@@ -14,8 +14,7 @@ var LayerModel = Backbone.Model.extend({
         }
         if(this.get('enabled') === true) {
             this.set_enabled(true);
-        }
-        this.layer = null;
+        }        
     },
 
     set_enabled: function(b) {
@@ -48,7 +47,7 @@ var RGBStrechLayer = LayerModel.extend({
               description: desc,
               layer: this.google_maps_layer()               
         });
-        this.set_enabled(true);
+        this.set_enabled(false);
     },
 
     on_cell: function(x, y, z) {
