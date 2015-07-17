@@ -28,10 +28,10 @@ var BaselineLayer = Backbone.View.extend({
  
         this.def_thresh = 165;
         this.deg_thresh = 175;
-        this.shade_thresh = 70;
+        this.shade_thresh = 65;
         this.gv_thresh = 15; 
         this.soil_thresh = 10;
-        this.cloud_thresh = 7;
+        this.cloud_thresh = 42;
         this.showing = false;
         this.inner_poly_sensibility = 10;
         console.log("Report ID: "+this.report.id);        
@@ -65,6 +65,8 @@ var BaselineLayer = Backbone.View.extend({
         
         var map_layer_baseline = this.map_layer.baseline;
 
+        console.log(map_layer_baseline);
+
         for(var key  in this.map_layer){
             if(key !== "baseline"){
                 this.map_layer[key].set({"layer": new CanvasTileLayer(this.canvas_setup, this.filter)});
@@ -73,6 +75,12 @@ var BaselineLayer = Backbone.View.extend({
         
         this.token =  map_layer_baseline.get('token');
         this.mapid = map_layer_baseline.get('mapid');
+        this.def_thresh = map_layer_baseline.get('def');
+        this.deg_thresh = map_layer_baseline.get('deg');
+        this.shade_thresh = map_layer_baseline.get('shade');
+        this.gv_thresh = map_layer_baseline.get('gv'); 
+        this.soil_thresh = map_layer_baseline.get('soil');
+        this.cloud_thresh = map_layer_baseline.get('cloud');
         this.mapview.layers.trigger('reset');
     	
         console.log("Token: "+this.token+"Mapid: "+this.mapid);

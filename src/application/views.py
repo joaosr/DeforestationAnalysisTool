@@ -94,66 +94,7 @@ def default_maps():
     logging.info('Image ID: '+str(d))
     if d: maps.append({'data': d, 'info': 'NDFI T1 (LANDSAT7)'})
     """
-    
-    
 
-@app.route('/map/level/<level>/<bbox>/')
-def maps_level(level, bbox):
-    result = []
-    if level == '0':
-        result.append(map_from_bbox(EELandsat.LANDSAT5, bbox))
-        result.append(map_from_bbox(EELandsat.LANDSAT7, bbox))
-        result.append(map_from_bbox(EELandsat.LANDSAT8, bbox))
-    elif level == '1':
-        result.append(map_from_bbox(SMA.LANDSAT5_T0, bbox))
-        result.append(map_from_bbox(SMA.LANDSAT5_T1, bbox))
-        result.append(map_from_bbox(SMA.LANDSAT7_T0, bbox))
-        result.append(map_from_bbox(SMA.LANDSAT7_T1, bbox))
-        result.append(map_from_bbox(SMA.LANDSAT8_T0, bbox))
-        result.append(map_from_bbox(SMA.LANDSAT8_T1, bbox))
-    elif level == '2':
-        result.append(map_from_bbox(NDFI.LANDSAT5_T0, bbox))
-        result.append(map_from_bbox(NDFI.LANDSAT5_T1, bbox))
-        result.append(map_from_bbox(NDFI.LANDSAT7_T0, bbox))
-        result.append(map_from_bbox(NDFI.LANDSAT7_T1, bbox))
-        result.append(map_from_bbox(NDFI.LANDSAT8_T0, bbox))
-        result.append(map_from_bbox(NDFI.LANDSAT8_T1, bbox))
-
-    return jsonify({'result': result})
-
-def map_from_bbox(map_image, bbox):
-    bounds = bbox.split(',')
-    report = Report.current()
-    map_data = ''
-    map_type = ''
-
-    if EELandsat.from_class(map_image):
-        logging.info("==================> Map image landsat: "+map_image)
-        landsat = EELandsat(timestamp(report.start), datetime.datetime.now(), map_image)
-        map_data = landsat.find_mapid_from_sensor(bounds)
-        map_type = 'base_map'
-    elif SMA.from_class(map_image):
-        logging.info("==================> Map image SMA: "+map_image)
-        sma = SMA(past_month_range(report.start), report.range(), map_image)
-        map_data = sma.find_mapid_from_sensor(bounds)
-        map_type = 'processed'
-    elif NDFI.from_class(map_image):
-        logging.info("==================> Map image NDFI: "+map_image)
-        ndfi     = NDFI(past_month_range(report.start), report.range())
-        map_data = ndfi.find_mapid_from_sensor(map_image, bounds)
-        map_type = 'analysis'
-
-    if map_data == '':
-        return None
-    else:
-        return {
-            'id': map_data.get('mapid'),
-            'token': map_data.get('token'),
-            'type': map_type,
-            'description': map_image,
-            'visibility': True,
-            'url': 'https://earthengine.googleapis.com/map/'+map_data.get('mapid')+'/{Z}/{X}/{Y}?token='+map_data.get('token')
-        }
 
 def get_or_create_user():
     user = users.get_current_user()
@@ -281,7 +222,6 @@ def warmup():
 
     """
     return ''
-FT_TABLE_DOWNSCALLING = '17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo'
 
 @app.route('/range_report/', methods=['POST', 'GET'])
 def range_report():
@@ -328,7 +268,6 @@ def tiles_sensor(sensor=None):
                 
 
     return jsonify({'result': tile_array})
-
 
 @app.route('/downscalling/', methods=['POST', 'GET'])
 @app.route('/downscalling/<tile>/')
@@ -437,9 +376,6 @@ def downscalling(tile=None):
 
     return jsonify({'result': 'success'});
 
-
-
-
 @app.route('/picker/', methods=['POST', 'GET'])
 @app.route('/picker/<tile>/')
 def picker(tile=None):
@@ -540,7 +476,6 @@ def search_tiles_intersect():
         #result = Tile.find_by_cell_name(cell_name)
         return jsonify({'tiles': result})
 
-
 @app.route('/baseline_on_cell/<date_start>/<date_end>/<cell_name>/', methods=['POST', 'GET'])
 def baseline_on_cell(date_start, date_end, cell_name):
     if request.method == 'POST':
@@ -563,13 +498,22 @@ def baseline_on_cell(date_start, date_end, cell_name):
         result = create_tile_baseline(start_date, end_date, cell_name)
         return jsonify({'result': result})
 
-
 @app.route('/change_baseline/', methods=['POST', 'GET'])
 def change_baseline():
     if request.method == 'POST':
         baseline = request.form.get('baseline')
         logging.info(baseline)
         result = Baseline.change_baseline(ast.literal_eval(baseline))
+        return jsonify({'result': result.as_json()})
+    
+    return jsonify({'result': None})
+
+@app.route('/change_timeseries/', methods=['POST', 'GET'])
+def change_timeseires():
+    if request.method == 'POST':
+        timeseries = request.form.get('timeseries')
+        logging.info(timeseries)
+        result = TimeSeries.change_timeseries(ast.literal_eval(timeseries))
         return jsonify({'result': result.as_json()})
     
     return jsonify({'result': None})
@@ -595,7 +539,6 @@ def timeseries_on_cell(date_start, date_end, cell_name):
         
         result = create_tile_timeseries(start_date, end_date, cell_name)
         return jsonify({'result': result})
-        
 
 @app.route('/timeseries/<cell_name>/', methods=['POST', 'GET'])
 def timeseries_cell(cell_name):
@@ -628,7 +571,6 @@ def timeseries_last_maps():
         logging.info(cell_name)
         result = TimeSeries.formated_by_cell_name(cell_name)        
         return jsonify({'result': result})        
-
 
 @app.route('/baselines/<cell_name>/', methods=['POST', 'GET'])
 def baselines_cell(cell_name):

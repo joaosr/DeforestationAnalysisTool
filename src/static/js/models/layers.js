@@ -14,7 +14,8 @@ var LayerModel = Backbone.Model.extend({
         }
         if(this.get('enabled') === true) {
             this.set_enabled(true);
-        }        
+        }
+        this.layer = null;
     },
 
     set_enabled: function(b) {
@@ -177,8 +178,7 @@ var LayerTimeSeriesCollection = Backbone.Collection.extend({
     },
     get_by_cell: function(cell_name) {
         var lay;
-        this.each(function(m) {
-            
+        this.each(function(m) {            
             var timeseries_name = m.get('name');
             if(timeseries_name === undefined){
                 timeseries_name = m.get('description'); 

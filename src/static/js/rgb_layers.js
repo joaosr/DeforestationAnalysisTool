@@ -28,7 +28,7 @@ var RGB_layers =  [
         b: 4,
         sensor: 'modis',
         description: 'F color infrared RGB214'
-    },
+    }/*,
     {
         r: 3,
         g: 2,
@@ -56,7 +56,7 @@ var RGB_layers =  [
         b: 1,
         sensor: 'landsat',
         description: 'Landsat Stretch RGB121'
-    }
+    }*/
 ];
 
 /*

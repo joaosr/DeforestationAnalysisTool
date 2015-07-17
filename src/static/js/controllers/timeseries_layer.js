@@ -71,6 +71,12 @@ var TimeSeriesLayer = Backbone.View.extend({
         
         this.token =  map_layer_timeseries.get('token');
         this.mapid = map_layer_timeseries.get('mapid');
+        this.def_thresh = map_layer_timeseries.get('def');
+        this.deg_thresh = map_layer_timeseries.get('deg');
+        this.shade_thresh = map_layer_timeseries.get('shade');
+        this.gv_thresh = map_layer_timeseries.get('gv'); 
+        this.soil_thresh = map_layer_timeseries.get('soil');
+        this.cloud_thresh = map_layer_timeseries.get('cloud');
         this.mapview.layers.trigger('reset');
     	
         console.log("Token: "+this.token+"Mapid: "+this.mapid);
@@ -332,16 +338,8 @@ var TimeSeriesLayer = Backbone.View.extend({
     // filter image canvas based on thresholds
     // and color it
     filter: function(ndfi_data, mask_images, w, h, def_thresh, deg_thresh, shade_thresh, gv_thresh, soil_thresh, cloud_thresh) {    
-        var temperature_thresh = 22;
-         shade_thresh = 65;
-         gv_thresh = 10;
-         soil_thresh = 5;
-         cloud_thresh = 15;
-        
-//         deg_thresh = 175;
-//     	def_thresh = 165;
-    	
-//     	temperature_thresh = 22;
+       var temperature_thresh = 22;
+       
     	
         var components = 4; //rgba
         

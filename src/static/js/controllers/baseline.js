@@ -984,7 +984,7 @@ var Baseline = Backbone.View.extend({
 		is_baseline_load: function(cell_name) {
 			var baseline_loaded = this.cell_items[cell_name].layers.get_by_cell(cell_name);
 
-			if (baseline_loaded) {				
+			if (baseline_loaded) {																
 				this.polygon_tools.baseline_range.baseline = this.cell_items[cell_name].baseline
 				this.polygon_tools.baseline_range.render(this.cell_items[cell_name].baseline);
 				return true;

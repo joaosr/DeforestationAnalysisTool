@@ -326,7 +326,7 @@ var PolygonToolbarTimeSeries = Backbone.View.extend({
     },
 
     initialize: function() {
-        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change', 'update_timeseries');        
+        _.bindAll(this, 'show', 'hide', 'change_state', 'reset', 'visibility_change');        
         this.buttons = new ButtonGroup({el: this.$('#timeseries_selection')});
         this.polytype = new ButtonGroup({el: this.$('#timeseries_polytype')});
         this.timeseries_range = new RangeSliderTimeSeries({el: this.$("#timeseries_maptools")});
@@ -339,15 +339,15 @@ var PolygonToolbarTimeSeries = Backbone.View.extend({
 
     },
     update_timeseries: function(low, high, shade, gv, soil, cloud){
-    	this.time_series.def = low;
-    	this.time_series.deg = high;
-    	this.time_series.shade = shade;
-    	this.time_series.gv = gv;
-    	this.time_series.soil = soil;
-    	this.time_series.cloud = cloud;
+     	this.time_series.def = low;
+     	this.time_series.deg = high;
+     	this.time_series.shade = shade;
+     	this.time_series.gv = gv;
+     	this.time_series.soil = soil;
+     	this.time_series.cloud = cloud;
 
-        console.log(this.time_series); 
-      	this.trigger('send_timeseries', this.time_series);
+//         console.log(this.time_series); 
+       	this.trigger('send_timeseries', this.time_series);
     },
     visibility_change: function(e) {
         var el = $(e.target);
@@ -399,13 +399,15 @@ var RangeSliderTimeSeries = Backbone.View.extend({
 	 },
 	 render: function(timeseries){
 		var self = this;     
-		if(timeseries){
-		 this.low = timeseries.def;
-		 this.high = timeseries.deg;
-		 this.shade = timeseries.shade;
-		 this.gv = timeseries.gv;
-		 this.soil = timeseries.soil;
-		 this.cloud = timeseries.cloud;
+		if(timeseries){	
+		 
+		 console.log(timeseries[0].def);	 
+		 this.low = timeseries[0].def;
+		 this.high = timeseries[0].deg;
+		 this.shade = timeseries[0].shade;
+		 this.gv = timeseries[0].gv;
+		 this.soil = timeseries[0].soil;
+		 this.cloud = timeseries[0].cloud;
 		}
 
 		this.$("#slider_forest").slider({
@@ -930,7 +932,7 @@ var TimeSeries = Backbone.View.extend({
         'click #time_series_historical_results_select': 'show_time_series_historical_results'
     },
     initialize: function(){
-        _.bindAll(this, 'visibility_change', 'set_selected', 'is_timeseries_load', 'show_imagepicker_search', 'genarete_timeseries', 'load_timeseries', 'setting_timeseries_popup', 'change_timeseries');
+        _.bindAll(this, 'visibility_change', 'set_selected', 'show_imagepicker_search', 'genarete_timeseries', 'load_timeseries', 'setting_timeseries_popup', 'change_timeseries');
         this.callerView = this.options.callerView;
         this.polygon_tools = new PolygonToolbarTimeSeries();  
 
@@ -1014,12 +1016,11 @@ var TimeSeries = Backbone.View.extend({
 				+ '_' + cell.model.get('y');
           				
         
-		if (this.selected && cell.model.get('z') === 2) {
-									
-			var popup_el = popup.find('#timeseries_actions');
-			var time_series = this.cell_items[cell_name].time_series;
+		if (this.selected && cell.model.get('z') == '2') {            									
+			var popup_el = popup.find('#timeseries_actions');				
+			var timeseries_lay = this.time_series.get_by_cell(cell_name);
 
-			if (time_series) {
+			if (timeseries_lay) {
 				popup_el.find('#load_timeseries').unbind('click');
 				popup_el.find('#load_timeseries').click(
 						function(e) {
@@ -1068,7 +1069,8 @@ var TimeSeries = Backbone.View.extend({
         this.cell_polygons.polygons.y = y;
         this.cell_polygons.polygons.z = z;
         this.cell_polygons.polygons.operation = 'time_series';
-        this.cell_polygons.polygons.fetch();
+        //this.cell_polygons.polygons.fetch();
+        this.cell_polygons.polygons.remove();
       
         this.start_editing_tools(true);
         callback.get_status_layer_map(cell.get('compare_view'));
@@ -1079,7 +1081,7 @@ var TimeSeries = Backbone.View.extend({
 						url : "/change_timeseries/",
 						type : 'POST',
 						data : {
-							timeseries: JSON.stringify(timeseries),								
+							timeseries: JSON.stringify(timeseries[0]),								
 						},
 						dataType : 'json',
 						async : true,

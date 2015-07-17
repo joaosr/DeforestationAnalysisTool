@@ -123,7 +123,7 @@ $(function() {
         ),
 
         initialize:function() {
-            _.bindAll(this, 'to_cell', 'start', 'select_mode', 'work_mode', 'change_report', 'compare_view', 'update_map_layers', 'cell_done', 'go_back', 'open_notes', 'change_cell', 'close_report', 'open_settings', 'reload_report');
+            _.bindAll(this, 'to_cell', 'start', 'select_mode', 'work_mode', 'change_report', 'compare_view', 'update_map_layers', 'cell_done', 'go_back', 'open_notes', 'change_cell', 'close_report', 'open_settings', 'reload_report', 'init_sad_map'); 
             
             window.loading.loading("Imazon:initialize");
             this.reports = new ReportCollection();
@@ -530,7 +530,7 @@ $(function() {
             
             if(this.main_operations.sad.selected){            	
             	this.polygon_tools.show();	
-            	this.map.reset_layers_map('2', this.available_layers, 'sad');
+            	//this.map.reset_layers_map('2', this.available_layers, 'sad');
             	this.ndfi_layer.ndfimap.trigger('change');
             	this.ndfi_layer.show();
             	this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
@@ -667,6 +667,37 @@ $(function() {
         show_messagem: function(){
 
         },
+        init_sad_map: function(){
+        	// init the map
+            this.map.map.setCenter(this.amazon_bounds.getCenter());
+            this.map.layers.reset(this.available_layers.models);            
+    
+            add_rgb_layers(this.map.layers, this.gridstack, this.active_report.get('id'), 'sad');
+            this.map.layers.trigger('reset');
+
+            // enable layer, amazonas bounds
+            var lay = this.map.layers.get_by_name('Brazil Legal Amazon');
+            if(lay) {
+                lay.set_enabled(true);
+            }
+            // enable layer, rgb
+            lay = this.map.layers.get_by_name('rgb');
+            if(lay) {
+                lay.set_enabled(true);
+            }
+            // add a layer to control polygon showing
+            var polygons = new LayerModel({
+                  id: 'polygons',
+                  type: 'fake',
+                  visibility: true,
+                  description: 'Validated polygons'
+            });
+            polygons.set_enabled(true);
+            polygons.bind('change', function(layer) {
+                self.cell_polygons.show_polygons(layer.enabled);
+            });
+            this.map.layers.add(polygons);
+        },
         // this function is called when map is loaded
         // and all stuff can start to work.
         // do *NOT* perform any operation over map before this function
@@ -755,10 +786,8 @@ $(function() {
             this.gridstack.bind('select_mode', this.select_mode);
             this.gridstack.bind('work_mode', this.work_mode);
             
-            
-
             // init interface elements
-            this.init_ui();
+            this.init_ui();            
             
             this.gridstack.grid.bind('show_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);            
             this.gridstack.grid.bind('hide_cell_popup', this.main_operations.baseline.setting_baseline_popup, this);
@@ -766,35 +795,9 @@ $(function() {
             this.gridstack.grid.bind('show_cell_popup', this.main_operations.time_series.setting_timeseries_popup, this);
             this.gridstack.grid.bind('hide_cell_popup', this.main_operations.time_series.setting_timeseries_popup, this);
 
-            // init the map
-            this.map.map.setCenter(this.amazon_bounds.getCenter());
-            this.map.layers.reset(this.available_layers.models);
-            
+            this.init_sad_map();
+            //this.main_operations.sad.bind("sad_selected", this.init_sad_map);
 
-            add_rgb_layers(this.map.layers, this.gridstack, this.active_report.get('id'), 'sad');
-            this.map.layers.trigger('reset');
-
-            // enable layer, amazonas bounds
-            var lay = this.map.layers.get_by_name('Brazil Legal Amazon');
-            if(lay) {
-                lay.set_enabled(true);
-            }
-            // enable layer, rgb
-            lay = this.map.layers.get_by_name('rgb');
-            if(lay) {
-                lay.set_enabled(true);
-            }
-            // add a layer to control polygon showing
-            var polygons = new LayerModel({
-                  id: 'polygons',
-                  type: 'fake',
-                  description: 'Validated polygons'
-            });
-            polygons.set_enabled(true);
-            polygons.bind('change', function(layer) {
-                self.cell_polygons.show_polygons(layer.enabled);
-            });
-            this.map.layers.add(polygons);
 
             if(location.hash === '') {
                 router.navigate('cell/0/0/0');

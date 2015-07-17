@@ -2,7 +2,6 @@
 models.py
 
 App Engine datastore models
-
 """
 
 import ast
@@ -744,7 +743,7 @@ class Area(db.Model):
         q = Area.all().filter('cell =', cell)
         r = q.fetch(100)
         logging.info("+++++++++++++++ Polygons ++++++++++++++++++++++++")
-        logging.info(len(r))
+        logging.info('Tamanho - '+str(len(r)))
         if r: 
             result = []
             for i in range(len(r)):
@@ -1498,6 +1497,22 @@ class TimeSeries(db.Model):
                 'soil': self.soil,
                 'cloud': self.cloud                                
         }
+        
+    @staticmethod    
+    def change_timeseries(timeseries):
+        q = TimeSeries.all().filter("name =", timeseries['name'])
+        r = q.fetch(1)
+        if r:
+            r[0].defo = float(timeseries['def'])
+            r[0].deg = float(timeseries['deg'])
+            r[0].shade = float(timeseries['shade'])
+            r[0].gv = float(timeseries['gv'])
+            r[0].soil = float(timeseries['soil'])
+            r[0].cloud = float(timeseries['cloud'])
+            r[0].put()
+            return r[0]
+        else:
+            return None    
 
     def as_json(self):
         return json.dumps(self.as_dict())

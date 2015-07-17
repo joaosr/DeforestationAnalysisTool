@@ -1792,6 +1792,7 @@ def create_tile_baseline(start_date, end_date, cell_name):
         baseline_result['mapid'] = mapid
         baseline_result['token'] = token
         baseline_result['description'] = name        
+        baseline_result['visibility'] = True
         baseline_result['type']  = 'custom'
         baseline_result['id']    = 'baseline' 
         baseline_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 
@@ -2088,18 +2089,23 @@ def make_last_map(cell_grid, last_map_info, baseline_image = None):
 ##
 
 def make_last_map_with_validated_polygons(last_map_info, baseline_image = None):
-        
-    polygons = Area.find_feature_collection_by_cell(last_map_info.cell)
     
-#     logging.info(polygons.getInfo()['features'][0])
+    cell = Cell.get_cell(Report.current(), 'time_series', last_map_info.cell.x, last_map_info.cell.y, last_map_info.cell.z)        
+    polygons = Area.find_feature_collection_by_cell(cell)
     
-    validatedRaster = polygons.reduceToImage({'properties': 'type', 'reducer': ee.Reducer.first()}).multiply(3)
+    logging.info(type(polygons))
+#     validatedRaster = polygons.reduceToImage(['type'], ee.Reducer.max())
+    empty = ee.Image(0).byte()
     
+    borda = empty.paint(polygons, 'type', 3)
+    validatedRaster = empty.paint(polygons, 'type', None)
+    validatedRaster = validatedRaster.where(borda.eq(1),1)
+     
     if baseline_image:
-        validatedRaster = validatedRaster.where((baseline_image.eq(3)), 3)
-    
+        validatedRaster = baseline_image.where(validatedRaster.eq(1),3)
+         
     return validatedRaster
-
+    
 def create_tile_timeseries(start_date, end_date, cell_name):
     #  Get the new time series classifcation applying the baseline deforestation mask
     ndfis         = []
@@ -2211,21 +2217,24 @@ def create_tile_timeseries(start_date, end_date, cell_name):
         Gera a imagem classificada do baseline para esta data.
         
         """
+        
         for ii in range(len(registers)):
             if ii == 0:
 #                 image_last_map = make_last_map_with_validated_polygons(registers[ii])
                 image_last_map = make_last_map(cell_grid, registers[ii])
             else:
                 image_last_map = make_last_map_with_validated_polygons(registers[ii], image_last_map)
+                
+        
                 #image_last_map = make_last_map(last_map_cell)
         ##
         
         image_last_map = image_last_map.clip(polygon)
-#         image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
+#        image_ndfi = image_ndfi.where(image_last_map.eq(3), 255)
         image_ndfi = image_ndfi.mask(image_last_map.neq(3))
         image_last_map = image_last_map.mask(image_last_map.eq(3))
         """
-        =========================================================================
+        ==========================================================
         """
         feature_ndfi = ee.Image(image_ndfi).getMapId({
                               'bands': 'nd'}) #TODO: aqui está o dado ndfi bruto
@@ -2242,6 +2251,7 @@ def create_tile_timeseries(start_date, end_date, cell_name):
         ndfi_result['mapid'] = mapid
         ndfi_result['token'] = token
         ndfi_result['description'] = name
+        ndfi_result['visibility'] = True
         ndfi_result['type']  = 'custom'
         ndfi_result['id']    = 'time_series' 
         ndfi_result['url']   = 'https://earthengine.googleapis.com/map/'+mapid+'/{Z}/{X}/{Y}?token='+token 

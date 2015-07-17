@@ -474,6 +474,7 @@ var Sad = Backbone.View.extend({
     initialize: function(){
         _.bindAll(this, 'visibility_change', 'callback', 'hide_date_range', 'show_date_range', 'hide_image_picker', 'show_image_picker', 'hide_down_scalling', 'show_down_scalling', 'reload_report', 'set_selected', 'hide_layer_editor_reports');
         this.callerView = this.options.callerView;
+        this.map = this.options.mapview;
         this.report = this.options.report
         console.log("==== setting_report_data ====");
 
@@ -488,7 +489,7 @@ var Sad = Backbone.View.extend({
         this.reports.fetch();
         var that = this;
         this.date_range.bind('send_success', function(){that.reports.add(that.date_range.data_request)});
-    },
+    },   
     compounddate: function(){
         var date = moment(new Date(this.report.escape('str'))).format('YYYYMM');
         return date;
@@ -575,9 +576,10 @@ var Sad = Backbone.View.extend({
 
     },
     set_selected: function(){
-    	this.selected = true;        
+    	this.selected = true;      	      
         this.callerView.callback_selected(this);
         this.$("#sad_select").addClass('sad_select');
+        //this.trigger('sad_selected');
     },
     disable: function(){
     	$(this.el).css("background-color", "rgba(0, 0, 0, 0)")
