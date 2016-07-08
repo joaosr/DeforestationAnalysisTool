@@ -1,4 +1,5 @@
 # encoding: utf-8
+import urllib2
 
 import datetime
 import logging
@@ -9,7 +10,7 @@ import sys
 import time
 import ast
 
-from google.appengine.api import memcache, users
+from google.appengine.api import memcache, users, oauth
 from google.appengine.api import urlfetch
 
 from app import app
@@ -44,6 +45,7 @@ except:
 
 #from google.appengine.ext.db import Key
 
+scope = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json'#'https://www.googleapis.com/auth/userinfo.email'
 
 def default_maps():
     maps = []
@@ -97,9 +99,9 @@ def default_maps():
 
 
 def get_or_create_user():
-    user = users.get_current_user()
+    user = oauth.get_current_user(scope)
     u = User.get_user(user)
-    if not u and users.is_current_user_admin():
+    if not u:
         u = User(user=user, role='admin')
         u.put()
     return u
@@ -107,6 +109,18 @@ def get_or_create_user():
 @app.route('/')
 def start():
     return redirect('/analysis')
+
+@app.route('/googleauth/', methods=['POST', 'GET'])
+def googleauth():
+    if request.method == 'POST':
+        user = oauth.get_current_user(scope)
+        u = User.get_user(user)
+        if not u:
+            u = User(user=user, role='admin')
+            u.put()
+        return jsonify({'result': "success"})
+    else:
+        return jsonify({'result': 'Other method'})
 
 
 @app.route('/analysis')

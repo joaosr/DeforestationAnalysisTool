@@ -76,7 +76,6 @@ class User(db.Model):
 
 
 class Report(db.Model):
-
     start = db.DateProperty();
     end = db.DateProperty();
     finished = db.BooleanProperty(default=False);
