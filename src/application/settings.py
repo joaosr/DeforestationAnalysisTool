@@ -24,7 +24,7 @@ DEBUG_MODE = ('SERVER_SOFTWARE' in os.environ and
 
 if DEBUG_MODE:
     EE_API_URL = 'https://earthengine.sandbox.google.com'
-    EE_CREDENTIALS = ee.ServiceAccountCredentials(EE_ACCOUNT, EE_PRIVATE_KEY_FILE)
+    #EE_CREDENTIALS = ee.ServiceAccountCredentials(EE_ACCOUNT, EE_PRIVATE_KEY_FILE)
     FT_TABLE = 'imazon_testing.csv'
     FT_TABLE_ID = '2676501'
 else:

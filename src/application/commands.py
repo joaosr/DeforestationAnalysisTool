@@ -16,7 +16,6 @@ from application import settings
 from application.constants import amazon_bounds
 from application.ee_bridge import Stats
 from application.models import Report, Cell, StatsStore, FustionTablesNames, CellGrid, Tile
-from application.time_utils import timestamp
 from ee_bridge import NDFI
 from flask import render_template, flash, url_for, redirect, abort, request, make_response
 from ft import FT
@@ -106,9 +105,9 @@ def export_areas():
 def create_tables_cell():
     """ creates a report for specified month """
        
-    z = request.args.get('z','')
-    x = request.args.get('x','')
-    y  = request.args.get('y','')
+    z = request.args.get('z', '')
+    x = request.args.get('x', '')
+    y = request.args.get('y', '')
     
     parent_id =  request.args.get('parent_id','')
     

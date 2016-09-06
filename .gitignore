@@ -21,3 +21,4 @@ src/packages/wtforms/
 static/bb/
 static/tiles/
 gae
+.idea

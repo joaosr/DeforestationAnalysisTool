@@ -26,7 +26,7 @@ from models import Report, User, Error, ImagePicker, Downscalling
 import simplejson as json
 
 
-#from chardet.test import result
+# from chardet.test import result
 sys.modules['ssl'] = None
 
 try:
@@ -40,12 +40,13 @@ except:
     wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
 
 
-#from forms import ExampleForm
+# from forms import ExampleForm
 
 
-#from google.appengine.ext.db import Key
+# from google.appengine.ext.db import Key
 
-scope = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json'#'https://www.googleapis.com/auth/userinfo.email'
+scope = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json'  # 'https://www.googleapis.com/auth/userinfo.email'
+
 
 def default_maps():
     maps = []
@@ -106,9 +107,11 @@ def get_or_create_user():
         u.put()
     return u
 
+
 @app.route('/')
 def start():
     return redirect('/analysis')
+
 
 @app.route('/googleauth/', methods=['POST', 'GET'])
 def googleauth():
@@ -146,15 +149,14 @@ def home(cell_path=None):
     if not u:
         abort(403)
 
-
     logout_url = users.create_logout_url('/')
     return render_template('home.html',
-            reports_json=reports,
-            report_base_json=report_base,
-            user=u,
-            maps=maps,
-            polygons_table=settings.FT_TABLE_ID,
-            logout_url=logout_url)
+                           reports_json=reports,
+                           report_base_json=report_base,
+                           user=u,
+                           maps=maps,
+                           polygons_table=settings.FT_TABLE_ID,
+                           logout_url=logout_url)
 
 
 
@@ -415,7 +417,7 @@ def picker(tile=None):
         date_start = datetime.datetime.combine(report.start, datetime.time())
         date_end = datetime.datetime.combine(report.end, datetime.time())
         
-        imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(cell),  location=location, sensor_dates=sensor_dates, start=date_start, end=date_end)
+        imagePicker = ImagePicker(report=report, added_by=users.get_current_user(), cell=str(cell),  location=location, sensor_dates=sensor_dates, start=date_start, end=date_end)
         return jsonify({'result': imagePicker.save()})
 
     else:
