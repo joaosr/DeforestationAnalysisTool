@@ -226,8 +226,6 @@ var Grid = Backbone.View.extend({
         var w = Number(this.w);
         var prj = this.mapview.projector;
 
-        console.log("X: "+x+" ,Y: "+y+" ,H: "+h+", W: "+w);
-
         bounds = new google.maps.LatLngBounds(
             prj.untransformCoordinates(new google.maps.Point(x, y + h)),
             prj.untransformCoordinates(new google.maps.Point(x + w, y))
@@ -335,7 +333,6 @@ var GridStack = Backbone.View.extend({
         //var cells = new Cells(undefined, {x: 0, y:0, z: 0, report: this.report});
         //this.set_cells(cells);
         this.mapview.bind('center_changed', this.grid.render);
-        console.log(" === Grid stack ready === ");
     },
 
     set_cells: function(cells) {

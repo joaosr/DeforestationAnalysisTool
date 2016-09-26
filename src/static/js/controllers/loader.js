@@ -9,7 +9,6 @@ var Loading = Backbone.View.extend({
     },
 
     loading: function(where, msg) {
-        console.log("s:" + where);
         if(msg) {
             this.set_msg(msg);
         }
@@ -20,7 +19,6 @@ var Loading = Backbone.View.extend({
         this.msg.html(msg);
     },
     finished: function(where) {
-        console.log("f:" + where);
         --this.refcount;
         if(this.refcount === 0) {
             //this.el.hide();

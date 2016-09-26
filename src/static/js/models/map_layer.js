@@ -17,8 +17,6 @@ var NDFIMap = Backbone.Model.extend({
 var NDFIMap = Backbone.Model.extend({
 
     url: function() {
-        console.log(this.get('report_id'));
-        console.log(this.get('sensor'));
         return '/api/v0/report/' + this.get('report_id') + '/' + this.get('sensor') + '/map';
     }
 

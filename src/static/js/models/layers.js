@@ -106,7 +106,6 @@ var LayerBaselineCollection = Backbone.Collection.extend({
 
     },
     parse: function(result){
-        console.log(result.result);
         return result.result;
     },
     get_by_cell: function(cell_name) {
@@ -173,7 +172,6 @@ var LayerTimeSeriesCollection = Backbone.Collection.extend({
 
     },
     parse: function(result){
-        console.log(result.result);
         return result.result;
     },
     get_by_cell: function(cell_name) {

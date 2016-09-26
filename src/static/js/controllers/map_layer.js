@@ -38,7 +38,6 @@ var NDFILayer = Backbone.View.extend({
         this.high = 60;
         this.showing = false;
         this.inner_poly_sensibility = 10;
-        console.log("Report ID: "+this.report.id);
 
         this.ndfimap = new NDFIMap({report_id: this.report.id, sensor: 'modis'});
 
@@ -101,7 +100,6 @@ var NDFILayer = Backbone.View.extend({
 
         this.sub_map_layer = [];
         this.add_class_control_layers();
-        console.log(" === NDFI layer created === ");
     },
 
     add_class_control_layers: function() {
@@ -118,9 +116,7 @@ var NDFILayer = Backbone.View.extend({
         this.token = this.ndfimap.get('token');
         this.mapid = this.ndfimap.get('mapid');
         //console.log("URL NDFI : "+this.ndfimap.url);
-        console.log(this.map_layer);
         this.mapview.layers.add(this.map_layer, { at: 0 });
-        console.log(this.map_layer);
         /*
         this.mapview.layers.add(this.map_layer_L5, { at: 1});
         this.mapview.layers.add(this.map_layer_L7, { at: 2});

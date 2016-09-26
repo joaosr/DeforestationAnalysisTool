@@ -343,7 +343,6 @@ $(function() {
     				layers = layers.slice(layers.indexOf(",")+1);
     				var flag = layers.slice(layers.indexOf("\"")+1,layers.indexOf("\","));
     				layers = layers.slice(layers.indexOf(",")+1);
-                    console.log(layers);
     				var lay = map2.layers.get_by_name(layer);
     				if(lay) {
 				    	if(flag==='true'){
@@ -417,6 +416,7 @@ $(function() {
                     this.compare_view('one');
                     this.compare_view_save('one');
                 }
+
                 // el gran putiferio
                 if(compare_type === 'two') {
                     this.compare_two();
@@ -425,6 +425,7 @@ $(function() {
                     this.compare_four();
                     this.compare_view_save('four');
                 }
+
                 this.map.crosshair(true);
                 _.each(this.compare_maps, function(m) {
                     m.map.setZoom(self.map.map.getZoom());
@@ -437,7 +438,7 @@ $(function() {
                     //m.bind('zoom_changed', self.map.set_zoom_silence);
                     m.bind('click', self.map.close_layer_editor);
                     m.bind('open_layer_editor', self.map.close_layer_editor);
-                    
+
                     if(self.main_operations.sad.selected){
                     	m.layers.reset(self.available_layers.toJSON());
                     	m.crosshair(true);
@@ -502,10 +503,6 @@ $(function() {
         },
 
         change_report: function() {
-            console.log("============ Report ================");
-            for(var key in this.reports.models[0]){
-                console.log(key);
-            }
             this.active_report = this.reports.models[0];
             this.cell_polygons.polygons.report = this.active_report;
             if(this.main_operations === undefined){
@@ -531,7 +528,8 @@ $(function() {
             if(this.main_operations.sad.selected){            	
             	this.polygon_tools.show();	
             	//this.map.reset_layers_map('2', this.available_layers, 'sad');
-            	this.ndfi_layer.ndfimap.trigger('change');
+            	//this.ndfi_layer.ndfimap.trigger('change');
+
             	this.ndfi_layer.show();
             	this.polygon_tools.ndfi_range.set_values(cell.get('ndfi_low'), cell.get('ndfi_high'));
             	this.compare_view(cell.get('compare_view'));
@@ -578,15 +576,14 @@ $(function() {
 
         go_back: function() {
         	//alert(this.status_layer_map(this.map));
-        	console.log(this.compare_type_view);
         	this.status_layer_map_save(this.compare_type_view);
         	//this.status_layer_map_save('two');
         	//this.get_status_layer_map('one');
             var p = this.gridstack.current_cell.parent_cell();
             
-            if(p.get('z') === 0){
+            /*if(p.get('z') === 0){
             	this.map.reset_layers_map('0', this.available_layers, 'sad');
-            }
+            }*/
             
             this.to_cell(p.get('z'), p.get('x'), p.get('y'));
             router.navigate('cell/' +  p.get('z') + "/" + p.get('x') + "/" + p.get('y'));            
@@ -605,10 +602,10 @@ $(function() {
 
                 //this.main_operations.baseline.load_baselines_saved(cell); 
 
-                this.main_operations.baseline.bind('load_success', function(){
+                /*this.main_operations.baseline.bind('load_success', function(){
                 	var response = self.main_operations.baseline.setting_baselines(cell);
          	        self.map.reset_layers_map('1', response['baseline'], 'baseline');	
-                });
+                });*/
 
                 this.main_operations.baseline.cell_polygons.polygons.reset();
 				if(this.main_operations.baseline.editing_router) {
@@ -668,6 +665,7 @@ $(function() {
 
         },
         init_sad_map: function(){
+            var self = this;
         	// init the map
             this.map.map.setCenter(this.amazon_bounds.getCenter());
             this.map.layers.reset(this.available_layers.models);            
@@ -805,8 +803,6 @@ $(function() {
 
             Backbone.history.start();
             window.loading.finished("Imazon: start");
-            console.log(" === App started === ");
-
 
         },
 

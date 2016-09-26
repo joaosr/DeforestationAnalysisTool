@@ -32,7 +32,6 @@ var ThumbsView = Backbone.View.extend({
     el: $("#thumb"),
     initialize: function(){
         _.bindAll(this, 'addOne', 'addAll', 'render');
-        console.log("Aqui");
         this.parentView = this.options.parentView;
         this.collection = new Thumbs();
         this.collection.bind('reset', this.addAll());
@@ -75,7 +74,6 @@ var ThumbsView = Backbone.View.extend({
         $(this.el).append(thumbView.render().el);
     },
     addAll: function(){
-        console.log('Agora aqui');
         this.collection.each(this.addOne);
     },
     render: function(){

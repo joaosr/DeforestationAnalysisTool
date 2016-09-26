@@ -20,7 +20,7 @@ from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_lis
     create_time_series, create_tile_baseline, create_tile_timeseries
 from application.models import Baseline, Tile, TimeSeries, CellGrid
 from application.time_utils import timestamp, past_month_range
-from decorators import login_required, admin_required
+from decorators import login_required, admin_required, login_required_oauth
 import ee
 from models import Report, User, Error, ImagePicker, Downscalling
 import simplejson as json
@@ -38,12 +38,6 @@ except:
     jinja2 = zipimport.zipimporter('packages/jinja2.zip').load_module('jinja2')
     flask = zipimport.zipimporter('packages/flask.zip').load_module('flask')
     wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
-
-
-# from forms import ExampleForm
-
-
-# from google.appengine.ext.db import Key
 
 scope = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json'  # 'https://www.googleapis.com/auth/userinfo.email'
 
@@ -100,6 +94,14 @@ def default_maps():
 
 
 def get_or_create_user():
+    user = users.get_current_user()
+    u = User.get_user(user)
+    if not u and users.is_current_user_admin():
+        u = User(user=user, role='admin')
+        u.put()
+    return u
+
+def get_or_create_user_oauth():
     user = oauth.get_current_user(scope)
     u = User.get_user(user)
     if not u:
@@ -119,15 +121,16 @@ def googleauth():
         user = oauth.get_current_user(scope)
         u = User.get_user(user)
         if not u:
-            u = User(user=user, role='admin')
-            u.put()
-        return jsonify({'result': "success"})
+            return jsonify({'result': "error"})
+        else:
+           return jsonify({'result': "success"})
     else:
         return jsonify({'result': 'Other method'})
 
 
 @app.route('/analysis')
-@login_required
+#@login_required
+@login_required_oauth
 def home(cell_path=None):
     import sys
     logging.info("Version python: "+sys.version);
@@ -145,11 +148,13 @@ def home(cell_path=None):
     report_base = json.dumps([Report.current().previous().as_dict()])
     logging.info("Reports: "+str(reports))
     logging.info("Maps: "+str(maps))
-    u = get_or_create_user()
+    #u = get_or_create_user()
+    u = get_or_create_user_oauth()
     if not u:
         abort(403)
 
-    logout_url = users.create_logout_url('/')
+    #logout_url = users.create_logout_url('/')
+    logout_url = "/"
     return render_template('home.html',
                            reports_json=reports,
                            report_base_json=report_base,

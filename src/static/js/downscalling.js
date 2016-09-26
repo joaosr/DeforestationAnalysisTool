@@ -68,7 +68,6 @@ var SelectParameters = Backbone.View.extend({
                that.parentView.$("table").show();
                that.parentView.$("#submit").show();
                that.parentView.$("#loading_tile_downscalling").hide();
-               console.log(that.collection);
            }
        });
 
@@ -101,7 +100,6 @@ var SelectParameters = Backbone.View.extend({
 
     addAll: function(){
         this.collection.each(this.addOne);
-        console.log(this.collection);
     },
     render: function () {
         this.addAll();

@@ -42,8 +42,6 @@ var ReportsCollection = Backbone.Collection.extend({
 
         },
         parse: function(result){
-        	console.log("=================== List reports ================");
-            console.log(result);
             return result.data;
         },        
         get_by_name: function(name) {

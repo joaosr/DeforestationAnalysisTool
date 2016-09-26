@@ -476,7 +476,6 @@ var Sad = Backbone.View.extend({
         this.callerView = this.options.callerView;
         this.map = this.options.mapview;
         this.report = this.options.report
-        console.log("==== setting_report_data ====");
 
         //this.setting_report_data();
         this.date_range = new ReportToolbar({el: this.$("#date_range"), report: this.report, url_send: '/range_report/', callerView: this});

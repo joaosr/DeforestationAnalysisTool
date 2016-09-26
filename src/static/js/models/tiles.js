@@ -8,7 +8,6 @@ var Tiles = Backbone.Collection.extend({
     },
 //    url: 'tiles/'+this.sensor+'/',
     parse: function(result){
-        console.log(result.result);
         return result.result;
     }
 

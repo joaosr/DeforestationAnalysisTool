@@ -34,7 +34,6 @@ var BaselineLayer = Backbone.View.extend({
         this.cloud_thresh = 42;
         this.showing = false;
         this.inner_poly_sensibility = 10;
-        console.log("Report ID: "+this.report.id);        
         this.extra_images_list = {};
         this.extra_images_data = {};
 
@@ -47,7 +46,6 @@ var BaselineLayer = Backbone.View.extend({
 
         this.sub_map_layer = [];
         this.add_class_control_layers();
-        console.log(" === Baseline layer created === ");
     },
 
     add_class_control_layers: function() {
