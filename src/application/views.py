@@ -129,8 +129,8 @@ def googleauth():
 
 
 @app.route('/analysis')
-#@login_required
-@login_required_oauth
+@login_required
+# @login_required_oauth
 def home(cell_path=None):
     import sys
     logging.info("Version python: "+sys.version);
@@ -148,13 +148,13 @@ def home(cell_path=None):
     report_base = json.dumps([Report.current().previous().as_dict()])
     logging.info("Reports: "+str(reports))
     logging.info("Maps: "+str(maps))
-    #u = get_or_create_user()
-    u = get_or_create_user_oauth()
+    u = get_or_create_user()
+    # u = get_or_create_user_oauth()
     if not u:
         abort(403)
 
-    #logout_url = users.create_logout_url('/')
-    logout_url = "/"
+    logout_url = users.create_logout_url('/')
+    # logout_url = "/"
     return render_template('home.html',
                            reports_json=reports,
                            report_base_json=report_base,

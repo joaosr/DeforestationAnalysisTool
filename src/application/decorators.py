@@ -8,10 +8,8 @@ Decorators for URL handlers
 from functools import wraps
 from google.appengine.api import users, oauth
 from flask import redirect, request, render_template
-from models import User
-import logging
 
-scope = 'https://www.googleapis.com/auth/userinfo.email'
+scope = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json'
 
 def login_required(func):
     """Requires standard login credentials"""
@@ -28,7 +26,8 @@ def login_required_oauth(func):
     """Requires standard login credentials"""
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if not oauth.get_current_user(scope):
+        # user = oauth.get_current_user(scope)
+        if not False:
             return render_template('login.html')
         return func(*args, **kwargs)
 
