@@ -22,17 +22,6 @@ def login_required(func):
 
     return decorated_view
 
-def login_required_oauth(func):
-    """Requires standard login credentials"""
-    @wraps(func)
-    def decorated_view(*args, **kwargs):
-        # user = oauth.get_current_user(scope)
-        if not False:
-            return render_template('login.html')
-        return func(*args, **kwargs)
-
-    return decorated_view
-
 
 def admin_required(func):
     """Requires App Engine admin credentials"""

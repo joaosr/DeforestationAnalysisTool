@@ -21,40 +21,40 @@ class DataTest(unittest.TestCase):
     with DoStubHttp(200, 'application/json', '{"data"}'):
       with self.assertRaises(ee.ee_exception.EEException) as cm:
         ee.data.send_('/foo', {})
-      self.assertEqual('Invalid JSON: {"data"}', cm.exception.message)
+      self.assertEqual('Invalid JSON: {"data"}', str(cm.exception))
 
   def testJsonStructureError(self):
     with DoStubHttp(200, 'application/json', '{}'):
       with self.assertRaises(ee.ee_exception.EEException) as cm:
         ee.data.send_('/foo', {})
-      self.assertEqual('Malformed response: {}', cm.exception.message)
+      self.assertEqual('Malformed response: {}', str(cm.exception))
 
   def testUnexpectedStatus(self):
     with DoStubHttp(418, 'text/html', '<html>'):
       with self.assertRaises(ee.ee_exception.EEException) as cm:
         ee.data.send_('/foo', {})
-      self.assertEqual('Server returned HTTP code: 418', cm.exception.message)
+      self.assertEqual('Server returned HTTP code: 418', str(cm.exception))
 
   def testJson200Error(self):
     with DoStubHttp(200, 'application/json',
                     '{"error": {"code": 500, "message": "bar"}}'):
       with self.assertRaises(ee.ee_exception.EEException) as cm:
         ee.data.send_('/foo', {})
-      self.assertEqual(u'bar', cm.exception.message)
+      self.assertEqual(u'bar', str(cm.exception))
 
   def testJsonNon2xxError(self):
     with DoStubHttp(400, 'application/json',
                     '{"error": {"code": 400, "message": "bar"}}'):
       with self.assertRaises(ee.ee_exception.EEException) as cm:
         ee.data.send_('/foo', {})
-      self.assertEqual(u'bar', cm.exception.message)
+      self.assertEqual(u'bar', str(cm.exception))
 
   def testWrongContentType(self):
     with DoStubHttp(200, 'text/html', '{"data": "bar"}'):
       with self.assertRaises(ee.ee_exception.EEException) as cm:
         ee.data.send_('/foo', {})
       self.assertEqual(u'Response was unexpectedly not JSON, but text/html',
-                       cm.exception.message)
+                       str(cm.exception))
 
   def testNoContentType(self):
     with DoStubHttp(200, None, '{"data": "bar"}'):
@@ -73,7 +73,7 @@ class DataTest(unittest.TestCase):
                     '{"error": {"code": 400, "message": "bar"}}'):
       with self.assertRaises(ee.ee_exception.EEException) as cm:
         ee.data.send_('/foo', {}, opt_raw=True)
-      self.assertEqual(u'Server returned HTTP code: 400', cm.exception.message)
+      self.assertEqual(u'Server returned HTTP code: 400', str(cm.exception))
 
   def testRaw200Error(self):
     """Raw shouldn't be parsed, so the error-in-200 shouldn't be noticed.
@@ -85,11 +85,38 @@ class DataTest(unittest.TestCase):
       self.assertEqual('{"error": {"code": 400, "message": "bar"}}',
                        ee.data.send_('/foo', {}, opt_raw=True))
 
+  def testNotProfiling(self):
+    # Test that we do not request profiling.
+    with DoProfileStubHttp(self, False):
+      ee.data.send_('/foo', {})
+
+  def testProfiling(self):
+    with DoProfileStubHttp(self, True):
+      seen = []
+      def ProfileHook(profile_id):
+        seen.append(profile_id)
+
+      with ee.data.profiling(ProfileHook):
+        ee.data.send_('/foo', {})
+      self.assertEqual(['someProfileId'], seen)
+
+  def testProfilingCleanup(self):
+    with DoProfileStubHttp(self, True):
+      try:
+        with ee.data.profiling(lambda _: None):
+          raise ExceptionForTest()
+      except ExceptionForTest:
+        pass
+
+    # Should not have profiling enabled after exiting the context by raising.
+    with DoProfileStubHttp(self, False):
+      ee.data.send_('/foo', {})
+
 
 def DoStubHttp(status, mime, resp_body):
   """Context manager for temporarily overriding Http."""
   def Request(unused_self, unused_url, method, body, headers):
-    _ = method, body, headers  # unused kwargs
+    _ = method, body, headers  # Unused kwargs.
     response = httplib2.Response({
         'status': status,
         'content-type': mime,
@@ -98,10 +125,23 @@ def DoStubHttp(status, mime, resp_body):
   return mock.patch('httplib2.Http.request', new=Request)
 
 
-class StubResponse(object):
+def DoProfileStubHttp(test, expect_profiling):
+  def Request(unused_self, unused_url, method, body, headers):
+    _ = method, headers  # Unused kwargs.
+    test.assertEqual(expect_profiling, 'profiling=1' in body, msg=body)
+    response_dict = {
+        'status': 200,
+        'content-type': 'application/json'
+    }
+    if expect_profiling:
+      response_dict['x-earth-engine-computation-profile'] = 'someProfileId'
+    response = httplib2.Response(response_dict)
+    return response, '{"data": "dummy_data"}'
+  return mock.patch('httplib2.Http.request', new=Request)
 
-  def __init__(self, status):
-    self.status = status
+
+class ExceptionForTest(Exception):
+  pass
 
 
 if __name__ == '__main__':

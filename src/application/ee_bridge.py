@@ -13,6 +13,8 @@
 import ast
 import calendar
 import datetime
+import traceback
+
 import ee
 import logging
 import re
@@ -884,15 +886,25 @@ class NDFI(object):
             stats_image = display_image = collection.mosaic()
         else:
             raise RuntimeError('Sensor %s neither modis nor landsat.' % sensor)
+
         stats_image = stats_image.select(bands, RGB_BANDS)
         display_image = display_image.select(bands, RGB_BANDS)
 
+
         # Calculate stats.
         bbox = ee.Feature.Rectangle(*self._get_polygon_bbox(polygon))
+
+        logging.info("BANDS: " + str(bands))
+        logging.info("NUM_SAMPLES: "+str(NUM_SAMPLES))
+        logging.info("RGB_BANDS: "+','.join(RGB_BANDS))
+        logging.info("STATS_IMAGE: "+str(stats_image.getInfo()))
+        logging.info("BBOX: "+str(bbox.bounds().getInfo()))
+
         stats = ee.data.getValue({
-            'image': stats_image.stats(NUM_SAMPLES, bbox).serialize(False),
+            'image': stats_image.stats(NUM_SAMPLES, bbox.bounds()).serialize(False),
             'fields': ','.join(RGB_BANDS)
         })
+
         mins = []
         maxs = []
         for band in RGB_BANDS:
@@ -1321,7 +1333,6 @@ class NDFI(object):
         logging.info(base.getMapId({'bands': 'sur_refl_b01,sur_refl_b02,sur_refl_b03'}))
         unmixed = base.select([BAND_FORMAT % i for i in BANDS]).unmix(ENDMEMBERS)
         result = unmixed.expression('addBands(b(0,1,2), round(max(b(0,1,2), 0) * 100))')
-        #logging.info(result.getMapId({'bands': 'band_0,band_1,band_2'}))
         return result.select(['.*'], OUTPUTS + [i + '_100' for i in OUTPUTS])
 
     def _unmixed_landsat_L5(self, period):
@@ -1367,7 +1378,6 @@ class NDFI(object):
             logging.info("End: "+str(period['end']))
             periodo = ['2011-06-01', '2011-07-01']
 
-        #collection = ee.ImageCollection('L5_L1T_SR').filterMetadata('WRS_PATH', 'equals', 227).filterMetadata('WRS_ROW', 'equals', 65).filterMetadata('CLOUD_COVER', 'less_than', 30).filterDate(periodo[0], periodo[1])
         bounder = ee.Geometry.Rectangle(-74.0, -18.0, -44, 5.0)
 
         collection = ee.ImageCollection('LE7_L1T_SR').filterDate(periodo[0], periodo[1]).filterBounds(bounder)
@@ -1401,20 +1411,16 @@ class NDFI(object):
         work_year = self._getMidYear(period['start'], period['end'])
         compounddate = '%04d%02d' % (work_year, work_month)                
         #TODO: Work with data from Downscalling table when EE KrigeModis algorithm to user it.
-        #downscalling = Downscalling.find_by_compounddate(compounddate)         
-        #feature_collection = Downscalling.return_feature_collection(downscalling)        
-        feature_collection = False
-        params = ''
+        downscalling = Downscalling.find_by_compounddate(compounddate)
+        feature_collection = Downscalling.return_feature_collection(downscalling)
         
-        if feature_collection:
-            params = feature_collection            
-        else:
+        if feature_collection is None:
             krig_filter = ee.Filter.eq('Compounddate', int(compounddate))
-            params = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)            
-            Downscalling.save_feature_collection(params)
+            feature_collection = ee.FeatureCollection(KRIGING_PARAMS_TABLE).filter(krig_filter)
+            Downscalling.save_feature_collection(feature_collection)
         
         mosaic = self._make_mosaic(period, long_span)
-        image = ee.Algorithms.SAD.KrigeModis(mosaic, params)
+        image = ee.Algorithms.SAD.KrigeModis(mosaic, feature_collection)
         
         return image
 
@@ -1472,16 +1478,12 @@ class NDFI(object):
             end_month = time.gmtime(end_time / 1000).tm_mon
             end_year = time.gmtime(end_time / 1000).tm_year
             start = '%04d%02d' % (start_year, start_month)
-            end = '%04d%02d' % (end_year, end_month)            
-            #image_picker = ImagePicker.find_by_period(start_time, end_time, True)
-            #feature_collection = ImagePicker.return_feature_collection(image_picker)
-            feature_collection = False
+            end = '%04d%02d' % (end_year, end_month)
+            image_picker = ImagePicker.find_by_period(start_time, end_time, True)
+            inclusions = ImagePicker.return_feature_collection(image_picker)
             
             # Prepare the inclusions table.
-            if feature_collection:
-                inclusions = feature_collection
-                logging.info("from system")
-            else:
+            if inclusions is None:
                 inclusions_filter = ee.Filter.And(
                                        ee.Filter.gte('compounddate', start),
                                        ee.Filter.lte('compounddate', end))
@@ -1497,15 +1499,11 @@ class NDFI(object):
             month = self._getMidMonth(start_time, end_time)
             year = self._getMidYear(start_time, end_time)
             compounddate = '%04d%02d' % (year, month)            
-            #image_picker = ImagePicker.find_by_period(start_time, end_time)
-            #feature_collection = ImagePicker.return_feature_collection(image_picker)
-            feature_collection = False
+            image_picker = ImagePicker.find_by_period(start_time, end_time)
+            inclusions = ImagePicker.return_feature_collection(image_picker)
                         
             # Prepare the inclusions table.
-            if feature_collection:
-                inclusions = feature_collection
-                logging.info("from system")
-            else:
+            if inclusions is None:
                 inclusions_filter = ee.Filter.eq(
                 'compounddate', compounddate)
                 inclusions = ee.FeatureCollection(MODIS_INCLUSIONS_TABLE)
@@ -1518,11 +1516,9 @@ class NDFI(object):
 
         
         #TODO: Return to normal start_time without add 1 day
-        object1 = ee.call(
+        return ee.call(
           'SAD/com.google.earthengine.examples.sad.MakeMosaic',
           modis_ga, modis_gq, inclusions, start_time + 1, end_time)
-
-        return object1
 
     def _get_polygon_bbox(self, polygon):
         """Returns the bounding box of a polygon.
@@ -2821,7 +2817,6 @@ def _get_landsat_toa(start_time, end_time, version=-1):
 def _get_landsat8(start_time, end_time, version=-1):
     collection = ee.ImageCollection.load('LC8_L1T', version)
     collection = collection.filterDate(start_time, end_time)
-    #return collection.map(ee.Algorithms.LandsatTOA)
     return collection
 
 def _get_modis_tile(horizontal, vertical):

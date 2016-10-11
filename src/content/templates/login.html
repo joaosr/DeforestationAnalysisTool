@@ -2,19 +2,21 @@
 
 {% block  head %}
     <link href="{{url_for('static', filename='css/style.css')}}" rel="stylesheet" type="text/css"/>
-    <meta name="google-signin-client_id" content="702464249217-lr70ubu2cf3gk3gddva38g3nl8ejug79.apps.googleusercontent.com">
+    <meta name="google-site-verification" content="wN3oaGU8bpHVt_8jqXlgcde1ny4L5PLM2oqpmCuv4QM" />
+    <meta name="google-signin-scope" content="profile email">
+    <meta name="google-signin-client_id" content="911125517007-rjklh3qel2ajimlu7k9jgjv78p3h2l9d.apps.googleusercontent.com">
+    <!--<meta name="google-signin-client_id" content="702464249217-lr70ubu2cf3gk3gddva38g3nl8ejug79.apps.googleusercontent.com">-->
 {% endblock %}
 
 {% block js_files %}
 
-	<script src="https://apis.google.com/js/platform.js" async defer></script>
+	<script src="https://apis.google.com/js/platform.js?onload=onLoadCallback" async defer></script>
 
 {% endblock %}
 
 {% block js %}
 
 	function onSignIn(googleUser) {
-
         var profile = googleUser.getBasicProfile();
         console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
         console.log('Name: ' + profile.getName());
@@ -23,18 +25,12 @@
     };
 
     function onSignInOauth(googleUser) {
-
-        var googleAuthData = {
-            token: googleUser.getAuthResponse().id_token
-        };
-
-        $.post('/googleauth/', googleAuthData, function(data) {
-            console.log(data);
-            if(data.result == "error"){
-                return;
-            }
-            window.location.href = "/";
+        console.log("{{login_url}}");
+        $.get("{{login_url}}", function(data, status){
+            alert("Data: " + data + "\nStatus: " + status);
+            //window.location.href = "/";
         });
+        //window.location.href = "{{login_url}}";
     };
 
 {% endblock %}
@@ -47,8 +43,9 @@
         {% block text_box %}
             <h1>Deforestation Validation Tool</h1>
             <p>For using this application you need to sign in with your google account. Just press the button below and start contributing</p>
+
             <a class="sign_in" href="{{login_url}}">Sign in</a>
-            <!--<div class="g-signin2" data-onsuccess="onSignInOauth" style="float:right;"></div><br/>-->
+            <!--<div class="g-signin2" data-onsuccess="onSignInOauth" style="float:right;"></div>-->
         {% endblock %}
   </article>
 

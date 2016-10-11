@@ -9,17 +9,20 @@ See: https://sites.google.com/site/earthengineapidocs for more details.
 # Using lowercase function naming to match the JavaScript names.
 # pylint: disable=g-bad-name
 
+# Disable lint messages caused by Python 3 compatibility changes.
+# pylint: disable=superfluous-parens
+
 import json
 
-import apifunction
-import computedobject
-import data
-import deprecation
-import ee_exception
-import ee_types
-import element
-import function
-import geometry
+from . import apifunction
+from . import computedobject
+from . import data
+from . import deprecation
+from . import ee_exception
+from . import ee_types
+from . import element
+from . import function
+from . import geometry
 
 
 class Image(element.Element):
@@ -121,7 +124,7 @@ class Image(element.Element):
     Returns:
       An object containing a mapid and access token, or an error message.
     """
-    request = vis_params or {}
+    request = (vis_params or {}).copy()
     request['image'] = self.serialize()
     response = data.getMapId(request)
     response['image'] = self
@@ -184,7 +187,7 @@ class Image(element.Element):
     """
     request = params or {}
     request['image'] = self.serialize()
-    if request.has_key('region'):
+    if 'region' in request:
       if (isinstance(request['region'], dict) or
           isinstance(request['region'], list)):
         request['region'] = json.dumps(request['region'])
@@ -328,7 +331,7 @@ class Image(element.Element):
 
     # Add custom arguments, promoting them to Images manually.
     if opt_map:
-      for name, value in opt_map.iteritems():
+      for name, value in opt_map.items():
         all_vars.append(name)
         args[name] = Image(value)
 
@@ -354,10 +357,16 @@ class Image(element.Element):
     return ReinterpretedFunction().apply(args)
 
   def clip(self, clip_geometry):
-    """Clips an image by a Geometry, Feature or FeatureCollection.
+    """Clips an image to a Geometry or Feature.
+
+    The output bands correspond exactly the input bands, except data not
+    covered by the geometry is masked. The output image retains the
+    metadata of the input image.
+
+    Use clipToCollection to clip an image to a FeatureCollection.
 
     Args:
-      clip_geometry: The Geometry, Feature or FeatureCollection to clip to.
+      clip_geometry: The Geometry or Feature to clip to.
 
     Returns:
       The clipped image.
@@ -369,6 +378,31 @@ class Image(element.Element):
     except ee_exception.EEException:
       pass  # Not an ee.Geometry or GeoJSON. Just pass it along.
     return apifunction.ApiFunction.call_('Image.clip', self, clip_geometry)
+
+  def rename(self, names, *args):
+    """Rename the bands of an image.
+
+    Can be called with either a list of strings or any number of strings.
+
+    Args:
+      names: An array of strings specifying the new names for the
+          bands.  Must exactly match the number of bands in the image.
+      *args: Band names as varargs.
+
+    Returns:
+      An image with the renamed bands.
+    """
+    if args:
+      # Handle varargs; everything else we let the server handle.
+      args = list(args)
+      args.insert(0, names)
+      names = args
+
+    algorithm_args = {
+        'input': self,
+        'names': names
+    }
+    return apifunction.ApiFunction.apply_('Image.rename', algorithm_args)
 
   @staticmethod
   def name():

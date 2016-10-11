@@ -1,17 +1,30 @@
 #!/usr/bin/env python
 """Singleton for all of the library's communcation with the Earth Engine API."""
 
+from __future__ import print_function
+
 
 
 # Using lowercase function naming to match the JavaScript names.
 # pylint: disable=g-bad-name
 
+# pylint: disable=g-bad-import-order
+import contextlib
 import json
-import urllib
-
-import ee_exception
 import httplib2
+import six
 
+# pylint: disable=g-import-not-at-top
+try:
+  # Python 3.x
+  import urllib.error
+  import urllib.parse
+  import urllib.request
+except ImportError:
+  # Python 2.x
+  import urllib
+
+from . import ee_exception
 
 # OAuth2 credentials object.  This may be set by ee.Initialize().
 _credentials = None
@@ -29,11 +42,30 @@ _initialized = False
 # it timed out. 0 means no limit.
 _deadline_ms = 0
 
+# A function called when profile results are received from the server. Takes the
+# profile ID as an argument. None if profiling is disabled.
+#
+# This is a global variable because the alternative is to add a parameter to
+# ee.data.send_, which would then have to be propagated from the assorted API
+# call functions (ee.data.getInfo, ee.data.getMapId, etc.), and the user would
+# have to modify each call to profile, rather than enabling profiling as a
+# wrapper around the entire program (with ee.data.profiling, defined below).
+_profile_hook = None
+
+
+# The HTTP header through which profile results are returned.
+# Lowercase because that's how httplib2 does things.
+_PROFILE_HEADER_LOWERCASE = 'x-earth-engine-computation-profile'
+
 # The default base URL for API calls.
 DEFAULT_API_BASE_URL = 'https://earthengine.googleapis.com/api'
 
 # The default base URL for media/tile calls.
-DEFAULT_TILE_BASE_URL = 'https://earthengine.googleapis.com/'
+DEFAULT_TILE_BASE_URL = 'https://earthengine.googleapis.com'
+
+# Asset types recognized by create_assets().
+ASSET_TYPE_FOLDER = 'Folder'
+ASSET_TYPE_IMAGE_COLL = 'ImageCollection'
 
 
 def initialize(credentials=None, api_base_url=None, tile_base_url=None):
@@ -87,6 +119,30 @@ def setDeadline(milliseconds):
   _deadline_ms = milliseconds
 
 
+@contextlib.contextmanager
+def profiling(hook):
+  # pylint: disable=g-doc-return-or-yield
+  """Returns a context manager which enables or disables profiling.
+
+  If hook is not None, enables profiling for all API calls in its scope and
+  calls the hook function with all resulting profile IDs. If hook is null,
+  disables profiling (or leaves it disabled).
+
+  Args:
+    hook: A function of one argument which is called with each profile
+        ID obtained from API calls, just before the API call returns.
+  """
+  global _profile_hook
+  saved_hook = _profile_hook
+  _profile_hook = hook
+  try:
+    yield
+  finally:
+    _profile_hook = saved_hook
+
+
+
+
 def getInfo(asset_id):
   """Load info for an asset, given an asset id.
 
@@ -136,8 +192,9 @@ def getMapId(params):
           to map onto 00-FF.
       gamma - (comma-separated numbers) Gamma correction
           factor (or one per band)
-      palette - (comma-separated strings) List of CSS-style color
-          strings (single-band previews only).
+      palette - (comma-separated strings) A string of comma-separated
+          CSS-style color strings (single-band previews only). For example,
+          'FF0000,000000'.
       format (string) Either 'jpg' (does not support transparency) or
           'png' (supports transparency).
 
@@ -273,7 +330,7 @@ def getDownloadId(params):
     A dict containing a docid and token.
   """
   params['json_format'] = 'v2'
-  if 'bands' in params and not isinstance(params['bands'], basestring):
+  if 'bands' in params and not isinstance(params['bands'], six.string_types):
     params['bands'] = json.dumps(params['bands'])
   return send_('/download', params)
 
@@ -342,19 +399,60 @@ def getAlgorithms():
 
 
 def createAsset(value, opt_path=None):
-  """Save an asset.
+  """Creates an asset from a JSON value.
+
+  To create an empty image collection or folder, pass in a "value" object
+  with a "type" key whose value is "ImageCollection" or "Folder".
 
   Args:
-    value: The JSON-serialized value of the asset.
+    value: An object describing the asset to create or a JSON string
+        with the already-serialized value for the new asset.
     opt_path: An optional desired ID, including full path.
 
   Returns:
     A description of the saved asset, including a generated ID.
   """
+  if not isinstance(value, six.string_types):
+    value = json.dumps(value)
   args = {'value': value, 'json_format': 'v2'}
   if opt_path is not None:
     args['id'] = opt_path
   return send_('/create', args)
+
+
+def copyAsset(sourceId, destinationId):
+  """Copies the asset from sourceId into destinationId.
+
+  Args:
+    sourceId: The ID of the asset to copy.
+    destinationId: The ID of the new asset created by copying.
+  """
+  send_('/copy', {
+      'sourceId': sourceId,
+      'destinationId': destinationId,
+  })
+
+
+def renameAsset(sourceId, destinationId):
+  """Renames the asset from sourceId to destinationId.
+
+  Args:
+    sourceId: The ID of the asset to rename.
+    destinationId: The new ID of the asset.
+  """
+  send_('/rename', {
+      'sourceId': sourceId,
+      'destinationId': destinationId,
+  })
+
+
+def deleteAsset(assetId):
+  """Deletes the asset with the given id.
+
+  Args:
+    assetId: The ID of the asset to delete.
+  """
+  send_('/delete', {'id': assetId})
 
 
 def newTaskId(count=1):
@@ -396,7 +494,7 @@ def getTaskStatus(taskId):
         doesn't exist.
       error_message (string) For a FAILED task, a description of the error.
   """
-  if isinstance(taskId, basestring):
+  if isinstance(taskId, six.string_types):
     taskId = [taskId]
   args = {'q': ','.join(taskId)}
   return send_('/taskstatus', args, 'GET')
@@ -407,23 +505,6 @@ def cancelTask(taskId):
   send_('/updatetask', {'id': taskId, 'action': 'CANCEL'})
 
 
-def prepareValue(taskId, params):
-  """Create processing task which computes a value.
-
-  Args:
-    taskId: ID for the task (obtained using newTaskId).
-    params: The object that describes the value to be evaluated, with the
-      following field:
-        json (string) A JSON object to be evaluated.
-
-  Returns:
-    A dict with optional notes about the created task.
-  """
-  args = params.copy()
-  args['tid'] = taskId
-  return send_('/prepare', args)
-
-
 def startProcessing(taskId, params):
   """Create processing task that exports or pre-renders an image.
 
@@ -431,7 +512,8 @@ def startProcessing(taskId, params):
     taskId: ID for the task (obtained using newTaskId).
     params: The object that describes the processing task; only fields
       that are common for all processing types are documented below.
-        type (string) Either 'EXPORT_IMAGE' or 'EXPORT_FEATURES'.
+        type (string) Either 'EXPORT_IMAGE', 'EXPORT_FEATURES',
+          'EXPORT_VIDEO', or 'EXPORT_TILES'.
         json (string) JSON description of the image.
 
   Returns:
@@ -442,15 +524,15 @@ def startProcessing(taskId, params):
   return send_('/processingrequest', args)
 
 
-def startIngestion(taskId, request):
+def startIngestion(taskId, params):
   """Creates an asset import task.
 
   Args:
     taskId: ID for the task (obtained using newTaskId).
-    request: The object that describes the import task, which can
+    params: The object that describes the import task, which can
         have these fields:
-          name (string) The destination asset id (e.g. users/foo/bar).
-          filesets (array) A list of Google Cloud Storage source file paths
+          id (string) The destination asset id (e.g. users/foo/bar).
+          tilesets (array) A list of Google Cloud Storage source file paths
             formatted like:
               [{'sources': [
                   {'primaryPath': 'foo.tif', 'additionalPaths': ['foo.prj']},
@@ -459,15 +541,17 @@ def startIngestion(taskId, request):
             Where path values correspond to source files' Google Cloud Storage
             object names, e.g. 'gs://bucketname/filename.tif'
           bands (array) An optional list of band names formatted like:
-            [{'name': 'R'}, {'name': 'G'}, {'name': 'B'}]
+            [{'id': 'R'}, {'id': 'G'}, {'id': 'B'}]
           extensions (array) An optional list of file extensions formatted like:
             ['tif', 'prj']. Useful if the file names in GCS lack extensions.
 
   Returns:
     A dict with optional notes about the created task.
   """
-  args = {'id': taskId, 'request': json.dumps(request)}
+  args = {'id': taskId, 'request': json.dumps(params)}
   return send_('/ingestionrequest', args)
+
+
 
 
 def getAssetRoots():
@@ -483,7 +567,28 @@ def getAssetRoots():
           {"type": "Folder", "id": "projects/bar"},
       ]
   """
-  return send_('/buckets', None, 'GET')
+  return send_('/buckets', {}, 'GET')
+
+
+def getAssetRootQuota(rootId):
+  """Returns quota usage details for the asset root with the given ID.
+
+  Usage notes:
+
+    - The id *must* be a root folder like "users/foo" (not "users/foo/bar").
+    - The authenticated user must own the asset root to see its quota usage.
+
+  Args:
+    rootId: The ID of the asset to check.
+
+  Returns:
+    A dict describing the asset's quota usage. Looks like, with size in bytes:
+      {
+          asset_count: {usage: number, limit: number},
+          asset_size: {usage: number, limit: number},
+      }
+  """
+  return send_('/quota', {'id': rootId}, 'GET')
 
 
 def getAssetAcl(assetId):
@@ -519,6 +624,19 @@ def setAssetAcl(assetId, aclUpdate):
   send_('/setacl', {'id': assetId, 'value': aclUpdate})
 
 
+def setAssetProperties(assetId, properties):
+  """Sets metadata properties of the asset with the given ID.
+
+  To delete a property, set its value to null.
+  The authenticated user must be a writer or owner of the asset.
+
+  Args:
+    assetId: The ID of the asset to set the ACL on.
+    properties: A dictionary of keys and values for the properties to update.
+  """
+  send_('/setproperties', {'id': assetId, 'properties': json.dumps(properties)})
+
+
 def createAssetHome(requestedId):
   """Attempts to create a home root folder for the current user ("users/joe").
 
@@ -529,6 +647,13 @@ def createAssetHome(requestedId):
     requestedId: The requested ID of the home folder (e.g. "users/joe").
   """
   send_('/createbucket', {'id': requestedId})
+
+
+def authorizeHttp(http):
+  if _credentials:
+    return _credentials.authorize(http)
+  else:
+    return http
 
 
 def send_(path, params, opt_method='POST', opt_raw=False):
@@ -550,13 +675,20 @@ def send_(path, params, opt_method='POST', opt_raw=False):
   # Make sure we never perform API calls before initialization.
   initialize()
 
-  url = _api_base_url + path
-  payload = urllib.urlencode(params)
-  http = httplib2.Http(timeout=int(_deadline_ms / 1000) or None)
+  if _profile_hook:
+    params = params.copy()
+    params['profiling'] = '1'
 
+  url = _api_base_url + path
   headers = {}
-  if _credentials:
-    http = _credentials.authorize(http)
+
+
+  try:
+    payload = urllib.parse.urlencode(params)  # Python 3.x
+  except AttributeError:
+    payload = urllib.urlencode(params)  # Python 2.x
+  http = httplib2.Http(timeout=(_deadline_ms / 1000.0) or None)
+  http = authorizeHttp(http)
 
   if opt_method == 'GET':
     url = url + ('&' if '?' in url else '?') + payload
@@ -569,21 +701,35 @@ def send_(path, params, opt_method='POST', opt_raw=False):
   try:
     response, content = http.request(url, method=opt_method, body=payload,
                                      headers=headers)
-  except httplib2.HttpLib2Error, e:
+  except httplib2.HttpLib2Error as e:
     raise ee_exception.EEException(
         'Unexpected HTTP error: %s' % e.message)
+
+  # Call the profile hook if present. Note that this is done before we handle
+  # the content, so that profiles are reported even if the response is an error.
+  if _profile_hook and _PROFILE_HEADER_LOWERCASE in response:
+    _profile_hook(response[_PROFILE_HEADER_LOWERCASE])
 
   # Whether or not the response is an error, it may be JSON.
   content_type = (response['content-type'] or 'application/json').split(';')[0]
   if content_type in ('application/json', 'text/json') and not opt_raw:
     try:
+      try:
+        # Python 3.x
+        try:
+          content = content.decode()
+        except AttributeError:
+          pass
+      except UnicodeDecodeError:
+        # Python 2.x
+        content = content
       json_content = json.loads(content)
-    except Exception, e:
-      raise ee_exception.EEException('Invalid JSON: ' + content)
+    except Exception as e:
+      raise ee_exception.EEException('Invalid JSON: %s' % content)
     if 'error' in json_content:
       raise ee_exception.EEException(json_content['error']['message'])
     if 'data' not in content:
-      raise ee_exception.EEException('Malformed response: ' + content)
+      raise ee_exception.EEException('Malformed response: ' + str(content))
   else:
     json_content = None
 
@@ -601,3 +747,20 @@ def send_(path, params, opt_method='POST', opt_raw=False):
         'Response was unexpectedly not JSON, but %s' % response['content-type'])
   else:
     return json_content['data']
+
+
+def create_assets(asset_ids, asset_type, mk_parents):
+  """Creates the specified assets if they do not exist."""
+  for asset_id in asset_ids:
+    if getInfo(asset_id):
+      print('Asset %s already exists' % asset_id)
+      continue
+    if mk_parents:
+      parts = asset_id.split('/')
+      path = ''
+      for part in parts[:-1]:
+        path += part
+        if getInfo(path) is None:
+          createAsset({'type': ASSET_TYPE_FOLDER}, path)
+        path += '/'
+    createAsset({'type': asset_type}, asset_id)

@@ -6,14 +6,14 @@
        
         {% block head %}
         {% endblock %}
-        <link href='http://fonts.googleapis.com/css?family=Droid+Sans:400,700&v2' rel='stylesheet' type='text/css'>
+        <link href='https://fonts.googleapis.com/css?family=Droid+Sans:400,700&v2' rel='stylesheet' type='text/css'>
     </head>
 
     <body class="{% block login %}{% endblock %}">
         {% block body %}
         {% endblock %}
 
-          <script src="//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.js"></script>
+          <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.js"></script>
           <script>window.jQuery || document.write("<script src='js/libs/jquery-1.6.2.min.js'>\x3C/script>")</script>
 
           <script src="{{url_for('static',filename='js/libs/json2.js')}}" type="text/javascript" charset="utf-8"></script>

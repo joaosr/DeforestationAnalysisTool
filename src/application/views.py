@@ -10,24 +10,25 @@ import sys
 import time
 import ast
 
+import os
+
 from google.appengine.api import memcache, users, oauth
 from google.appengine.api import urlfetch
 
 from app import app
 from application import settings
-from application.api import landstat
 from application.ee_bridge import EELandsat, SMA, NDFI, get_modis_thumbnails_list, get_modis_location, create_baseline, \
     create_time_series, create_tile_baseline, create_tile_timeseries
 from application.models import Baseline, Tile, TimeSeries, CellGrid
 from application.time_utils import timestamp, past_month_range
-from decorators import login_required, admin_required, login_required_oauth
+from decorators import login_required, admin_required
 import ee
 from models import Report, User, Error, ImagePicker, Downscalling
 import simplejson as json
 
-
 # from chardet.test import result
 sys.modules['ssl'] = None
+from flask import session
 
 try:
     from flask import render_template,  redirect, abort, request, make_response, jsonify
@@ -39,17 +40,11 @@ except:
     flask = zipimport.zipimporter('packages/flask.zip').load_module('flask')
     wtforms = zipimport.zipimporter('packages/wtforms.zip').load_module('wtforms')
 
-scope = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json'  # 'https://www.googleapis.com/auth/userinfo.email'
-
-
 def default_maps():
     maps = []
     r = Report.current()
-    logging.info("report " + unicode(r))
     landsat = EELandsat(timestamp(r.start), datetime.datetime.now())
     ndfi = NDFI(past_month_range(r.start), r.range())
-
-    logging.info('Past_month_range: '+str(past_month_range(r.start))+', Range: '+str(r.range)+', Timestamp: '+str(timestamp(r.start))+', Datetime: '+str(datetime.datetime.now()) )
 
     d = landsat.mapid(timestamp(r.start), datetime.datetime.now())
     maps.append({'data' :d, 'info': 'LANDSAT/LE7_L1T'})
@@ -58,7 +53,6 @@ def default_maps():
     maps.append({'data':d, 'info': 'LANDSAT/LC8_L1T'})
 
     assetid = r.previous().as_dict().get('assetid')
-    logging.info("Assetid :"+str(assetid))
     d = ndfi.smaid()
     if d: maps.append({'data': d, 'info': 'SMA'})    
     d = ndfi.rgb1id()
@@ -101,40 +95,14 @@ def get_or_create_user():
         u.put()
     return u
 
-def get_or_create_user_oauth():
-    user = oauth.get_current_user(scope)
-    u = User.get_user(user)
-    if not u:
-        u = User(user=user, role='admin')
-        u.put()
-    return u
-
-
 @app.route('/')
 def start():
     return redirect('/analysis')
 
 
-@app.route('/googleauth/', methods=['POST', 'GET'])
-def googleauth():
-    if request.method == 'POST':
-        user = oauth.get_current_user(scope)
-        u = User.get_user(user)
-        if not u:
-            return jsonify({'result': "error"})
-        else:
-           return jsonify({'result': "success"})
-    else:
-        return jsonify({'result': 'Other method'})
-
-
 @app.route('/analysis')
 @login_required
-# @login_required_oauth
 def home(cell_path=None):
-    import sys
-    logging.info("Version python: "+sys.version);
-    
     maps = memcache.get('default_maps')
 
     if maps:
@@ -146,15 +114,12 @@ def home(cell_path=None):
     # send only the active report
     reports = json.dumps([Report.current().as_dict()])
     report_base = json.dumps([Report.current().previous().as_dict()])
-    logging.info("Reports: "+str(reports))
-    logging.info("Maps: "+str(maps))
+
     u = get_or_create_user()
-    # u = get_or_create_user_oauth()
     if not u:
         abort(403)
 
     logout_url = users.create_logout_url('/')
-    # logout_url = "/"
     return render_template('home.html',
                            reports_json=reports,
                            report_base_json=report_base,
@@ -162,7 +127,6 @@ def home(cell_path=None):
                            maps=maps,
                            polygons_table=settings.FT_TABLE_ID,
                            logout_url=logout_url)
-
 
 
 @app.route('/vis')
@@ -189,7 +153,6 @@ def login():
 @app.route('/error_track',  methods=['GET', 'POST'])
 def error_track():
     d = request.form
-    logging.info(request.form)
     Error(msg=d['msg'], url=d['url'], line=d['line'], user=users.get_current_user()).put()
     return 'thanks'
 
@@ -383,15 +346,12 @@ def downscalling(tile=None):
         if tile:
             filter_fc = ee.Filter.eq('Cell', tile.upper())
             fc        = ee.FeatureCollection('ft:17Qn-29xy2JwFFeBam5YL_EjsvWo40zxkkOEq1Eo').filter(filter_fc)
-            logging.info("==================  Aqui ================")
-            logging.info(fc.getInfo())
             for feature in fc.getInfo().get('features'):
                 result.append({'Band':  feature.get('properties').get('Band'),
                             'Sill':  feature.get('properties').get('Sill'),
                             'Range': feature.get('properties').get('Range'),
                             'Nugget': feature.get('properties').get('Nugget')
                             })
-                logging.info(feature);
 
             return jsonify({'result': result})
 
@@ -402,8 +362,6 @@ def downscalling(tile=None):
 def picker(tile=None):
     
     if request.method == 'POST':
-        logging.info(request.form.get('thumb'))
-
         cell   = request.form.get('tile')
         p      = re.compile('\d+')
         p      = p.findall(cell)
@@ -501,7 +459,6 @@ def search_tiles_intersect():
 def baseline_on_cell(date_start, date_end, cell_name):
     if request.method == 'POST':
         cell_name    = request.form.get('cell_name')
-        logging.info(cell_name)
         start_date   = request.form.get('start_date')
         end_date     = request.form.get('end_date')
         start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
@@ -510,7 +467,6 @@ def baseline_on_cell(date_start, date_end, cell_name):
         result = create_tile_baseline(start_date, end_date, cell_name)
         return jsonify({'result': result})
     else:
-        logging.info(cell_name)
         start_date   = date_start.replace("-", "/")
         end_date     = date_end.replace("-", "/")
         start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
@@ -523,7 +479,6 @@ def baseline_on_cell(date_start, date_end, cell_name):
 def change_baseline():
     if request.method == 'POST':
         baseline = request.form.get('baseline')
-        logging.info(baseline)
         result = Baseline.change_baseline(ast.literal_eval(baseline))
         return jsonify({'result': result.as_json()})
     
@@ -533,7 +488,6 @@ def change_baseline():
 def change_timeseires():
     if request.method == 'POST':
         timeseries = request.form.get('timeseries')
-        logging.info(timeseries)
         result = TimeSeries.change_timeseries(ast.literal_eval(timeseries))
         return jsonify({'result': result.as_json()})
     
@@ -543,7 +497,6 @@ def change_timeseires():
 def timeseries_on_cell(date_start, date_end, cell_name):
     if request.method == 'POST':
         cell_name    = request.form.get('cell_name')
-        logging.info(cell_name)
         start_date   = request.form.get('start_date')
         end_date     = request.form.get('end_date')
         start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
@@ -552,7 +505,6 @@ def timeseries_on_cell(date_start, date_end, cell_name):
         result = create_tile_timeseries(start_date, end_date, cell_name)
         return jsonify({'result': result})
     else:
-        logging.info(cell_name)
         start_date   = date_start.replace("-", "/")
         end_date     = date_end.replace("-", "/")
         start_date = datetime.datetime.strptime(start_date,"%d/%b/%Y")
@@ -566,7 +518,6 @@ def timeseries_cell(cell_name):
     if request.method == 'POST':
         return jsonify({'result': None})
     else:
-        logging.info(cell_name)
         result = TimeSeries.formated_by_cell_parent(cell_name)        
         return jsonify({'result': result})
     
@@ -578,7 +529,6 @@ def timeseries_tile(cell_name=None):
         result = TimeSeries.formated_by_cell_name(cell_name)
         return jsonify({'result': result})
     else:
-        logging.info(cell_name)
         result = TimeSeries.formated_by_cell_name(cell_name)        
         return jsonify({'result': result})
     
@@ -589,7 +539,6 @@ def timeseries_last_maps():
         result = TimeSeries.find_last_maps(cell_name)
         return jsonify({'result': result})
     else:
-        logging.info(cell_name)
         result = TimeSeries.formated_by_cell_name(cell_name)        
         return jsonify({'result': result})        
 
@@ -598,7 +547,6 @@ def baselines_cell(cell_name):
     if request.method == 'POST':
         return jsonify({'result': None})
     else:
-        logging.info(cell_name)
         result = Baseline.formated_by_cell_parent(cell_name)
                 
         return jsonify({'result': result})
@@ -612,7 +560,6 @@ def baseline_cell(cell_name=None):
                 
         return jsonify({'result': result})
     else:
-        logging.info(cell_name)
         result = Baseline.formated_by_cell_name(cell_name)        
         return jsonify({'result': result})                
 
@@ -621,10 +568,9 @@ def baseline_cell(cell_name=None):
 def imagepicker_tile():    
        
     if request.method == 'POST' and request.form.get('list_cloud_percent') and request.form.get('date_start') and request.form.get('date_end'):
-        
 
-        date_start         = request.form.get('date_start')
-        date_end           = request.form.get('date_end')
+        date_start = request.form.get('date_start')
+        date_end = request.form.get('date_end')
         date_start = datetime.datetime.strptime(date_start,"%d/%b/%Y")
         date_end = datetime.datetime.strptime(date_end,"%d/%b/%Y")
         
@@ -636,8 +582,6 @@ def imagepicker_tile():
                 
         return jsonify({'result': result})
     elif request.method == 'POST' and request.form.get('thumbs_tile'):
-        
-        logging.info(request.form.get('thumbs_tile'))
         thumbs_tile = request.form.get('thumbs_tile')        
         thumbs_tile = thumbs_tile.split(',')
         
@@ -663,9 +607,6 @@ def imagepicker_tile():
             
 
         report = Report.current()
-        
-        logging.info("===== sensor_date =====")
-        logging.info(sensor_date)
         
         for key in sensor_date:
             imagePicker = ImagePicker(report=report, added_by= users.get_current_user(), cell=str(key.replace("_", "/")),  location=str(sensor_date[key]['location']), sensor_dates=sensor_date[key]['sensor_date'], start=date_start, end=date_end)

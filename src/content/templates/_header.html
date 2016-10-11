@@ -6,7 +6,7 @@
         <div id="topbar">
                 <div class="content ">
                     <div id="google_powered">
-                        <div style="color: #666;font-family: arial;font-size: 11px;white-space: nowrap;">Powered By <span style="font-size: 12px;font-weight: bold;"><a href="http://google.org/earthengine" style="color:#444;text-decoration:none;"><img src="http://www.google.com/images/logos/google_logo_powered_by.png" style="border:none;vertical-align:middle;" /> Earth Engine</a></div>
+                        <div style="color: #666;font-family: arial;font-size: 11px;white-space: nowrap;">Powered By <span style="font-size: 12px;font-weight: bold;"><a href="https://google.org/earthengine" style="color:#444;text-decoration:none;"><img src="https://www.google.com/images/logos/google_logo_powered_by.png" style="border:none;vertical-align:middle;" /> Earth Engine</a></div>
                     </div>
 
                     <ul id="tabs">
@@ -30,7 +30,26 @@
                       {% if user.is_admin() %}
                       <a id="go_setting" href="#">Settings</a>
                       {% endif %}
-                      <a id="logout" href="{{logout_url}}">Log out</a>
+                      <!--<a id="logout" href="{{logout_url}}">Log out</a>-->
+                      <a id="logout" href="#" onclick="signOut();">Log out</a>
+                      <script>
+                          window.onLoadCallback = function(){
+                              gapi.load('auth2', function() {
+                                 gapi.auth2.init({
+                                    client_id: '911125517007-rjklh3qel2ajimlu7k9jgjv78p3h2l9d.apps.googleusercontent.com'
+                                 });
+                              });
+                          }
+
+                          function signOut() {
+                              console.log(gapi);
+                              var auth2 = gapi.auth2.getAuthInstance();
+                              auth2.signOut().then(function () {
+                                  console.log('User signed out.');
+                                  window.location.href = "{{logout_url}}";
+                              });
+                          }
+                      </script>
                   </div>
               </div>
               <img id="settings_sep" src="/static/img/settings_separator.png"></img>

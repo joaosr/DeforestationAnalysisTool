@@ -184,13 +184,11 @@ class Report(db.Model):
 
     @staticmethod
     def add_report(start, end, assetid='null'):
-        logging.info(start+', '+end)
         start_date = datetime.strptime(start, "%d/%b/%Y").date()
         end_date   = datetime.strptime(end, "%d/%b/%Y").date()
 
         q = Report.all().filter('start', start_date).filter('end', end_date)
         r = q.fetch(1)
-        logging.info(r)
         if len(r) > 0:
             return {'message': 'Period already created, try another one!', 'data': None}
         else:
@@ -542,13 +540,10 @@ class CellGrid(db.Model):
                         
             #if len(intersection.getInfo()['coordinates']) > 0:
             if geo_cell_grid.intersects(geo_tile, ee.ErrorMargin(30.0, "meters"), "EPSG:4326").getInfo():
-                logging.info(r[i].name)
                 r[i].save_cells(self.name, False)
-                #logging.info(geo_cell_grid.intersects(geo_tile, ee.ErrorMargin(30.0, "meters"), "EPSG:4326").getInfo())
                 result.append(r[i])
             else:
                 r[i].save_cells(self.name, True)
-                logging.info(r[i].name)
         
         return result
     
@@ -689,8 +684,6 @@ class Tile(db.Model):
         
         try:
             if r:
-                logging.info(type(self.cells))
-                logging.info(type(r[0].cells))
                 for cell in self.cells: 
                     if cell not in r[0].cells:
                         r[0].cells.append(cell)
@@ -741,8 +734,6 @@ class Area(db.Model):
     def find_feature_collection_by_cell(cell):
         q = Area.all().filter('cell =', cell)
         r = q.fetch(100)
-        logging.info("+++++++++++++++ Polygons ++++++++++++++++++++++++")
-        logging.info('Tamanho - '+str(len(r)))
         if r: 
             result = []
             for i in range(len(r)):
@@ -803,14 +794,12 @@ class Area(db.Model):
         cl.sql("delete from %s where rowid = '%s'" % (table_id, self.fusion_tables_id))
     def update_fusion_tables(self):
         """ update polygon in fusion tables. Do not call this method, use save method when change instance data """
-        logging.info("updating fusion tables %s" % self.key())
         cl = self._get_ft_client()
         table_id = cl.table_id(settings.FT_TABLE)
         geo_kml = path_to_kml(json.loads(self.geo))
         cl.sql("update  %s set geo = '%s', type = '%s' where rowid = '%s'" % (table_id, geo_kml, self.fusion_tables_type(), self.fusion_tables_id))
 
     def create_fusion_tables(self):
-        logging.info("saving to fusion tables report %s" % self.key())
         cl = self._get_ft_client()
         table_id = cl.table_id(settings.FT_TABLE)
         geo_kml = path_to_kml(json.loads(self.geo))
@@ -872,7 +861,6 @@ class StatsStore(db.Model):
     def table_accum(self, table, zone=None):
         table_stats = self.for_table(table, zone)
         if not table_stats:
-            logging.info("no stats for %s on %s" % (table, self.report_id))
             return None
         return [{
             'id': zone,
@@ -927,22 +915,25 @@ class ImagePicker(db.Model):
     def find_by_period(start, end, long_span=False):
         if isinstance(start, types.IntType):
             start = datetime.fromtimestamp(start / 1e3)
-            logging.info(start.strftime("%Y-%b-%d %H:%M:%S"))
         if isinstance(end, types.IntType):
             end = datetime.fromtimestamp(end / 1e3)
-            logging.info(end.strftime("%Y-%b-%d %H:%M:%S"))
             
         if long_span:
             q = ImagePicker.all().filter('start <=', start)
         else:     
             q = ImagePicker.all().filter('start =', start).filter('end =', end)
+
         r = q.fetch(100)
-        
+
         if r:
-            for i in range(len(r)):                            
+            list_remove = []
+            for i in range(len(r)):
                 for j in range(len(r[i].sensor_dates)):
                     if "modis" not in r[i].sensor_dates[j]:
-                        r.remove(r[i])
+                        list_remove.append(r[i])
+                        # r.remove(r[i])
+            for i in range(len(list_remove)):
+                r.remove(list_remove[i])
             return r
         else:
             return None
@@ -1070,8 +1061,7 @@ class ImagePicker(db.Model):
                     feature = ee.Feature(geometry, properties)
                     feature_collection.append(feature)
                     
-                result = ee.FeatureCollection(feature_collection) 
-                #logging.info(result)
+                result = ee.FeatureCollection(feature_collection)
                 return result 
         
         else:
@@ -1079,7 +1069,7 @@ class ImagePicker(db.Model):
     
     @staticmethod
     def save_feature_collection(feature_collection):
-        logging.info("Image Picker feature size:"+str(len(feature_collection.getInfo()['features'])))        
+        logging.info("ImagePicker feature size:" + str(len(feature_collection.getInfo()['features'])))
         collections_ = feature_collection.getInfo()['features']
         report = Report.current()                
         
@@ -1274,8 +1264,6 @@ class Baseline(db.Model):
         
         for tile in tiles:
             tile_name = tiles[tile]['name']
-            logging.info("======= Tiles =========");
-            logging.info(tile_name);
             list_image_picker = ImagePicker.list_by_period_date(self.start, self.end, tile_name)
             result.append(list_image_picker)            
                 
@@ -1454,7 +1442,6 @@ class TimeSeries(db.Model):
         r = q.fetch(100)
         
         if r:
-            logging.info(len(r))
             result = []
             result.append(Baseline.find_by_cell_xyz(self.cell))            
             for i in range(len(r)):
@@ -1472,8 +1459,6 @@ class TimeSeries(db.Model):
         
         for tile in tiles:
             tile_name = tiles[tile]['name']
-            logging.info("======= Tiles =========");
-            logging.info(tiles[tile]['name']);
             list_image_picker = ImagePicker.list_by_period_date(self.start, self.end, tile_name)
             result.append(list_image_picker)                            
             
