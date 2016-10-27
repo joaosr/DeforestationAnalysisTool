@@ -1039,30 +1039,29 @@ class ImagePicker(db.Model):
         feature_collection = []
         
         if r:
-                for i in range(len(r)):
-                    location = r[i].location
-                    polygon = ast.literal_eval(location)
-                    geometry = ee.Geometry.Polygon(polygon)
-                    
-                    days = []
-                    for j in range(len(r[i].sensor_dates)):
-                        sensor_date      = r[i].sensor_dates[j]
-                        date_day         = re.search(r'(\d+-\d+-\d+)', sensor_date).group(1)
-                        year, month, day = date_day.split('-')
-                        days.append(str(int(day)).zfill(2))   
-                        
-                    
-                    properties = {'cell': r[i].cell,
-                                  'compounddate': int(year + month),
-                                  'day': ','.join(days),
-                                  'month': int(month),
-                                  'year': int(year)
-                                 }
-                    feature = ee.Feature(geometry, properties)
-                    feature_collection.append(feature)
-                    
-                result = ee.FeatureCollection(feature_collection)
-                return result 
+            for i in range(len(r)):
+                location = r[i].location
+                polygon = ast.literal_eval(location)
+                geometry = ee.Geometry.Polygon(polygon)
+
+                days = []
+                for j in range(len(r[i].sensor_dates)):
+                    sensor_date = r[i].sensor_dates[j]
+                    date_day = re.search(r'(\d+-\d+-\d+)', sensor_date).group(1)
+                    year, month, day = date_day.split('-')
+                    days.append(str(int(day)).zfill(2))
+
+                properties = {'cell': r[i].cell,
+                              'compounddate': str(year + month),
+                              'day': ','.join(days),
+                              'month': str(int(month)),
+                              'year': str(year)}
+
+                feature = ee.Feature(geometry, properties)
+                feature_collection.append(feature)
+
+            result = ee.FeatureCollection(feature_collection)
+            return result
         
         else:
             return None
@@ -1171,13 +1170,13 @@ class Downscalling(db.Model):
                     region = r[i].region
                     polygon = ast.literal_eval(region)
                     geometry = ee.Geometry.Polygon(polygon)
-                    properties = {'Band': r[i].band,
+                    properties = {'Band': str(r[i].band),
                                   'Cell': r[i].cell,
-                                  'Compounddate': int(r[i].compounddate),
+                                  'Compounddate': str(r[i].compounddate),
                                   'Model': r[i].model,
-                                  'Nugget': r[i].nugget,
-                                  'Range': r[i].range,
-                                  'Sill': r[i].sill,
+                                  'Nugget': str(r[i].nugget),
+                                  'Range': str(r[i].range),
+                                  'Sill': str(r[i].sill),
                                  }
                     feature = ee.Feature(geometry, properties)
                     feature_collection.append(feature)

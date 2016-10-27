@@ -13,13 +13,13 @@
 import ast
 import calendar
 import datetime
-import traceback
 
 import ee
 import logging
 import re
 import time
 
+from flask import jsonify
 from google.appengine.api import users
 
 from application.models import Area, Report, Baseline, ImagePicker, Downscalling, Tile, \
@@ -145,7 +145,8 @@ class Stats(object):
 
         return stats
 
-    def _get_historical_freeze(self, report_id, frozen_image):
+    @staticmethod
+    def _get_historical_freeze(report_id, frozen_image):
         """Paints deforestation onto an image.
 
         Args:
@@ -193,14 +194,17 @@ class EELandsat(object):
     LANDSAT5 = 'L5_L1T_SR'
     LANDSAT7 = 'LE7_L1T_SR'
     LANDSAT8 = 'LC8_L1T'
-    SENSORS  = [LANDSAT5, LANDSAT7, LANDSAT8]
+    PREVIEW_GAIN = 500
+    MAX_ERROR_METERS = 30.0
+    SENSORS = [LANDSAT5, LANDSAT7, LANDSAT8]
 
     def __init__(self, start, end, sensor=''):
         self.start = start
         self.end = end
         self.sensor = sensor
 
-    def list(self, bounds):
+    @staticmethod
+    def list(bounds):
         """Returns a list of IDs of Landsat 7 images intersecting a given area.
 
         Args:
@@ -239,25 +243,24 @@ class EELandsat(object):
             return {'bands': ['B7', 'B5', 'B4'], 'gain': ['0.013','0.009','0.013']}
 
     def find_mapid_from_sensor(self, bound=None):
-        PREVIEW_GAIN = 500
-
         map_image_bands = self.get_image_bands().get('bands')
 
         image = self.find_map_image(bound)
 
         if image:
-           return _get_raw_mapid(image.getMapId({
+            raw_mapid = _get_raw_mapid(image.getMapId({
                'bands': ','.join(map_image_bands),
-               'gain': PREVIEW_GAIN
+               'gain': self.PREVIEW_GAIN
             }))
         else:
-           return _get_raw_mapid(None)
+            raw_mapid = _get_raw_mapid(None)
 
-    def get_thumbs(self, tiles, bounds=None):
+        return raw_mapid
+
+    def get_thumbs(self, tiles):
         results = {}
 
         for tile in tiles:
-            MAX_ERROR_METERS = 30.0
             thumbs_info = []
             tile = tile.replace("_","/")
             cloud_cover = tiles[tiles.keys()[0]]
@@ -265,7 +268,7 @@ class EELandsat(object):
             region = ee.Geometry.Polygon(region)
     
             feature = ee.Feature(region)
-            region = feature.bounds(MAX_ERROR_METERS)
+            # region = feature.bounds(self.MAX_ERROR_METERS)
             reprojected = ee.data.getValue({'json': feature.serialize()})['geometry']['coordinates']
     
             collections = self.find_image_tile_from_all_sensors(tile, cloud_cover)
@@ -285,7 +288,11 @@ class EELandsat(object):
         
                     date = images[j].get('properties').get('DATE_ACQUIRED') 
         
-                    thumbs_info.append({'thumb': result['thumbid'], 'token': result['token'], 'date': date, 'map_image': map_image, 'tile': tile.replace("/","_")})
+                    thumbs_info.append({'thumb': result['thumbid'],
+                                        'token': result['token'],
+                                        'date': date,
+                                        'map_image': map_image,
+                                        'tile': tile.replace("/","_")})
                     
                 results[tile] = thumbs_info
 
@@ -296,37 +303,44 @@ class EELandsat(object):
         image = self.find_map_collection(bounds)
 
         if image:
-           return image.mosaic()
+            mosaic = image.mosaic()
         else:
-           return None
+            mosaic = None
+
+        return mosaic
     
     @staticmethod
     def find_collection_tile(sensor, tile, start_date, end_date=None):
-        wrs_path =  tile.split('/')[0];
-        wrs_row =  tile.split('/')[1];
+        wrs_path = tile.split('/')[0]
+        wrs_row = tile.split('/')[1]
         
         if end_date:
-            collection = ee.ImageCollection(sensor).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(start_date, end_date)
+            collection = ee.ImageCollection(sensor).filterMetadata('WRS_PATH', 'equals', int(wrs_path))\
+                .filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(start_date, end_date)
         else:
-            collection = ee.ImageCollection(sensor).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterMetadata('DATE_ACQUIRED', 'equals', start_date)
+            collection = ee.ImageCollection(sensor).filterMetadata('WRS_PATH', 'equals', int(wrs_path))\
+                .filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterMetadata('DATE_ACQUIRED', 'equals', start_date)
         
         return collection
        
     def find_image_tile_from_all_sensors(self, tile, cloud_cover=30):        
-        wrs_path =  tile.split('/')[0];
-        wrs_row =  tile.split('/')[1];
+        wrs_path = tile.split('/')[0];
+        wrs_row = tile.split('/')[1];
         collections = []
                  
-        collection_l8 = ee.ImageCollection(EELandsat.LANDSAT8).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end).filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
+        collection_l8 = ee.ImageCollection(EELandsat.LANDSAT8).filterMetadata('WRS_PATH', 'equals', int(wrs_path))\
+            .filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end)\
+            .filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
         
         size_l8 = len(collection_l8.getInfo().get('features'))        
         
         if size_l8 > 0:
             collections.append(collection_l8)
         
-        collection_l7 = ee.ImageCollection(EELandsat.LANDSAT7).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end).filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
-        
-        
+        collection_l7 = ee.ImageCollection(EELandsat.LANDSAT7).filterMetadata('WRS_PATH', 'equals', int(wrs_path))\
+            .filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end)\
+            .filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
+
         size_l7 = len(collection_l7.getInfo().get('features'))        
          
         if size_l7 > 0: 
@@ -338,18 +352,18 @@ class EELandsat(object):
         
         if size_l5 > 0: 
             collections.append(collection_l5)
-           
-                
+
         return collections
-    
+
     def find_image_tile_from_L5(self, tile, cloud_cover=30):
-        wrs_path =  tile.split('/')[0];
-        wrs_row =  tile.split('/')[1];        
+        wrs_path = tile.split('/')[0]
+        wrs_row = tile.split('/')[1]
           
-        collection = ee.ImageCollection(EELandsat.LANDSAT5).filterMetadata('WRS_PATH', 'equals', int(wrs_path)).filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end).filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
+        collection = ee.ImageCollection(EELandsat.LANDSAT5).filterMetadata('WRS_PATH', 'equals', int(wrs_path))\
+            .filterMetadata('WRS_ROW', 'equals', int(wrs_row)).filterDate(self.start, self.end)\
+            .filterMetadata('CLOUD_COVER', 'less_than', int(cloud_cover))
           
         return collection
-        
 
     def find_map_collection(self, bounds=None):
 
@@ -363,12 +377,7 @@ class EELandsat(object):
 
         collection_size = len(collection.getInfo().get('features'))
 
-        logging.info("==========>>> Collections: "+str(collection_size))
-
-        if collection_size != 0:
-           return collection
-        else:
-           return None
+        return collection_size != 0 if collection else None
        
     def find_full_map_collection(self, bounds=None):
 
@@ -380,11 +389,7 @@ class EELandsat(object):
             collection = ee.ImageCollection(self.sensor)
             collection = collection.filterDate(self.start, self.end)
 
-        if collection:
-           return collection
-        else:
-           return None
-
+        return collection if collection else None
 
     def mapid(self, start, end):
         """Returns a Map ID for a Landsat 7 TOA mosaic for a given time period.
@@ -860,6 +865,7 @@ class NDFI(object):
             # Kriging is very expensive and does not significantly affect
             # value distribution. Skip it for the stats aggregation.
             stats_image = self._make_mosaic(self.work_period)
+
             stats_image = stats_image.select(
                 ['sur_refl_b01_250m',
                  'sur_refl_b02_250m',
@@ -890,15 +896,8 @@ class NDFI(object):
         stats_image = stats_image.select(bands, RGB_BANDS)
         display_image = display_image.select(bands, RGB_BANDS)
 
-
         # Calculate stats.
         bbox = ee.Feature.Rectangle(*self._get_polygon_bbox(polygon))
-
-        logging.info("BANDS: " + str(bands))
-        logging.info("NUM_SAMPLES: "+str(NUM_SAMPLES))
-        logging.info("RGB_BANDS: "+','.join(RGB_BANDS))
-        logging.info("STATS_IMAGE: "+str(stats_image.getInfo()))
-        logging.info("BBOX: "+str(bbox.bounds().getInfo()))
 
         stats = ee.data.getValue({
             'image': stats_image.stats(NUM_SAMPLES, bbox.bounds()).serialize(False),
@@ -1467,7 +1466,6 @@ class NDFI(object):
           11. num_observations_250m
         """
         inclusions = ''
-
         
         if long_span:
             # Calculate the time span.
@@ -1514,8 +1512,7 @@ class NDFI(object):
         modis_ga = ee.ImageCollection('MODIS/MOD09GA').filterDate(start_time, end_time)
         modis_gq = ee.ImageCollection('MODIS/MOD09GQ').filterDate(start_time, end_time)
 
-        
-        #TODO: Return to normal start_time without add 1 day
+        # TODO: Return to normal start_time without add 1 day
         return ee.call(
           'SAD/com.google.earthengine.examples.sad.MakeMosaic',
           modis_ga, modis_gq, inclusions, start_time + 1, end_time)
